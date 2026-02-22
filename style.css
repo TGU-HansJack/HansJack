@@ -40,8 +40,8 @@
     --hj-chip-height: 24px;
     --hj-chip-width: 24px;
     --hj-header-action-size: calc(var(--hj-nav-icon-size) + 2px);
-    /* Desktop: widen spacing between the 4 right-side icon buttons by ~1 character width. */
-    --hj-header-actions-gap: 2em;
+    /* Desktop: widen spacing between the right-side icon buttons, but allow it to shrink on narrower screens. */
+    --hj-header-actions-gap: clamp(0.9em, 2.2vw, 2em);
     --hj-header-h: 56px;
     /* Posts/Article sidebar width should roughly match the header-right actions width. */
     --hj-posts-aside-width: calc(5 * var(--hj-header-action-size) + 4 * var(--hj-header-actions-gap));
@@ -153,14 +153,20 @@ img {
 
 .hj-shell {
     width: 60%;
-    max-width: 100%;
     margin: 0 auto;
     padding: 0 0.8rem;
+    max-width: 100%;
+}
+
+@media (max-width: 1400px) {
+    .hj-shell {
+        /* Narrower desktop: shrink the side whitespace first. */
+        width: 78%;
+    }
 }
 
 @media (max-width: 1200px) {
     .hj-shell {
-        /* On narrower screens, shrink the left/right whitespace first to avoid early wrapping/overlap. */
         width: var(--hj-desktop-width);
     }
 }
@@ -168,7 +174,6 @@ img {
 @media (max-width: 980px) {
     .hj-shell {
         width: 100%;
-        max-width: 100%;
         padding: 0 0.6rem;
     }
 }
@@ -176,7 +181,6 @@ img {
 @media (max-width: 768px) {
     .hj-shell {
         width: 100%;
-        max-width: 100%;
         padding: 0 0.6rem;
     }
 }
@@ -1271,7 +1275,7 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
     align-items: stretch;
 }
 
-@media (min-width: 981px) {
+@media (min-width: 1600px) {
     .hj-recent-grid {
         gap: clamp(4.8rem, 15.6vw, 13.5rem);
     }
@@ -1551,6 +1555,7 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
     margin-top: -0.08rem;
     font-family: var(--hj-font-ui);
     font-size: 0.74rem;
+    line-height: 1.25;
     color: var(--hj-muted-day);
     letter-spacing: 0.02em;
 }
@@ -1563,6 +1568,7 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
     align-items: baseline;
     gap: 0.6rem;
     padding-top: 0.25rem;
+    line-height: 1.25;
     color: var(--hj-muted-day);
 }
 
@@ -1745,17 +1751,49 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
     background: var(--hj-nav-block-bg);
 }
 
+@media (max-width: 1099px) {
+    .hj-posts-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .hj-posts-aside {
+        display: none;
+    }
+}
+
 @media (max-width: 980px) {
     .hj-posts-layout {
         grid-template-columns: 1fr;
     }
 
     .hj-posts-item {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
+        gap: 0.22rem;
     }
 
     .hj-posts-item-right {
+        /* Title -> tags -> time on narrow screens. */
+        order: 2;
         justify-content: flex-start;
+        padding-top: 0;
+        gap: 0.35rem 0.75rem;
+        line-height: 1.25;
+    }
+
+    .hj-posts-item-left {
+        display: contents;
+    }
+
+    .hj-posts-title,
+    .hj-posts-title-row {
+        order: 1;
+    }
+
+    .hj-posts-date {
+        order: 3;
+        margin-top: 0;
+        line-height: 1.25;
     }
 }
 
@@ -2028,7 +2066,7 @@ html.hj-theme-dark .hj-posts-pager.page-navigator li a:focus-visible {
     color: var(--hj-recent-muted);
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1099px) {
     .hj-recent-grid {
         grid-template-columns: 1fr;
     }
@@ -2600,9 +2638,21 @@ html.hj-theme-dark .hj-recent {
     --hj-fab-ring-muted: var(--hj-muted-day);
 }
 
+@media (max-width: 1400px) {
+    .hj-fab {
+        right: calc((100vw - 78vw) / 2 - var(--hj-fab-size) + env(safe-area-inset-right, 0px));
+    }
+}
+
 @media (max-width: 1200px) {
     .hj-fab {
         right: calc((100% - var(--hj-desktop-width)) / 2 - var(--hj-fab-size) + env(safe-area-inset-right, 0px));
+    }
+}
+
+@media (max-width: 980px) {
+    .hj-fab {
+        right: calc(0.6rem + env(safe-area-inset-right, 0px));
     }
 }
 

@@ -144,11 +144,13 @@ if ($hjNotesRootMid) {
                                         }
                                     }
                                     ?>
-                                    <?php if ($hjColumnName !== ''): ?>
-                                        <span class="hj-posts-title-prefix"><?php echo hansJackEscape($hjColumnName); ?></span>
-                                        <span class="hj-posts-title-sep" aria-hidden="true"> | </span>
-                                    <?php endif; ?>
-                                    <a class="hj-posts-title" href="<?php echo hansJackEscape($posts->permalink); ?>"><?php echo hansJackEscape($posts->title); ?></a>
+                                    <div class="hj-posts-title-row">
+                                        <?php if ($hjColumnName !== ''): ?>
+                                            <span class="hj-posts-title-prefix"><?php echo hansJackEscape($hjColumnName); ?></span>
+                                            <span class="hj-posts-title-sep" aria-hidden="true"> | </span>
+                                        <?php endif; ?>
+                                        <a class="hj-posts-title" href="<?php echo hansJackEscape($posts->permalink); ?>"><?php echo hansJackEscape($posts->title); ?></a>
+                                    </div>
                                     <time class="hj-posts-date" datetime="<?php $posts->date('c'); ?>">
                                         <?php $posts->date('Y/m/d-H:i:s'); ?>
                                     </time>
