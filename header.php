@@ -203,19 +203,108 @@ if ($this->is('tag')) {
         </div>
     </div>
     <div class="hj-mobile-nav" aria-hidden="true">
-        <div class="hj-mobile-nav-panel" role="menu" aria-label="<?php _e('主导航'); ?>">
-            <?php foreach ($themeConfig['navItems'] as $item): ?>
-                <?php $navIcon = hansJackNavIconSvg($item['key']); ?>
-                <a class="hj-user-dropdown-item<?php echo hansJackIsActiveNav($this, $item['url']) ? ' is-active' : ''; ?>"
-                   role="menuitem"
-                   href="<?php echo hansJackEscape($item['url']); ?>">
-                    <?php if ($navIcon !== ''): ?>
-                        <span class="hj-user-dropdown-icon" aria-hidden="true"><?php echo $navIcon; ?></span>
-                    <?php endif; ?>
-                    <span class="hj-user-dropdown-text"><?php echo hansJackEscape($item['label']); ?></span>
+        <div class="hj-mobile-nav-backdrop" aria-hidden="true"></div>
+        <aside class="hj-mobile-nav-panel" role="dialog" aria-label="<?php _e('菜单'); ?>" aria-modal="true" tabindex="-1">
+            <nav class="hj-mobile-nav-section" aria-label="<?php _e('主导航'); ?>">
+                <?php foreach ($themeConfig['navItems'] as $item): ?>
+                    <?php $navIcon = hansJackNavIconSvg($item['key']); ?>
+                    <a class="hj-user-dropdown-item<?php echo hansJackIsActiveNav($this, $item['url']) ? ' is-active' : ''; ?>"
+                       role="menuitem"
+                       href="<?php echo hansJackEscape($item['url']); ?>">
+                        <?php if ($navIcon !== ''): ?>
+                            <span class="hj-user-dropdown-icon" aria-hidden="true"><?php echo $navIcon; ?></span>
+                        <?php endif; ?>
+                        <span class="hj-user-dropdown-text"><?php echo hansJackEscape($item['label']); ?></span>
+                    </a>
+                <?php endforeach; ?>
+                <?php if (!empty($hjNavCategories)): ?>
+                    <div class="hj-mobile-nav-divider" role="separator" aria-hidden="true"></div>
+                    <div class="hj-mobile-nav-section-title"><?php _e('博文分类'); ?></div>
+                    <?php foreach ($hjNavCategories as $cat): ?>
+                        <a class="hj-user-dropdown-item hj-mobile-nav-subitem"
+                           role="menuitem"
+                           href="<?php echo hansJackEscape($cat['url']); ?>">
+                            <span class="hj-user-dropdown-text"><?php echo hansJackEscape($cat['name']); ?></span>
+                        </a>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </nav>
+
+            <div class="hj-mobile-nav-divider" role="separator" aria-hidden="true"></div>
+            <div class="hj-mobile-nav-section-title"><?php _e('功能'); ?></div>
+            <div class="hj-mobile-nav-section" aria-label="<?php _e('功能'); ?>">
+                <button class="hj-user-dropdown-item hj-mobile-nav-action" type="button" data-hj-theme-toggle="true">
+                    <span class="hj-user-dropdown-icon" aria-hidden="true">
+                        <span class="hj-theme-icon hj-theme-icon-sun">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                        </span>
+                        <span class="hj-theme-icon hj-theme-icon-moon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+                        </span>
+                    </span>
+                    <span class="hj-user-dropdown-text"><?php _e('切换主题'); ?></span>
+                </button>
+                <a class="hj-user-dropdown-item" role="menuitem" href="<?php $this->options->feedUrl(); ?>">
+                    <span class="hj-user-dropdown-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+                    </span>
+                    <span class="hj-user-dropdown-text"><?php _e('RSS'); ?></span>
                 </a>
-            <?php endforeach; ?>
-        </div>
+            </div>
+
+            <div class="hj-mobile-nav-divider" role="separator" aria-hidden="true"></div>
+            <div class="hj-mobile-nav-section-title"><?php _e('前往'); ?></div>
+            <nav class="hj-mobile-nav-section" aria-label="<?php _e('独立页面'); ?>">
+                <?php
+                $this->widget('Widget_Contents_Page_List')->to($hjMobilePages);
+                $hjHasMobilePage = false;
+                while ($hjMobilePages->next()):
+                    $slug = isset($hjMobilePages->slug) ? (string) $hjMobilePages->slug : '';
+                    if ($slug === 'posts' || $slug === 'notes') {
+                        continue;
+                    }
+                    $hjHasMobilePage = true;
+                ?>
+                    <a class="hj-user-dropdown-item" role="menuitem" href="<?php $hjMobilePages->permalink(); ?>">
+                        <span class="hj-user-dropdown-icon" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09"/><path d="M9 12a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.4 22.4 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05"/></svg>
+                        </span>
+                        <span class="hj-user-dropdown-text"><?php $hjMobilePages->title(); ?></span>
+                    </a>
+                <?php endwhile; ?>
+                <?php if (!$hjHasMobilePage): ?>
+                    <div class="hj-user-dropdown-item" role="none">
+                        <span class="hj-user-dropdown-text"><?php _e('暂无页面'); ?></span>
+                    </div>
+                <?php endif; ?>
+            </nav>
+
+            <div class="hj-mobile-nav-divider" role="separator" aria-hidden="true"></div>
+            <div class="hj-mobile-nav-section-title"><?php _e('用户'); ?></div>
+            <nav class="hj-mobile-nav-section" aria-label="<?php _e('用户'); ?>">
+                <?php if ($this->user->hasLogin()): ?>
+                    <a class="hj-user-dropdown-item" role="menuitem" href="<?php $this->options->adminUrl(); ?>">
+                        <span class="hj-user-dropdown-icon" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 11 2-2-2-2"/><path d="M11 13h4"/><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/></svg>
+                        </span>
+                        <span class="hj-user-dropdown-text"><?php _e('控制台'); ?></span>
+                    </a>
+                    <a class="hj-user-dropdown-item" role="menuitem" href="<?php $this->options->logoutUrl(); ?>">
+                        <span class="hj-user-dropdown-icon" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20H2"/><path d="M11 4.562v16.157a1 1 0 0 0 1.242.97L19 20V5.562a2 2 0 0 0-1.515-1.94l-4-1A2 2 0 0 0 11 4.561z"/><path d="M11 4H8a2 2 0 0 0-2 2v14"/><path d="M14 12h.01"/><path d="M22 20h-3"/></svg>
+                        </span>
+                        <span class="hj-user-dropdown-text"><?php _e('退出'); ?></span>
+                    </a>
+                <?php else: ?>
+                    <a class="hj-user-dropdown-item" role="menuitem" href="<?php $this->options->adminUrl('login.php'); ?>">
+                        <span class="hj-user-dropdown-icon" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+                        </span>
+                        <span class="hj-user-dropdown-text"><?php _e('登录'); ?></span>
+                    </a>
+                <?php endif; ?>
+            </nav>
+        </aside>
     </div>
 </header>
 <div class="hj-shell hj-main-shell">

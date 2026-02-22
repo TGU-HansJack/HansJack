@@ -17,7 +17,7 @@ $notesCategorySlug = 'notes';
 $posts = null;
 $categories = null;
 $tags = null;
-$postsPageSize = 10;
+$postsPageSize = 15;
 $hjListPage = 1;
 
 try {

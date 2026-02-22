@@ -19,12 +19,12 @@ function themeConfig($form)
 
 /**
  * Theme entry hook.
- * Keep root "posts"/"notes" archives at a fixed 10 items per page.
+ * Keep root "posts"/"notes" archives at a fixed 15 items per page.
  */
 function themeInit(Archive $archive)
 {
     if ($archive->is('category', 'posts') || $archive->is('category', 'notes')) {
-        $archive->parameter->pageSize = 10;
+        $archive->parameter->pageSize = 15;
     }
 }
 

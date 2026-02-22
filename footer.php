@@ -535,86 +535,58 @@
 
 <script>
     (function () {
+        var root = document.documentElement;
         var toggle = document.querySelector(".hj-nav-toggle");
         var mobileNav = document.querySelector(".hj-mobile-nav");
-        if (!toggle || !mobileNav) {
+        if (!root || !toggle || !mobileNav) {
             return;
         }
 
         var panel = mobileNav.querySelector(".hj-mobile-nav-panel");
-        if (!panel) {
+        var backdrop = mobileNav.querySelector(".hj-mobile-nav-backdrop");
+        if (!panel || !backdrop) {
             return;
         }
 
         var openClass = "is-open";
-        var margin = 8; // px from viewport edges
+        var rootOpenClass = "hj-mobile-nav-open";
 
-        function getGapPx() {
-            try {
-                var raw = window
-                    .getComputedStyle(document.documentElement)
-                    .getPropertyValue("--hj-dropdown-gap");
-                var px = parseFloat(raw) || 0;
-                if (px > 0) {
-                    return Math.max(4, Math.min(28, Math.round(px)));
-                }
-            } catch (e) {
-                // Ignore.
-            }
+        function closeOtherHeaderMenus() {
+            var pagesMenu = document.querySelector(".hj-pages-menu");
+            var userMenu = document.querySelector(".hj-user-menu");
 
-            // Fallback: roughly one-character height.
-            var fontSize = 0;
-            try {
-                fontSize = parseFloat(window.getComputedStyle(toggle).fontSize) || 0;
-            } catch (e) {
-                fontSize = 0;
-            }
-
-            var gap = Math.round(fontSize || 14);
-            return Math.max(8, Math.min(28, gap));
-        }
-
-        function positionPanel() {
-            var toggleRect = toggle.getBoundingClientRect();
-            if (!toggleRect) {
-                return;
-            }
-
-            var panelRect = panel.getBoundingClientRect();
-            var width = panelRect.width || panel.offsetWidth || 0;
-            var viewportWidth = document.documentElement.clientWidth || window.innerWidth || 0;
-            if (viewportWidth <= 0) {
-                return;
-            }
-
-            var centerX = toggleRect.left + toggleRect.width / 2;
-            var left = centerX;
-            if (width > 0) {
-                var half = width / 2;
-                if (left - half < margin) {
-                    left = margin + half;
-                } else if (left + half > viewportWidth - margin) {
-                    left = viewportWidth - margin - half;
+            if (pagesMenu) {
+                pagesMenu.classList.remove("is-open");
+                var pagesTrigger = pagesMenu.querySelector(".hj-pages-trigger");
+                if (pagesTrigger) {
+                    pagesTrigger.setAttribute("aria-expanded", "false");
                 }
             }
 
-            panel.style.position = "fixed";
-            panel.style.left = Math.round(left) + "px";
-            panel.style.top = Math.round(toggleRect.bottom + getGapPx()) + "px";
-            panel.style.right = "auto";
+            if (userMenu) {
+                userMenu.classList.remove("is-open");
+                var userTrigger = userMenu.querySelector(".hj-user-trigger");
+                if (userTrigger) {
+                    userTrigger.setAttribute("aria-expanded", "false");
+                }
+            }
+
+            root.classList.remove("hj-header-dropdown-open");
         }
 
         function openMenu() {
+            closeOtherHeaderMenus();
             mobileNav.classList.add(openClass);
             toggle.setAttribute("aria-expanded", "true");
             mobileNav.setAttribute("aria-hidden", "false");
-            positionPanel();
+            root.classList.add(rootOpenClass);
         }
 
         function closeMenu() {
             mobileNav.classList.remove(openClass);
             toggle.setAttribute("aria-expanded", "false");
             mobileNav.setAttribute("aria-hidden", "true");
+            root.classList.remove(rootOpenClass);
         }
 
         toggle.addEventListener("click", function (event) {
@@ -628,15 +600,7 @@
             }
         });
 
-        document.addEventListener("click", function (event) {
-            if (!mobileNav.classList.contains(openClass)) {
-                return;
-            }
-
-            var target = event ? event.target : null;
-            if (target && (panel.contains(target) || toggle.contains(target))) {
-                return;
-            }
+        backdrop.addEventListener("click", function () {
             closeMenu();
         });
 
@@ -644,7 +608,7 @@
             if (!event) {
                 return;
             }
-            if (event.key === "Escape") {
+            if (event.key === "Escape" && mobileNav.classList.contains(openClass)) {
                 closeMenu();
             }
         });
@@ -655,22 +619,132 @@
             });
         });
 
-        var resizeTimer = null;
-        function scheduleReposition() {
-            if (!mobileNav.classList.contains(openClass)) {
+        var themeBtn = panel.querySelector("[data-hj-theme-toggle]");
+        if (themeBtn) {
+            themeBtn.addEventListener("click", function (event) {
+                event.preventDefault();
+                var themeToggle = document.querySelector(".hj-theme-toggle");
+                if (themeToggle) {
+                    themeToggle.click();
+                }
+            });
+        }
+    })();
+</script>
+
+<script>
+    (function () {
+        var root = document.documentElement;
+        var body = document.body;
+        if (!root || !body) {
+            return;
+        }
+
+        var isListPage = body.classList.contains("hj-page-posts") || body.classList.contains("hj-page-notes");
+        if (!isListPage) {
+            return;
+        }
+
+        var pager = document.querySelector("ol.page-navigator.hj-posts-pager");
+        if (!pager) {
+            return;
+        }
+
+        var mq = null;
+        try {
+            mq = window.matchMedia ? window.matchMedia("(max-width: 980px)") : null;
+        } catch (e) {
+            mq = null;
+        }
+
+        var floatPager = null;
+        var ticking = false;
+        var raf = window.requestAnimationFrame
+            ? window.requestAnimationFrame.bind(window)
+            : function (callback) {
+                return window.setTimeout(callback, 16);
+            };
+
+        function isNarrow() {
+            if (mq) {
+                return mq.matches;
+            }
+            var width = window.innerWidth || document.documentElement.clientWidth || 0;
+            return width > 0 && width <= 980;
+        }
+
+        function ensureFloatPager() {
+            if (floatPager) {
                 return;
             }
 
-            if (resizeTimer) {
-                window.clearTimeout(resizeTimer);
-            }
-            resizeTimer = window.setTimeout(function () {
-                positionPanel();
-            }, 60);
+            floatPager = pager.cloneNode(true);
+            floatPager.classList.add("hj-posts-pager-float");
+            floatPager.setAttribute("aria-hidden", "true");
+            document.body.appendChild(floatPager);
         }
 
-        window.addEventListener("resize", scheduleReposition);
-        window.addEventListener("scroll", scheduleReposition, true);
+        function setVisible(visible) {
+            if (!floatPager) {
+                return;
+            }
+
+            if (visible) {
+                floatPager.classList.add("is-visible");
+                floatPager.removeAttribute("aria-hidden");
+            } else {
+                floatPager.classList.remove("is-visible");
+                floatPager.setAttribute("aria-hidden", "true");
+            }
+        }
+
+        function shouldShowFloatPager() {
+            var rect = pager.getBoundingClientRect();
+            var viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
+            if (!viewportH) {
+                return false;
+            }
+
+            // Show the floating pager only while you're above the real pager.
+            return rect.top > viewportH;
+        }
+
+        function update() {
+            if (!isNarrow()) {
+                if (floatPager) {
+                    floatPager.remove();
+                    floatPager = null;
+                }
+                return;
+            }
+
+            ensureFloatPager();
+            setVisible(shouldShowFloatPager());
+        }
+
+        function scheduleUpdate() {
+            if (ticking) {
+                return;
+            }
+            ticking = true;
+            raf(function () {
+                ticking = false;
+                update();
+            });
+        }
+
+        window.addEventListener("scroll", scheduleUpdate, { passive: true });
+        window.addEventListener("resize", scheduleUpdate);
+
+        if (mq) {
+            if (typeof mq.addEventListener === "function") {
+                mq.addEventListener("change", scheduleUpdate);
+            } else if (typeof mq.addListener === "function") {
+                mq.addListener(scheduleUpdate);
+            }
+        }
+
+        update();
     })();
 </script>
 

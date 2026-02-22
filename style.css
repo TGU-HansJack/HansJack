@@ -964,6 +964,7 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
     :root {
         --hj-header-h: 52px;
         --hj-header-actions-gap: 0.8em;
+        --hj-mobile-pager-h: calc(3rem + env(safe-area-inset-bottom, 0px));
     }
 
     html,
@@ -971,10 +972,29 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
         overflow-x: hidden;
     }
 
+    html.hj-mobile-nav-open,
+    html.hj-mobile-nav-open body {
+        overflow: hidden;
+    }
+
+    /* Keep the header button above the slide-in drawer. */
+    .hj-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2400;
+        background: var(--hj-day-bg);
+    }
+
+    html.hj-theme-dark .hj-header {
+        background: var(--hj-night-bg);
+    }
+
     .hj-header-inner {
         min-height: var(--hj-header-h);
         grid-template-columns: minmax(0, 1fr) auto;
-        column-gap: 0.6rem;
+        column-gap: 0.7rem;
         row-gap: 0;
         padding: 0.22rem 0;
     }
@@ -983,45 +1003,116 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
         padding: 0;
     }
 
+    /* Narrow screens: keep the brand and the drawer toggle in the top bar. */
+    .hj-header-left {
+        display: flex;
+    }
+
     .hj-header-center {
         display: none;
     }
 
-    .hj-brand {
-        font-size: 1.25rem;
+    .hj-header-right {
+        width: auto;
+        justify-content: flex-end;
+        gap: 0;
     }
 
     .hj-nav-toggle {
         display: inline-flex;
     }
 
+    .hj-header-right > :not(.hj-nav-toggle) {
+        display: none !important;
+    }
+
     .hj-mobile-nav {
         display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 2300;
+        pointer-events: none;
     }
 
     .hj-mobile-nav-panel {
-        position: fixed;
-        left: 50%;
-        top: 56px;
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 100%;
+        width: 66.666vw;
+        max-width: 66.666vw;
         min-width: 0;
-        width: max-content;
-        max-width: calc(100vw - 16px);
-        font-size: 0.82rem;
-        border: 2px solid var(--hj-day-black);
-        border-radius: 0;
+        font-size: 0.95rem;
+        border-left: 2px solid var(--hj-day-black);
         background: var(--hj-day-bg);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        opacity: 0;
-        transform: translateX(-50%) translateY(-1px);
-        transition: opacity 0.16s ease, transform 0.16s ease;
-        pointer-events: none;
-        z-index: 1200;
+        box-shadow: -8px 0 18px rgba(0, 0, 0, 0.12);
+        transform: translateX(101%);
+        transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+        pointer-events: auto;
+        overflow: auto;
+        padding: 0.85rem 0.75rem 1rem;
     }
 
     .hj-mobile-nav.is-open .hj-mobile-nav-panel {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
+        transform: translateX(0);
+    }
+
+    .hj-mobile-nav-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(42, 42, 40, 0.45);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+    }
+
+    .hj-mobile-nav.is-open {
         pointer-events: auto;
+    }
+
+    .hj-mobile-nav.is-open .hj-mobile-nav-backdrop {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .hj-mobile-nav-panel::-webkit-scrollbar {
+        display: none;
+    }
+
+    .hj-mobile-nav-panel {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .hj-mobile-nav-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .hj-mobile-nav-section-title {
+        padding: 0.25rem 0.44rem 0.15rem;
+        font-family: var(--hj-font-ui);
+        font-size: 0.78rem;
+        letter-spacing: 0.02em;
+        color: var(--hj-muted-day);
+    }
+
+    .hj-mobile-nav-divider {
+        height: 1px;
+        background: var(--hj-line-day);
+        margin: 0.7rem 0;
+    }
+
+    .hj-mobile-nav-panel .hj-user-dropdown-item {
+        padding: 0.44rem 0.5rem;
+    }
+
+    .hj-mobile-nav-panel button.hj-user-dropdown-item {
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        text-align: left;
     }
 
     .hj-landing-main {
@@ -1069,6 +1160,17 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
 /* Same behavior for /notes listing page. */
 .hj-page-notes .hj-main-shell {
     min-height: calc(100vh - var(--hj-header-h));
+}
+
+@media (max-width: 980px) {
+    /* Header is fixed on narrow screens, so reserve space for it. */
+    .hj-main-shell {
+        padding-top: var(--hj-header-h);
+    }
+
+    .hj-page-index .hj-main-shell {
+        padding-top: var(--hj-header-h);
+    }
 }
 
 .hj-page-index .hj-main {
@@ -1686,6 +1788,70 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
     width: 100%;
     height: 100%;
     display: block;
+}
+
+@media (max-width: 980px) {
+    /* Narrow screens: show a floating pager only while you're above the real pager. */
+    .hj-page-posts .hj-posts-pager-float.page-navigator,
+    .hj-page-notes .hj-posts-pager-float.page-navigator {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 2200;
+        margin: 0;
+        padding: 0.4rem 0.6rem calc(0.4rem + env(safe-area-inset-bottom, 0px));
+        background: var(--hj-day-bg);
+        gap: 0.6rem;
+        justify-content: center;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        display: none;
+    }
+
+    .hj-page-posts .hj-posts-pager-float.page-navigator.is-visible,
+    .hj-page-notes .hj-posts-pager-float.page-navigator.is-visible {
+        display: flex;
+    }
+
+    .hj-page-posts .hj-posts-pager-float.page-navigator::-webkit-scrollbar,
+    .hj-page-notes .hj-posts-pager-float.page-navigator::-webkit-scrollbar {
+        display: none;
+    }
+
+    .hj-page-posts .hj-main-shell,
+    .hj-page-notes .hj-main-shell {
+        padding-bottom: calc(2.4rem + var(--hj-mobile-pager-h));
+    }
+
+    .hj-page-posts .hj-fab,
+    .hj-page-notes .hj-fab {
+        bottom: calc(0.8rem + var(--hj-mobile-pager-h));
+    }
+
+    html.hj-mobile-nav-open .hj-posts-pager-float.page-navigator {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    html.hj-theme-dark .hj-page-posts .hj-posts-pager-float.page-navigator,
+    html.hj-theme-dark .hj-page-notes .hj-posts-pager-float.page-navigator {
+        background: var(--hj-night-bg);
+    }
+}
+
+@media (max-width: 980px) and (prefers-color-scheme: dark) {
+    html:not(.hj-theme-light) .hj-header {
+        background: var(--hj-night-bg);
+    }
+
+    html:not(.hj-theme-light) .hj-page-posts .hj-posts-pager-float.page-navigator,
+    html:not(.hj-theme-light) .hj-page-notes .hj-posts-pager-float.page-navigator {
+        background: var(--hj-night-bg);
+    }
 }
 
 .hj-posts-aside {
@@ -3340,11 +3506,19 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     html:not(.hj-theme-light) .hj-mobile-nav-panel {
         background: var(--hj-night-bg);
         border-color: var(--hj-night-white);
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+        box-shadow: -8px 0 18px rgba(0, 0, 0, 0.55);
     }
 
     html:not(.hj-theme-light) .hj-mobile-nav-backdrop {
         background: rgba(0, 0, 0, 0.5);
+    }
+
+    html:not(.hj-theme-light) .hj-mobile-nav-divider {
+        background: var(--hj-line-night);
+    }
+
+    html:not(.hj-theme-light) .hj-mobile-nav-section-title {
+        color: var(--hj-muted-night);
     }
 
     html:not(.hj-theme-light) .hj-terminal-window {
@@ -3543,11 +3717,19 @@ html.hj-theme-dark .hj-nav-dropdown {
 html.hj-theme-dark .hj-mobile-nav-panel {
     background: var(--hj-night-bg);
     border-color: var(--hj-night-white);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    box-shadow: -8px 0 18px rgba(0, 0, 0, 0.55);
 }
 
 html.hj-theme-dark .hj-mobile-nav-backdrop {
     background: rgba(0, 0, 0, 0.5);
+}
+
+html.hj-theme-dark .hj-mobile-nav-divider {
+    background: var(--hj-line-night);
+}
+
+html.hj-theme-dark .hj-mobile-nav-section-title {
+    color: var(--hj-muted-night);
 }
 
 html.hj-theme-dark .hj-terminal-window {
