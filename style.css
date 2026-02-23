@@ -3104,6 +3104,63 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     --hj-comment-thread-bg: var(--hj-day-bg);
 }   
 
+.hj-comments .hj-comments-head {
+    margin-top: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.9rem;
+    min-width: 0;
+}
+
+.hj-comments .hj-comments-head-title {
+    min-width: 0;
+    font-family: var(--hj-font-ui);
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hj-comments .hj-comments-head-actions {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+}
+
+.hj-comments .hj-comments-head-btn {
+    color: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    opacity: 0.86;
+}
+
+.hj-comments .hj-comments-head-btn svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+.hj-comments .hj-comments-head-btn:hover,
+.hj-comments .hj-comments-head-btn:focus-visible {
+    opacity: 1;
+}
+
+.hj-comments .hj-comments-head-btn:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
 .hj-comments .comment-list {
     margin: 0;
     padding: 0;
@@ -3119,6 +3176,10 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 
 .hj-comments [data-hj-comment-role="top"] ~ .comment-list {
     margin-top: 0.9rem;
+}
+
+.hj-comments .hj-comments-head + .comment-list {
+    margin-top: 0.6rem;
 }
 
 /* Keep the top composer always visible; hide the built-in "respond" form until replying. */
@@ -3612,6 +3673,59 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 .hj-comment-box:focus-within .hj-comment-composer-actions {
     background: var(--hj-day-black);
     color: var(--hj-day-white);
+}
+
+.hj-emoji-picker {
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(34px + 0.55rem);
+    max-height: 240px;
+    overflow: auto;
+    padding: 0.4rem;
+    border: 2px solid var(--hj-day-black);
+    border-radius: 0;
+    background: var(--hj-day-bg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 40;
+    pointer-events: auto;
+}
+
+.hj-emoji-picker[hidden] {
+    display: none;
+}
+
+.hj-emoji-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
+    gap: 0.15rem;
+}
+
+.hj-emoji-picker-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    transition: background-color 0.16s ease, transform 0.16s ease;
+}
+
+.hj-emoji-picker-btn:hover,
+.hj-emoji-picker-btn:focus-visible {
+    background: rgba(42, 42, 40, 0.06);
+}
+
+.hj-emoji-picker-btn:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 1px;
 }
 
 .hj-comment-actions-left,
@@ -4211,7 +4325,18 @@ html.hj-login-modal-open .hj-login-modal {
         background: var(--hj-line-night); 
         color: inherit; 
     } 
- 
+
+    html:not(.hj-theme-light) .hj-emoji-picker {
+        background: var(--hj-night-bg);
+        border-color: var(--hj-night-white);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    }
+
+    html:not(.hj-theme-light) .hj-emoji-picker-btn:hover,
+    html:not(.hj-theme-light) .hj-emoji-picker-btn:focus-visible {
+        background: rgba(221, 221, 219, 0.06);
+    }
+  
     html:not(.hj-theme-light) .hj-comments .comment-meta time {   
         color: var(--hj-muted-night);   
     }   
@@ -4504,7 +4629,18 @@ html.hj-theme-dark .hj-comment-composer-actions {
     background: var(--hj-line-night); 
     color: inherit; 
 } 
- 
+
+html.hj-theme-dark .hj-emoji-picker {
+    background: var(--hj-night-bg);
+    border-color: var(--hj-night-white);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+html.hj-theme-dark .hj-emoji-picker-btn:hover,
+html.hj-theme-dark .hj-emoji-picker-btn:focus-visible {
+    background: rgba(221, 221, 219, 0.06);
+}
+  
 html.hj-theme-dark .hj-comments .comment-meta time {   
     color: var(--hj-muted-night);   
 }   

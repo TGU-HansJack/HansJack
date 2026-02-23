@@ -4,7 +4,17 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
 }
 ?>
 
-<section id="comments" class="hj-comments" aria-label="<?php _e('评论'); ?>">
+<?php
+$hjCommentsOrder = 'asc';
+try {
+    $hjCommentsOrder = strtoupper((string) ($this->options->commentsOrder ?? 'ASC'));
+} catch (\Throwable $e) {
+    $hjCommentsOrder = 'ASC';
+}
+$hjCommentsOrder = ($hjCommentsOrder === 'DESC') ? 'desc' : 'asc';
+?>
+
+<section id="comments" class="hj-comments" aria-label="<?php _e('评论'); ?>" data-hj-comments-order="<?php echo hansJackEscape($hjCommentsOrder); ?>">
     <?php $this->comments()->to($comments); ?>
 
     <?php if ($this->allow('comment')): ?>
@@ -124,6 +134,25 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
     <?php endif; ?>
 
     <?php if ($comments->have()): ?> 
+        <?php
+        $hjSortTarget = ($hjCommentsOrder === 'desc') ? 'asc' : 'desc';
+        $hjSortLabel = ($hjSortTarget === 'asc') ? _t('切换为时间升序') : _t('切换为时间降序');
+        ?>
+        <div class="hj-comments-head" aria-label="<?php _e('评论'); ?>">
+            <div class="hj-comments-head-title"><?php _e('评论'); ?> <span aria-hidden="true">·</span> <?php $this->commentsNum('%d'); ?><?php _e('条'); ?></div>
+            <div class="hj-comments-head-actions" aria-label="<?php _e('操作'); ?>">
+                <button class="hj-comments-head-btn hj-comments-refresh-btn" type="button" aria-label="<?php _e('刷新评论'); ?>" title="<?php _e('刷新评论'); ?>" data-hj-comments-refresh>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw-icon lucide-refresh-cw" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                </button>
+                <button class="hj-comments-head-btn hj-comments-sort-btn" type="button" aria-label="<?php echo hansJackEscape($hjSortLabel); ?>" title="<?php echo hansJackEscape($hjSortLabel); ?>" data-hj-comments-sort-toggle>
+                    <?php if ($hjSortTarget === 'asc'): ?>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-arrow-up-icon lucide-clock-arrow-up" aria-hidden="true"><path d="M12 6v6l1.56.78"/><path d="M13.227 21.925a10 10 0 1 1 8.767-9.588"/><path d="m14 18 4-4 4 4"/><path d="M18 22v-8"/></svg>
+                    <?php else: ?>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-arrow-down-icon lucide-clock-arrow-down" aria-hidden="true"><path d="M12 6v6l2 1"/><path d="M12.337 21.994a10 10 0 1 1 9.588-8.767"/><path d="m14 18 4 4 4-4"/><path d="M18 14v8"/></svg>
+                    <?php endif; ?>
+                </button>
+            </div>
+        </div>
         <?php $comments->listComments([ 
             'callback' => 'threadedComments', 
             'replyWord' => '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-reply-icon lucide-reply"><path d="M20 18v-2a4 4 0 0 0-4-4H4"/><path d="m9 17-5-5 5-5"/></svg>' 

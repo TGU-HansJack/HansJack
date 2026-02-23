@@ -196,9 +196,12 @@
 
         function findCommentTarget() {
             return (
+                // Prefer the always-visible top composer; the built-in respond box is hidden
+                // until it is moved into a comment body for replying.
+                document.querySelector("[data-hj-comment-role=\"top\"]") ||
+                document.querySelector("#comments") ||
                 document.querySelector("[data-hj-comment-respond]") ||
                 document.querySelector("#respond") ||
-                document.querySelector("#comments") ||
                 document.querySelector(".respond") ||
                 document.querySelector(".comment-list")
             );
@@ -1398,6 +1401,176 @@
         if (!comments) { 
             return; 
         } 
+
+        (function setupCommentsToolbar() {
+            var refreshBtn = comments.querySelector("[data-hj-comments-refresh]");
+            if (refreshBtn) {
+                refreshBtn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    try {
+                        if (window && window.location && window.location.hash !== "#comments") {
+                            window.location.hash = "comments";
+                        }
+                    } catch (err) {}
+                    try {
+                        window.location.reload();
+                    } catch (err2) {}
+                });
+            }
+
+            var sortBtn = comments.querySelector("[data-hj-comments-sort-toggle]");
+            if (!sortBtn) {
+                return;
+            }
+
+            function getOrder() {
+                var v = (comments.getAttribute("data-hj-comments-order") || "asc").toLowerCase();
+                return v === "desc" ? "desc" : "asc";
+            }
+
+            function setOrder(v) {
+                comments.setAttribute("data-hj-comments-order", v === "desc" ? "desc" : "asc");
+            }
+
+            function updateSortLabel() {
+                var order = getOrder();
+                var target = order === "desc" ? "asc" : "desc";
+                var label = target === "asc" ? "切换为时间升序" : "切换为时间降序";
+                sortBtn.setAttribute("aria-label", label);
+                sortBtn.setAttribute("title", label);
+            }
+
+            var iconAsc = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-arrow-up-icon lucide-clock-arrow-up" aria-hidden="true"><path d="M12 6v6l1.56.78"/><path d="M13.227 21.925a10 10 0 1 1 8.767-9.588"/><path d="m14 18 4-4 4 4"/><path d="M18 22v-8"/></svg>';
+            var iconDesc = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-arrow-down-icon lucide-clock-arrow-down" aria-hidden="true"><path d="M12 6v6l2 1"/><path d="M12.337 21.994a10 10 0 1 1 9.588-8.767"/><path d="m14 18 4 4 4-4"/><path d="M18 14v8"/></svg>';
+
+            function renderSortIcon() {
+                var order = getOrder();
+                var target = order === "desc" ? "asc" : "desc";
+                sortBtn.innerHTML = target === "asc" ? iconAsc : iconDesc;
+            }
+
+            function reverseList(list) {
+                if (!list) {
+                    return;
+                }
+                var nodes = Array.prototype.slice.call(list.children || []);
+                for (var i = nodes.length - 1; i >= 0; i--) {
+                    list.appendChild(nodes[i]);
+                }
+            }
+
+            function cleanText(text) {
+                return String(text || "").replace(/\s+/g, " ").trim();
+            }
+
+            function shorten(text, maxLen) {
+                text = cleanText(text);
+                maxLen = parseInt(maxLen || "0", 10);
+                if (!isFinite(maxLen) || maxLen <= 0) {
+                    return text;
+                }
+                if (text.length <= maxLen) {
+                    return text;
+                }
+                if (maxLen <= 3) {
+                    return text.slice(0, maxLen);
+                }
+                return text.slice(0, maxLen - 3) + "...";
+            }
+
+            function rebuildPreview(detailsEl) {
+                if (!detailsEl) {
+                    return;
+                }
+                var preview = detailsEl.querySelector(".hj-comment-children-preview");
+                var list = detailsEl.querySelector(".hj-comment-children-full > .comment-list");
+                if (!preview || !list) {
+                    return;
+                }
+
+                var items = Array.prototype.slice.call(list.children || []).filter(function (n) {
+                    return n && n.classList && n.classList.contains("comment-body");
+                });
+
+                // Keep the same 5-item cap as the server-side render.
+                var maxItems = 5;
+                items = items.slice(0, maxItems);
+
+                while (preview.firstChild) {
+                    preview.removeChild(preview.firstChild);
+                }
+
+                items.forEach(function (item) {
+                    var authorEl = item.querySelector(".comment-author .fn");
+                    var author = cleanText(authorEl ? authorEl.textContent : "");
+                    if (!author) {
+                        author = "匿名";
+                    }
+
+                    var text = "";
+                    if (item.classList.contains("is-private-hidden")) {
+                        text = "私信内容";
+                    } else {
+                        var contentEl = item.querySelector(".comment-content");
+                        text = cleanText(contentEl ? contentEl.textContent : "");
+                        if (!text) {
+                            text = "（无内容）";
+                        } else {
+                            text = shorten(text, 72);
+                        }
+                    }
+
+                    var row = document.createElement("div");
+                    row.className = "hj-comment-children-preview-item";
+
+                    var a = document.createElement("span");
+                    a.className = "hj-comment-children-preview-author";
+                    a.textContent = author;
+
+                    var sep = document.createElement("span");
+                    sep.className = "hj-comment-children-preview-sep";
+                    sep.textContent = "：";
+
+                    var t = document.createElement("span");
+                    t.className = "hj-comment-children-preview-text";
+                    t.textContent = text;
+
+                    row.appendChild(a);
+                    row.appendChild(sep);
+                    row.appendChild(t);
+                    preview.appendChild(row);
+                });
+            }
+
+            function rebuildAllPreviews() {
+                var blocks = Array.prototype.slice.call(comments.querySelectorAll("details.hj-comment-children"));
+                blocks.forEach(rebuildPreview);
+            }
+
+            sortBtn.addEventListener("click", function (e) {
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+
+                // Flip current order.
+                var current = getOrder();
+                var next = current === "asc" ? "desc" : "asc";
+
+                // Reverse every comment list (top-level + threaded lists) to match Typecho's backend behavior.
+                var lists = Array.prototype.slice.call(comments.querySelectorAll(".comment-list"));
+                lists.forEach(reverseList);
+
+                setOrder(next);
+                updateSortLabel();
+                renderSortIcon();
+                rebuildAllPreviews();
+            });
+
+            updateSortLabel();
+            renderSortIcon();
+        })();
  
         function copyText(text) { 
             if (!text) { 
@@ -1600,6 +1773,33 @@
 
         var privateMarker = "<!--hj-private-->";
         var fullscreenRootClass = "hj-comment-fullscreen-open";
+        var activeEmojiClose = null;
+
+        var EMOJIS = [
+            "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙", "😋", "😛", "😜", "🤪", "😝", "🤑",
+            "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢", "🤮", "🤧",
+            "🥵", "🥶", "🥴", "😵", "🤯", "🤠", "🥳", "😎", "🤓", "🧐", "😕", "😟", "🙁", "☹️", "😮", "😯", "😲", "😳", "🥺", "😦", "😧", "😨", "😰", "😥",
+            "😢", "😭", "😱", "😖", "😣", "😞", "😓", "😩", "😫", "🥱", "😤", "😡", "😠", "🤬", "😈", "👿", "💀", "☠️", "💩", "🤡", "👻", "👽", "🤖",
+
+            "👍", "👎", "👌", "🤌", "🤏", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "👇", "☝️", "✋", "🤚", "🖐️", "🖖", "👋", "🤝", "🙏", "👏", "🙌", "💪", "🫶", "🫡",
+
+            "❤️", "🧡", "💛", "💚", "💙", "💜", "🤎", "🖤", "🤍", "💔", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "✨", "🔥", "🌟", "💫", "🎉", "🎊", "💯", "✅", "❌", "⚠️", "❗", "❓", "💡",
+
+            "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🐦", "🐤", "🦆", "🦉", "🦇", "🐺", "🦄",
+            "🐝", "🐛", "🦋", "🐌", "🐞", "🐢", "🐍", "🦖", "🦕", "🐙", "🦑", "🦀", "🐡", "🐠", "🐟", "🐬", "🦈", "🐳", "🐋",
+
+            "🍎", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍒", "🥝", "🍑", "🥭", "🍍", "🥥", "🥑", "🍅", "🥕", "🌽", "🥔", "🍠", "🍞", "🥐", "🥯", "🥖", "🧀",
+            "🥚", "🍳", "🥞", "🧇", "🥓", "🍗", "🍖", "🌭", "🍔", "🍟", "🍕", "🥪", "🥙", "🌮", "🌯", "🍣", "🍱", "🍜", "🍝", "🍛", "🍙", "🍚", "🍘", "🍥", "🥟", "🍤",
+            "🍦", "🍨", "🍰", "🎂", "🍪", "🍩", "🍫", "🍬", "🍭", "☕", "🫖", "🍵", "🥤", "🧋", "🍺", "🍻",
+
+            "⚽", "🏀", "🏈", "⚾", "🎾", "🏐", "🏉", "🥏", "🎱", "🏓", "🏸", "🥊", "🏆", "🥇", "🥈", "🥉",
+
+            "📌", "📍", "🧭", "🗺️", "🚗", "🚕", "🚌", "🚇", "✈️", "🛫", "🛬", "🚀", "🛰️", "🌍", "🌙", "☀️", "⛅", "🌧️", "❄️",
+
+            "📝", "✏️", "🖊️", "📷", "📸", "🎥", "📺", "📱", "💻", "⌨️", "🖥️", "🖨️", "🔋", "🔌", "💾", "💿", "📀", "🎧", "🎵", "🎶",
+
+            "🏠", "🏡", "🏢", "🏪", "🏫", "⛪", "🕌", "🛕", "🕍", "⛩️", "🏯", "🏰"
+        ];
 
         function openLogin(saveDraftFn) {
             if (!modal || !root) {
@@ -1676,6 +1876,7 @@
             var privateBtn = form.querySelector("[data-hj-comment-private-toggle]");
             var fullscreenBtn = form.querySelector("[data-hj-comment-fullscreen-toggle]");
             var loginBtn = form.querySelector("[data-hj-open-login]");
+            var emojiBtn = form.querySelector(".hj-comment-emoji");
 
             // Auto-grow the composer textarea with content (no manual resize).
             // Reply form is initially hidden; compute min height lazily on first focus.
@@ -1771,12 +1972,184 @@
                 } catch (e) {}
             }
 
+            var emojiPicker = null;
+            var emojiDocHandlersOn = false;
+
+            function ensureEmojiPicker() {
+                if (emojiPicker) {
+                    return emojiPicker;
+                }
+                if (!document || !box) {
+                    return null;
+                }
+
+                var picker = document.createElement("div");
+                picker.className = "hj-emoji-picker";
+                picker.hidden = true;
+                picker.setAttribute("role", "dialog");
+                picker.setAttribute("aria-label", "表情");
+                picker.setAttribute("data-hj-emoji-picker", "");
+
+                var grid = document.createElement("div");
+                grid.className = "hj-emoji-picker-grid";
+                grid.setAttribute("role", "listbox");
+                grid.setAttribute("aria-label", "表情列表");
+
+                var html = "";
+                for (var i = 0; i < EMOJIS.length; i++) {
+                    var emo = EMOJIS[i];
+                    html += "<button type=\"button\" class=\"hj-emoji-picker-btn\" data-hj-emoji=\"" + emo + "\" aria-label=\"" + emo + "\">" + emo + "</button>";
+                }
+                grid.innerHTML = html;
+                picker.appendChild(grid);
+
+                picker.addEventListener("click", function (e) {
+                    var t = e && e.target;
+                    if (!t || !t.closest) {
+                        return;
+                    }
+                    var btn = t.closest("[data-hj-emoji]");
+                    if (!btn) {
+                        return;
+                    }
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    var emo = btn.getAttribute("data-hj-emoji") || "";
+                    insertEmoji(emo);
+                    closeEmojiPicker();
+                });
+
+                box.appendChild(picker);
+                emojiPicker = picker;
+                return emojiPicker;
+            }
+
+            function insertEmoji(emoji) {
+                if (!emoji) {
+                    return;
+                }
+                try {
+                    textarea.focus();
+                } catch (e) {}
+
+                var start;
+                var end;
+                try {
+                    start = typeof textarea.selectionStart === "number" ? textarea.selectionStart : (textarea.value || "").length;
+                    end = typeof textarea.selectionEnd === "number" ? textarea.selectionEnd : (textarea.value || "").length;
+                } catch (e) {
+                    start = (textarea.value || "").length;
+                    end = start;
+                }
+
+                try {
+                    if (typeof textarea.setRangeText === "function" && typeof start === "number" && typeof end === "number") {
+                        textarea.setRangeText(emoji, start, end, "end");
+                    } else {
+                        var v = textarea.value || "";
+                        var before = v.slice(0, start);
+                        var after = v.slice(end);
+                        textarea.value = before + emoji + after;
+                        var pos = before.length + emoji.length;
+                        textarea.selectionStart = pos;
+                        textarea.selectionEnd = pos;
+                    }
+                } catch (e) {
+                    textarea.value = (textarea.value || "") + emoji;
+                }
+
+                autoGrowTextarea();
+                saveDraft();
+            }
+
+            function onEmojiDocMouseDown(e) {
+                var t = e && e.target;
+                if (!t) {
+                    return;
+                }
+                if (emojiBtn && (t === emojiBtn || (emojiBtn.contains && emojiBtn.contains(t)))) {
+                    return;
+                }
+                if (emojiPicker && (t === emojiPicker || (emojiPicker.contains && emojiPicker.contains(t)))) {
+                    return;
+                }
+                closeEmojiPicker();
+            }
+
+            function onEmojiDocKeyDown(e) {
+                var key = e && (e.key || e.code);
+                if (key === "Escape" || key === "Esc") {
+                    closeEmojiPicker();
+                }
+            }
+
+            function setEmojiPickerOpen(isOn) {
+                if (!emojiBtn) {
+                    return;
+                }
+                var picker = ensureEmojiPicker();
+                if (!picker) {
+                    return;
+                }
+
+                var currentlyOpen = !picker.hidden;
+                if (!!isOn === currentlyOpen) {
+                    return;
+                }
+
+                if (isOn && typeof activeEmojiClose === "function" && activeEmojiClose !== closeEmojiPicker) {
+                    try {
+                        activeEmojiClose();
+                    } catch (e) {}
+                }
+
+                picker.hidden = !isOn;
+                box.classList.toggle("is-emoji-open", !!isOn);
+                emojiBtn.setAttribute("aria-expanded", isOn ? "true" : "false");
+
+                if (isOn) {
+                    activeEmojiClose = closeEmojiPicker;
+                    if (!emojiDocHandlersOn) {
+                        emojiDocHandlersOn = true;
+                        document.addEventListener("mousedown", onEmojiDocMouseDown, true);
+                        window.addEventListener("keydown", onEmojiDocKeyDown, true);
+                    }
+                } else {
+                    if (activeEmojiClose === closeEmojiPicker) {
+                        activeEmojiClose = null;
+                    }
+                    if (emojiDocHandlersOn) {
+                        emojiDocHandlersOn = false;
+                        document.removeEventListener("mousedown", onEmojiDocMouseDown, true);
+                        window.removeEventListener("keydown", onEmojiDocKeyDown, true);
+                    }
+                }
+            }
+
+            function closeEmojiPicker() {
+                setEmojiPickerOpen(false);
+            }
+
             if (loginBtn) {
                 loginBtn.addEventListener("click", function (e) {
                     if (e && e.preventDefault) {
                         e.preventDefault();
                     }
                     openLogin(saveDraft);
+                });
+            }
+
+            if (emojiBtn) {
+                emojiBtn.setAttribute("aria-haspopup", "dialog");
+                emojiBtn.setAttribute("aria-expanded", "false");
+                emojiBtn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    var picker = ensureEmojiPicker();
+                    var isOn = picker && !picker.hidden;
+                    setEmojiPickerOpen(!isOn);
                 });
             }
 

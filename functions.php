@@ -519,6 +519,148 @@ function hansJackCanViewPrivateComment(int $ownerId, int $authorId): bool
     return false;
 }
 
+function hansJackThreadedCommentsMap($comments): array
+{
+    if (!is_object($comments)) {
+        return [];
+    }
+
+    static $cache = [];
+    $key = '';
+    try {
+        $key = function_exists('spl_object_id') ? (string) spl_object_id($comments) : spl_object_hash($comments);
+    } catch (\Throwable $e) {
+        $key = '';
+    }
+
+    if ($key !== '' && isset($cache[$key]) && is_array($cache[$key])) {
+        return $cache[$key];
+    }
+
+    $map = [];
+    try {
+        $ref = new \ReflectionObject($comments);
+        while ($ref && !$ref->hasProperty('threadedComments')) {
+            $ref = $ref->getParentClass();
+        }
+
+        if ($ref && $ref->hasProperty('threadedComments')) {
+            $prop = $ref->getProperty('threadedComments');
+            $prop->setAccessible(true);
+            $value = $prop->getValue($comments);
+            if (is_array($value)) {
+                $map = $value;
+            }
+        }
+    } catch (\Throwable $e) {
+        $map = [];
+    }
+
+    if ($key !== '') {
+        $cache[$key] = $map;
+    }
+
+    return $map;
+}
+
+function hansJackCountCommentDescendantsByMap(array $map, int $coid, array &$memo = []): int
+{
+    $coid = (int) $coid;
+    if ($coid <= 0) {
+        return 0;
+    }
+
+    if (isset($memo[$coid]) && is_int($memo[$coid])) {
+        return $memo[$coid];
+    }
+
+    if (empty($map[$coid]) || !is_array($map[$coid])) {
+        $memo[$coid] = 0;
+        return 0;
+    }
+
+    $children = $map[$coid];
+    $count = 0;
+
+    foreach ($children as $child) {
+        $count++;
+        $childId = 0;
+        if (is_array($child)) {
+            try {
+                $childId = (int) ($child['coid'] ?? 0);
+            } catch (\Throwable $e) {
+                $childId = 0;
+            }
+        } elseif (is_object($child)) {
+            try {
+                $childId = (int) ($child->coid ?? 0);
+            } catch (\Throwable $e) {
+                $childId = 0;
+            }
+        }
+
+        if ($childId > 0) {
+            $count += hansJackCountCommentDescendantsByMap($map, $childId, $memo);
+        }
+    }
+
+    $memo[$coid] = $count;
+    return $count;
+}
+
+function hansJackCountCommentDescendants($comments): int
+{
+    if (!is_object($comments)) {
+        return 0;
+    }
+
+    static $memoByWidget = [];
+
+    $widgetKey = '';
+    try {
+        $widgetKey = function_exists('spl_object_id') ? (string) spl_object_id($comments) : spl_object_hash($comments);
+    } catch (\Throwable $e) {
+        $widgetKey = '';
+    }
+
+    $coid = 0;
+    try {
+        $coid = (int) ($comments->coid ?? 0);
+    } catch (\Throwable $e) {
+        $coid = 0;
+    }
+
+    if ($coid <= 0) {
+        try {
+            $children = $comments->children;
+            return is_array($children) ? count($children) : 0;
+        } catch (\Throwable $e) {
+            return 0;
+        }
+    }
+
+    $map = hansJackThreadedCommentsMap($comments);
+    if (empty($map)) {
+        try {
+            $children = $comments->children;
+            return is_array($children) ? count($children) : 0;
+        } catch (\Throwable $e) {
+            return 0;
+        }
+    }
+
+    if ($widgetKey === '') {
+        $tmpMemo = [];
+        return hansJackCountCommentDescendantsByMap($map, $coid, $tmpMemo);
+    }
+
+    if (!isset($memoByWidget[$widgetKey]) || !is_array($memoByWidget[$widgetKey])) {
+        $memoByWidget[$widgetKey] = [];
+    }
+
+    return hansJackCountCommentDescendantsByMap($map, $coid, $memoByWidget[$widgetKey]);
+}
+
 function threadedComments($comments, $singleCommentOptions): void
 {
     if (!$comments) {
@@ -620,9 +762,10 @@ function threadedComments($comments, $singleCommentOptions): void
         <?php if ($comments->children) { ?>
             <?php
             $hjChildren = $comments->children;
-            $hjChildrenCount = is_array($hjChildren) ? count($hjChildren) : 0;
+            $hjChildrenDirectCount = is_array($hjChildren) ? count($hjChildren) : 0;
+            $hjChildrenCount = hansJackCountCommentDescendants($comments);
             $hjChildrenPreview = [];
-            if ($hjChildrenCount > 0) {
+            if ($hjChildrenDirectCount > 0) {
                 $hjChildrenPreview = array_slice($hjChildren, 0, 5);
             }
             ?>
