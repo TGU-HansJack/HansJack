@@ -565,6 +565,16 @@ function threadedComments($comments, $singleCommentOptions): void
             $commentClass .= ' is-private-hidden';
         }
     }
+
+    $hjHasChildren = false;
+    try {
+        $hjHasChildren = !empty($comments->children);
+    } catch (\Throwable $e) {
+        $hjHasChildren = false;
+    }
+    if ($hjHasChildren) {
+        $commentClass .= ' hj-comment-has-children';
+    }
     ?>
     <li itemscope itemtype="http://schema.org/UserComments" id="<?php $comments->theId(); ?>" class="comment-body<?php 
     if ($comments->levels > 0) { 
@@ -584,19 +594,21 @@ function threadedComments($comments, $singleCommentOptions): void
                     $singleCommentOptions->avatarHighRes  
                 ); ?>  
             </span>
-            <cite class="fn" itemprop="name"><?php $singleCommentOptions->beforeAuthor();
-                $comments->author();
-                $singleCommentOptions->afterAuthor(); ?></cite>
-        </div> 
-        <div class="comment-meta"> 
-            <time itemprop="commentTime" datetime="<?php $comments->date('c'); ?>"><?php 
-                $singleCommentOptions->beforeDate(); 
-                $comments->date($singleCommentOptions->dateFormat); 
-                $singleCommentOptions->afterDate(); 
-            ?></time> 
-            <?php if ('approved' !== $comments->status) { ?> 
-                <em class="comment-awaiting-moderation"><?php $singleCommentOptions->commentStatus(); ?></em> 
-            <?php } ?> 
+            <div class="hj-comment-author-meta">
+                <cite class="fn" itemprop="name"><?php $singleCommentOptions->beforeAuthor();
+                    $comments->author();
+                    $singleCommentOptions->afterAuthor(); ?></cite>
+                <div class="comment-meta"> 
+                    <time itemprop="commentTime" datetime="<?php $comments->date('c'); ?>"><?php 
+                        $singleCommentOptions->beforeDate(); 
+                        $comments->date($singleCommentOptions->dateFormat); 
+                        $singleCommentOptions->afterDate(); 
+                    ?></time> 
+                    <?php if ('approved' !== $comments->status) { ?> 
+                        <em class="comment-awaiting-moderation"><?php $singleCommentOptions->commentStatus(); ?></em> 
+                    <?php } ?> 
+                </div> 
+            </div>
         </div> 
         <div class="comment-content hj-comment-content<?php echo $isPrivate ? ' is-private' : ''; ?><?php echo ($isPrivate && !$canViewPrivate) ? ' is-private-hidden' : ''; ?>" itemprop="commentText">
             <?php if ($isPrivate && !$canViewPrivate): ?>
@@ -605,17 +617,85 @@ function threadedComments($comments, $singleCommentOptions): void
                 <?php $comments->content(); ?>
             <?php endif; ?>
         </div> 
+        <?php if ($comments->children) { ?>
+            <?php
+            $hjChildren = $comments->children;
+            $hjChildrenCount = is_array($hjChildren) ? count($hjChildren) : 0;
+            $hjChildrenPreview = [];
+            if ($hjChildrenCount > 0) {
+                $hjChildrenPreview = array_slice($hjChildren, 0, 5);
+            }
+            ?>
+            <details class="comment-children hj-comment-children" itemprop="discusses" data-hj-comment-children data-hj-comment-children-count="<?php echo (int) $hjChildrenCount; ?>">
+                <summary class="hj-comment-children-summary">
+                    <div class="hj-comment-children-preview" aria-label="<?php _e('回复预览'); ?>">
+                        <?php foreach ($hjChildrenPreview as $hjChild): ?>
+                            <?php
+                            $hjChildAuthor = '';
+                            try {
+                                $hjChildAuthor = (string) ($hjChild['author'] ?? '');
+                            } catch (\Throwable $e) {
+                                $hjChildAuthor = '';
+                            }
+
+                            $hjChildRaw = '';
+                            try {
+                                $hjChildRaw = (string) ($hjChild['text'] ?? '');
+                            } catch (\Throwable $e) {
+                                $hjChildRaw = '';
+                            }
+
+                            $hjChildIsPrivate = hansJackIsPrivateCommentText($hjChildRaw);
+                            $hjChildCanView = true;
+                            if ($hjChildIsPrivate) {
+                                $hjChildOwnerId = 0;
+                                $hjChildAuthorId = 0;
+                                try {
+                                    $hjChildOwnerId = (int) ($hjChild['ownerId'] ?? 0);
+                                } catch (\Throwable $e) {
+                                    $hjChildOwnerId = 0;
+                                }
+                                try {
+                                    $hjChildAuthorId = (int) ($hjChild['authorId'] ?? 0);
+                                } catch (\Throwable $e) {
+                                    $hjChildAuthorId = 0;
+                                }
+                                $hjChildCanView = hansJackCanViewPrivateComment($hjChildOwnerId, $hjChildAuthorId);
+                            }
+
+                            if ($hjChildIsPrivate && !$hjChildCanView) {
+                                $hjChildPreviewText = _t('私信内容');
+                            } else {
+                                $hjChildPreviewText = hansJackStripPrivateCommentMarker($hjChildRaw);
+                                $hjChildPreviewText = strip_tags($hjChildPreviewText);
+                                $hjChildPreviewText = (string) preg_replace('/\\s+/u', ' ', $hjChildPreviewText);
+                                $hjChildPreviewText = trim($hjChildPreviewText);
+                                if ($hjChildPreviewText === '') {
+                                    $hjChildPreviewText = _t('（无内容）');
+                                } else {
+                                    $hjChildPreviewText = Common::subStr($hjChildPreviewText, 0, 72, '...');
+                                }
+                            }
+                            ?>
+                            <div class="hj-comment-children-preview-item">
+                                <span class="hj-comment-children-preview-author"><?php echo hansJackEscape($hjChildAuthor); ?></span><span class="hj-comment-children-preview-sep">：</span><span class="hj-comment-children-preview-text"><?php echo hansJackEscape($hjChildPreviewText); ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <span class="hj-comment-children-toggle hj-comment-children-toggle-closed"><?php echo _t('共') . (int) $hjChildrenCount . _t('条回复'); ?></span>
+                    <span class="hj-comment-children-toggle hj-comment-children-toggle-open"><?php _e('收起回复'); ?></span>
+                </summary>
+                <div class="hj-comment-children-full">
+                    <?php $comments->threadedComments(); ?>
+                </div>
+            </details>
+        <?php } ?>
         <div class="comment-reply"> 
             <?php $comments->reply($singleCommentOptions->replyWord); ?> 
             <button class="hj-comment-share-btn" type="button" aria-label="<?php _e('分享'); ?>" title="<?php _e('分享'); ?>" data-hj-comment-share="<?php $comments->permalink(); ?>"> 
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-share2-icon lucide-share-2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg> 
             </button> 
         </div> 
-        <?php if ($comments->children) { ?> 
-            <div class="comment-children" itemprop="discusses"> 
-                <?php $comments->threadedComments(); ?> 
-            </div> 
-        <?php } ?>
     </li>
     <?php
 }

@@ -1472,210 +1472,68 @@
                 }); 
             });  
         })();  
- 
-        (function setupCommentThreadCollapse() { 
-            // Collapse very deep threads to keep the tree readable. 
-            // Levels: 0 = top-level comment, 1 = reply, ... 
-            var collapseFromLevel = 3; 
-            var items = Array.prototype.slice.call(comments.querySelectorAll(".comment-body[data-hj-comment-level]")); 
-            if (!items || items.length === 0) { 
-                return; 
-            } 
- 
-            function findDirectChildrenContainer(item) { 
-                if (!item || !item.children) { 
-                    return null; 
-                } 
-                for (var i = 0; i < item.children.length; i++) { 
-                    var el = item.children[i]; 
-                    if (el && el.classList && el.classList.contains("comment-children")) { 
-                        return el; 
-                    } 
-                } 
-                return null; 
-            } 
- 
-            items.forEach(function (item) { 
-                var level = parseInt(item.getAttribute("data-hj-comment-level") || "0", 10); 
-                if (!isFinite(level) || level < collapseFromLevel) { 
-                    return; 
-                } 
- 
-                var children = findDirectChildrenContainer(item); 
-                if (!children) { 
-                    return; 
-                } 
- 
-                if (item.querySelector("[data-hj-comment-more-toggle]")) { 
-                    return; 
-                } 
- 
-                children.hidden = true; 
- 
-                var btn = document.createElement("button"); 
-                btn.type = "button"; 
-                btn.className = "hj-comment-more-toggle"; 
-                btn.setAttribute("data-hj-comment-more-toggle", ""); 
-                btn.setAttribute("aria-expanded", "false"); 
-                btn.textContent = "展开更多回复"; 
- 
-                btn.addEventListener("click", function () { 
-                    var expanded = btn.getAttribute("aria-expanded") === "true"; 
-                    expanded = !expanded; 
-                    btn.setAttribute("aria-expanded", expanded ? "true" : "false"); 
-                    children.hidden = !expanded; 
-                    btn.textContent = expanded ? "收起回复" : "展开更多回复"; 
-                }); 
- 
-                item.insertBefore(btn, children); 
-            }); 
-        })(); 
 
-        (function setupCommentThreadGuides() {
-            var parentClass = "hj-comment-thread-parent";
-            var childClass = "hj-comment-thread-child";
-
-            function clearParent(el) {
-                if (!el || !el.classList) {
+        (function setupCommentChildrenToggleGuard() {
+            // Only the "共x条回复 / 收起回复" text can toggle <details>.
+            comments.addEventListener("click", function (e) {
+                var t = e && e.target;
+                if (!t || !t.closest) {
                     return;
                 }
-                el.classList.remove(parentClass);
-                el.style.removeProperty("--hj-thread-x");
-                el.style.removeProperty("--hj-thread-y1");
-                el.style.removeProperty("--hj-thread-y2");
-            }
 
-            function clearChild(el) {
-                if (!el || !el.classList) {
+                var summary = t.closest("summary.hj-comment-children-summary");
+                if (!summary) {
                     return;
                 }
-                el.classList.remove(childClass);
-                el.style.removeProperty("--hj-branch-x");
-                el.style.removeProperty("--hj-branch-x2");
-                el.style.removeProperty("--hj-branch-y");
-            }
 
-            function isVisible(el) {
-                if (!el) {
-                    return false;
+                var toggle = t.closest(".hj-comment-children-toggle");
+                if (toggle) {
+                    return;
                 }
-                if (el.hidden) {
-                    return false;
-                }
-                try {
-                    return !!(el.getClientRects && el.getClientRects().length);
-                } catch (e) {
-                    return true;
-                }
-            }
 
-            function findDirectChildrenContainer(parent) {
-                if (!parent || !parent.children) {
-                    return null;
+                if (e && typeof e.preventDefault === "function") {
+                    e.preventDefault();
                 }
-                for (var i = 0; i < parent.children.length; i++) {
-                    var el = parent.children[i];
-                    if (el && el.classList && el.classList.contains("comment-children")) {
-                        return el;
-                    }
+                if (e && typeof e.stopPropagation === "function") {
+                    e.stopPropagation();
                 }
-                return null;
-            }
+            }, true);
+        })();
+
+        (function setupCommentAvatarSizing() {
+            // Make the avatar diameter match the author-meta two-line height.
+            // We also update --hj-comment-avatar-size so all left indents stay aligned.
+            var raf = window.requestAnimationFrame || function (fn) { return window.setTimeout(fn, 16); };
+            var ticking = false;
 
             function update() {
-                // Clear previous state.
-                Array.prototype.slice.call(comments.querySelectorAll("." + parentClass)).forEach(clearParent);
-                Array.prototype.slice.call(comments.querySelectorAll("." + childClass)).forEach(clearChild);
+                var items = Array.prototype.slice.call(comments.querySelectorAll(".comment-body"));
+                if (!items || items.length === 0) {
+                    return;
+                }
 
-                var parents = Array.prototype.slice.call(comments.querySelectorAll(".comment-body"));
-                parents.forEach(function (parent) {
-                    var childrenWrap = findDirectChildrenContainer(parent);
-                    if (!childrenWrap || !isVisible(childrenWrap)) {
+                items.forEach(function (item) {
+                    var meta = item.querySelector(".hj-comment-author-meta");
+                    if (!meta) {
                         return;
                     }
 
-                    var list = childrenWrap.querySelector(".comment-list");
-                    if (!list || !isVisible(list)) {
+                    var rect;
+                    try {
+                        rect = meta.getBoundingClientRect();
+                    } catch (e) {
+                        rect = null;
+                    }
+                    if (!rect || !isFinite(rect.height) || rect.height <= 0) {
                         return;
                     }
 
-                    var direct = Array.prototype.slice.call(list.children || []).filter(function (n) {
-                        return n && n.classList && n.classList.contains("comment-body");
-                    });
-                    if (!direct || direct.length === 0) {
-                        return;
-                    }
-
-                    var parentAvatar = parent.querySelector(".comment-author img.avatar");
-                    if (!parentAvatar || !isVisible(parentAvatar)) {
-                        return;
-                    }
-
-                    // Only consider visible children for the line end.
-                    var visibleChildren = direct.filter(function (c) {
-                        return isVisible(c);
-                    });
-                    if (visibleChildren.length === 0) {
-                        return;
-                    }
-
-                    // Vertical trunk stops at the last direct child avatar.
-                    var last = visibleChildren[visibleChildren.length - 1];
-                    var lastAvatar = last.querySelector(".comment-author img.avatar");
-                    if (!lastAvatar || !isVisible(lastAvatar)) {
-                        return;
-                    }
-
-                    var parentRect = parent.getBoundingClientRect();
-                    var parentAvatarRect = parentAvatar.getBoundingClientRect();
-                    var lastAvatarRect = lastAvatar.getBoundingClientRect();
-
-                    var x = (parentAvatarRect.left - parentRect.left) + (parentAvatarRect.width / 2);
-                    var y1 = (parentAvatarRect.bottom - parentRect.top);
-                    var y2 = (lastAvatarRect.top - parentRect.top) + (lastAvatarRect.height / 2);
-                    if (!isFinite(x) || !isFinite(y1) || !isFinite(y2) || y2 <= y1) {
-                        return;
-                    }
-
-                    parent.classList.add(parentClass);
-                    parent.style.setProperty("--hj-thread-x", x.toFixed(2) + "px");
-                    parent.style.setProperty("--hj-thread-y1", y1.toFixed(2) + "px");
-                    parent.style.setProperty("--hj-thread-y2", y2.toFixed(2) + "px");
-
-                    // Branch lines + junction dots for each direct child.
-                    visibleChildren.forEach(function (child) {
-                        var childAvatar = child.querySelector(".comment-author img.avatar");
-                        if (!childAvatar || !isVisible(childAvatar)) {
-                            return;
-                        }
-
-                        var childRect = child.getBoundingClientRect();
-                        var childAvatarRect = childAvatar.getBoundingClientRect();
-
-                        var childOffsetX = (childRect.left - parentRect.left);
-                        var branchX = x - childOffsetX;
-                        var branchY = (childAvatarRect.top - childRect.top) + (childAvatarRect.height / 2);
-                        var branchX2 = (childAvatarRect.left - childRect.left);
-
-                        if (!isFinite(branchX) || !isFinite(branchY) || !isFinite(branchX2)) {
-                            return;
-                        }
-
-                        // Ensure we have a visible segment.
-                        if (branchX2 <= branchX) {
-                            return;
-                        }
-
-                        child.classList.add(childClass);
-                        child.style.setProperty("--hj-branch-x", branchX.toFixed(2) + "px");
-                        child.style.setProperty("--hj-branch-y", branchY.toFixed(2) + "px");
-                        child.style.setProperty("--hj-branch-x2", branchX2.toFixed(2) + "px");
-                    });
+                    // Clamp to a reasonable minimum so it doesn't collapse on edge cases.
+                    var h = Math.max(24, rect.height);
+                    item.style.setProperty("--hj-comment-avatar-size", h.toFixed(2) + "px");
                 });
             }
 
-            var raf = window.requestAnimationFrame || function (fn) { return window.setTimeout(fn, 16); };
-            var ticking = false;
             function requestUpdate() {
                 if (ticking) {
                     return;
@@ -1687,47 +1545,19 @@
                 });
             }
 
-            // Recompute on resize.
             window.addEventListener("resize", requestUpdate);
 
-            // Recompute after toggling "more replies".
+            // Recompute after expanding/collapsing reply blocks.
             comments.addEventListener("click", function (e) {
                 var t = e && e.target;
-                if (!t) {
+                if (!t || !t.closest) {
                     return;
                 }
-                if (t.closest && t.closest("[data-hj-comment-more-toggle]")) {
-                    requestUpdate();
-                }
-            });
-
-            // Recompute after Typecho moves the reply form in/out (reply/cancel).
-            (function hookTypechoReply() {
-                if (!window || !window.TypechoComment) {
+                if (!t.closest(".hj-comment-children-toggle")) {
                     return;
                 }
-                var tc = window.TypechoComment;
-                if (!tc || tc.__hj_thread_guides_hooked) {
-                    return;
-                }
-                var origReply = tc.reply;
-                var origCancel = tc.cancelReply;
-                if (typeof origReply === "function") {
-                    tc.reply = function () {
-                        var r = origReply.apply(tc, arguments);
-                        requestUpdate();
-                        return r;
-                    };
-                }
-                if (typeof origCancel === "function") {
-                    tc.cancelReply = function () {
-                        var r = origCancel.apply(tc, arguments);
-                        requestUpdate();
-                        return r;
-                    };
-                }
-                tc.__hj_thread_guides_hooked = true;
-            })();
+                window.setTimeout(requestUpdate, 0);
+            }, true);
 
             requestUpdate();
         })();
