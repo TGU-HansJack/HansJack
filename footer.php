@@ -1771,6 +1771,13 @@
         var panel = modal ? modal.querySelector("[data-hj-login-panel]") : null;
         var loginOpenClass = "hj-login-modal-open";
 
+        var commentsUserLogged = comments.getAttribute("data-hj-user-logged") === "1";
+        var commentsRequireMail = comments.getAttribute("data-hj-comments-require-mail") === "1";
+        var commentsRequireUrl = comments.getAttribute("data-hj-comments-require-url") === "1";
+
+        var identityKey = "hj_comment_identity_" + (location && location.pathname ? location.pathname : "page");
+        var loginFocusTarget = null;
+
         var privateMarker = "<!--hj-private-->";
         var fullscreenRootClass = "hj-comment-fullscreen-open";
         var activeEmojiClose = null;
@@ -1801,13 +1808,128 @@
             "🏠", "🏡", "🏢", "🏪", "🏫", "⛪", "🕌", "🛕", "🕍", "⛩️", "🏯", "🏰"
         ];
 
-        function openLogin(saveDraftFn) {
+        function trimText(value) {
+            return String(value || "").replace(/\s+/g, " ").trim();
+        }
+
+        function readInputValue(input) {
+            if (!input) {
+                return "";
+            }
+            return trimText(input.value || "");
+        }
+
+        function loadIdentity() {
+            try {
+                var raw = sessionStorage.getItem(identityKey);
+                if (!raw) {
+                    return null;
+                }
+                var parsed = JSON.parse(raw);
+                if (!parsed || typeof parsed !== "object") {
+                    return null;
+                }
+                return {
+                    author: trimText(parsed.author || ""),
+                    url: trimText(parsed.url || ""),
+                    mail: trimText(parsed.mail || "")
+                };
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function saveIdentity(id) {
+            try {
+                sessionStorage.setItem(identityKey, JSON.stringify({
+                    author: trimText(id && id.author ? id.author : ""),
+                    url: trimText(id && id.url ? id.url : ""),
+                    mail: trimText(id && id.mail ? id.mail : "")
+                }));
+            } catch (e) {}
+        }
+
+        function readIdentityFromForms() {
+            if (!forms || forms.length === 0) {
+                return null;
+            }
+            var f = forms[0];
+            if (!f || !f.querySelector) {
+                return null;
+            }
+            var author = readInputValue(f.querySelector("input[name=\"author\"]"));
+            var url = readInputValue(f.querySelector("input[name=\"url\"]"));
+            var mail = readInputValue(f.querySelector("input[name=\"mail\"]"));
+            if (!author && !url && !mail) {
+                return null;
+            }
+            return { author: author, url: url, mail: mail };
+        }
+
+        function applyIdentityToForm(form, id) {
+            if (!form || !id) {
+                return;
+            }
+            var author = form.querySelector("input[name=\"author\"]");
+            var url = form.querySelector("input[name=\"url\"]");
+            var mail = form.querySelector("input[name=\"mail\"]");
+
+            if (author) author.value = id.author || "";
+            if (url) url.value = id.url || "";
+            if (mail) mail.value = id.mail || "";
+        }
+
+        function applyIdentityToAllForms(id) {
+            if (!forms || forms.length === 0 || !id) {
+                return;
+            }
+            forms.forEach(function (f) {
+                applyIdentityToForm(f, id);
+            });
+        }
+
+        function syncModalInputs(id) {
+            if (!modal || !id) {
+                return;
+            }
+            var nameInput = modal.querySelector("#hj-login-name");
+            var urlInput = modal.querySelector("#hj-login-url");
+            var mailInput = modal.querySelector("#hj-login-mail");
+            if (nameInput) nameInput.value = id.author || "";
+            if (urlInput) urlInput.value = id.url || "";
+            if (mailInput) mailInput.value = id.mail || "";
+        }
+
+        // Restore identity into hidden comment fields (so guest comments can submit without extra fields).
+        (function restoreIdentityToForms() {
+            var id = loadIdentity();
+            if (!id) {
+                id = readIdentityFromForms();
+            }
+            if (!id) {
+                return;
+            }
+            applyIdentityToAllForms(id);
+        })();
+
+        function openLogin(saveDraftFn, focusTarget) {
             if (!modal || !root) {
                 return;
             }
             if (typeof saveDraftFn === "function") {
                 saveDraftFn();
             }
+            loginFocusTarget = focusTarget || null;
+
+            // Ensure modal inputs reflect the last saved identity.
+            var id = loadIdentity();
+            if (!id) {
+                id = readIdentityFromForms();
+            }
+            if (id) {
+                syncModalInputs(id);
+            }
+
             root.classList.add(loginOpenClass);
             modal.setAttribute("aria-hidden", "false");
 
@@ -1831,6 +1953,16 @@
             }
             root.classList.remove(loginOpenClass);
             modal.setAttribute("aria-hidden", "true");
+
+            if (loginFocusTarget) {
+                var target = loginFocusTarget;
+                loginFocusTarget = null;
+                window.setTimeout(function () {
+                    try {
+                        target.focus();
+                    } catch (e) {}
+                }, 0);
+            }
         }
 
         if (backdrop) {
@@ -1848,6 +1980,91 @@
                 closeLogin();
             }
         });
+
+        // The "login" modal doubles as the guest identity editor:
+        // - If password is empty: save author/url/mail and close.
+        // - If password is filled: submit to Typecho login action as usual.
+        (function setupLoginIdentityForm() {
+            if (!modal) {
+                return;
+            }
+            var form = modal.querySelector("form");
+            if (!form) {
+                return;
+            }
+
+            var nameInput = modal.querySelector("#hj-login-name");
+            var urlInput = modal.querySelector("#hj-login-url");
+            var mailInput = modal.querySelector("#hj-login-mail");
+            var passInput = modal.querySelector("#hj-login-pass");
+            var submitBtn = form.querySelector(".hj-login-modal-submit");
+
+            function updateSubmitLabel() {
+                if (!submitBtn) {
+                    return;
+                }
+                var password = readInputValue(passInput);
+                var next = password ? "登录" : "保存";
+                // Avoid touching the DOM if nothing changes.
+                if (submitBtn.textContent !== next) {
+                    submitBtn.textContent = next;
+                }
+                submitBtn.setAttribute("aria-label", next);
+                submitBtn.setAttribute("title", next);
+            }
+
+            if (passInput) {
+                passInput.addEventListener("input", updateSubmitLabel);
+                passInput.addEventListener("change", updateSubmitLabel);
+            }
+            // Browser autofill may not trigger input events; set initial state.
+            updateSubmitLabel();
+
+            function focusFirstMissing(id) {
+                if (!id.author && nameInput) {
+                    try { nameInput.focus(); } catch (e) {}
+                    return true;
+                }
+                if (!commentsUserLogged && commentsRequireUrl && !id.url && urlInput) {
+                    try { urlInput.focus(); } catch (e) {}
+                    return true;
+                }
+                if (!commentsUserLogged && commentsRequireMail && !id.mail && mailInput) {
+                    try { mailInput.focus(); } catch (e) {}
+                    return true;
+                }
+                return false;
+            }
+
+            form.addEventListener("submit", function (e) {
+                var password = readInputValue(passInput);
+                if (password) {
+                    return;
+                }
+
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+
+                var id = {
+                    author: readInputValue(nameInput),
+                    url: readInputValue(urlInput),
+                    mail: readInputValue(mailInput)
+                };
+
+                if (focusFirstMissing(id)) {
+                    return;
+                }
+
+                saveIdentity(id);
+                applyIdentityToAllForms(id);
+                if (passInput) {
+                    passInput.value = "";
+                }
+                updateSubmitLabel();
+                closeLogin();
+            });
+        })();
 
         function cancelReplyIfAny() {
             if (!window || !window.TypechoComment || typeof window.TypechoComment.cancelReply !== "function") {
@@ -1871,7 +2088,11 @@
 
             var role = form.getAttribute("data-hj-comment-role") || "default";
             var isTop = role === "top";
-            var requireLogin = form.getAttribute("data-hj-require-login") === "1";
+            var isUserLogged = form.getAttribute("data-hj-user-logged") === "1";
+
+            var authorInput = form.querySelector("input[name=\"author\"]");
+            var urlInput = form.querySelector("input[name=\"url\"]");
+            var mailInput = form.querySelector("input[name=\"mail\"]");
 
             var privateBtn = form.querySelector("[data-hj-comment-private-toggle]");
             var fullscreenBtn = form.querySelector("[data-hj-comment-fullscreen-toggle]");
@@ -2136,7 +2357,7 @@
                     if (e && e.preventDefault) {
                         e.preventDefault();
                     }
-                    openLogin(saveDraft);
+                    openLogin(saveDraft, textarea);
                 });
             }
 
@@ -2213,12 +2434,17 @@
             form.addEventListener("submit", function (e) {
                 var isPrivate = privateBtn && privateBtn.getAttribute("aria-pressed") === "true";
 
-                if (requireLogin) {
-                    if (e && e.preventDefault) {
-                        e.preventDefault();
+                if (!isUserLogged) {
+                    var author = readInputValue(authorInput);
+                    var url = readInputValue(urlInput);
+                    var mail = readInputValue(mailInput);
+                    if (!author || (commentsRequireUrl && !url) || (commentsRequireMail && !mail)) {
+                        if (e && e.preventDefault) {
+                            e.preventDefault();
+                        }
+                        openLogin(saveDraft, textarea);
+                        return;
                     }
-                    openLogin(saveDraft);
-                    return;
                 }
 
                 if (isPrivate) {

@@ -12,19 +12,38 @@ try {
     $hjCommentsOrder = 'ASC';
 }
 $hjCommentsOrder = ($hjCommentsOrder === 'DESC') ? 'desc' : 'asc';
+
+$hjUserLoggedIn = false;
+try {
+    $hjUserLoggedIn = (bool) ($this->user && $this->user->hasLogin());
+} catch (\Throwable $e) {
+    $hjUserLoggedIn = false;
+}
+
+$hjRequireMail = false;
+try {
+    $hjRequireMail = (bool) ($this->options->commentsRequireMail ?? false);
+} catch (\Throwable $e) {
+    $hjRequireMail = false;
+}
+
+$hjRequireUrl = false;
+try {
+    $hjRequireUrl = (bool) ($this->options->commentsRequireUrl ?? false);
+} catch (\Throwable $e) {
+    $hjRequireUrl = false;
+}
 ?>
 
-<section id="comments" class="hj-comments" aria-label="<?php _e('评论'); ?>" data-hj-comments-order="<?php echo hansJackEscape($hjCommentsOrder); ?>">
+<section id="comments" class="hj-comments" aria-label="<?php _e('评论'); ?>"
+         data-hj-comments-order="<?php echo hansJackEscape($hjCommentsOrder); ?>"
+         data-hj-user-logged="<?php echo $hjUserLoggedIn ? '1' : '0'; ?>"
+         data-hj-comments-require-mail="<?php echo $hjRequireMail ? '1' : '0'; ?>"
+         data-hj-comments-require-url="<?php echo $hjRequireUrl ? '1' : '0'; ?>">
     <?php $this->comments()->to($comments); ?>
 
     <?php if ($this->allow('comment')): ?>
         <?php
-        $hjUserLoggedIn = false;
-        try {
-            $hjUserLoggedIn = (bool) ($this->user && $this->user->hasLogin());
-        } catch (\Throwable $e) {
-            $hjUserLoggedIn = false;
-        }
         $hjLoginReferer = '';
         try {
             $hjLoginReferer = (string) $this->request->getRequestUrl();
@@ -41,9 +60,13 @@ $hjCommentsOrder = ($hjCommentsOrder === 'DESC') ? 'desc' : 'asc';
             $hjCommentToken = '';
         }
         ?>
-        <form method="post" action="<?php $this->commentUrl(); ?>" id="comment-form-top" class="hj-comment-form hj-comment-composer-form" role="form" data-hj-comment-form data-hj-comment-role="top" data-hj-require-login="<?php echo $hjUserLoggedIn ? '0' : '1'; ?>">
+        <form method="post" action="<?php $this->commentUrl(); ?>" id="comment-form-top" class="hj-comment-form hj-comment-composer-form" role="form"
+              data-hj-comment-form data-hj-comment-role="top" data-hj-user-logged="<?php echo $hjUserLoggedIn ? '1' : '0'; ?>">
             <div class="hj-comment-box" data-hj-comment-box>
                 <textarea rows="6" cols="50" name="text" id="hj-comment-textarea-top" class="hj-comment-textarea" required></textarea>
+                <input type="hidden" name="author" value="<?php $this->remember('author'); ?>">
+                <input type="hidden" name="url" value="<?php $this->remember('url'); ?>">
+                <input type="hidden" name="mail" value="<?php $this->remember('mail'); ?>">
                 <div class="hj-comment-composer-actions" aria-label="<?php _e('评论操作'); ?>">
                     <div class="hj-comment-actions-left" aria-label="<?php _e('工具'); ?>">
                         <button class="hj-comment-icon-btn hj-comment-emoji" type="button" aria-label="<?php _e('表情'); ?>" title="<?php _e('表情'); ?>">
@@ -76,9 +99,13 @@ $hjCommentsOrder = ($hjCommentsOrder === 'DESC') ? 'desc' : 'asc';
         </form>
 
         <div id="<?php $this->respondId(); ?>" class="respond hj-respond" data-hj-comment-respond data-hj-user-logged="<?php echo $hjUserLoggedIn ? '1' : '0'; ?>">
-            <form method="post" action="<?php $this->commentUrl(); ?>" id="comment-form" class="hj-comment-form hj-comment-composer-form" role="form" data-hj-comment-form data-hj-comment-role="reply" data-hj-require-login="<?php echo $hjUserLoggedIn ? '0' : '1'; ?>">
+            <form method="post" action="<?php $this->commentUrl(); ?>" id="comment-form" class="hj-comment-form hj-comment-composer-form" role="form"
+                  data-hj-comment-form data-hj-comment-role="reply" data-hj-user-logged="<?php echo $hjUserLoggedIn ? '1' : '0'; ?>">
                 <div class="hj-comment-box" data-hj-comment-box>
                     <textarea rows="6" cols="50" name="text" id="hj-comment-textarea-reply" class="hj-comment-textarea" required></textarea>
+                    <input type="hidden" name="author" value="<?php $this->remember('author'); ?>">
+                    <input type="hidden" name="url" value="<?php $this->remember('url'); ?>">
+                    <input type="hidden" name="mail" value="<?php $this->remember('mail'); ?>">
                     <div class="hj-comment-composer-actions" aria-label="<?php _e('评论操作'); ?>">
                         <div class="hj-comment-actions-left" aria-label="<?php _e('工具'); ?>">
                             <button class="hj-comment-icon-btn hj-comment-emoji" type="button" aria-label="<?php _e('表情'); ?>" title="<?php _e('表情'); ?>">
@@ -111,20 +138,29 @@ $hjCommentsOrder = ($hjCommentsOrder === 'DESC') ? 'desc' : 'asc';
         <div class="hj-login-modal" data-hj-login-modal aria-hidden="true">
             <div class="hj-login-modal-backdrop" data-hj-login-backdrop aria-hidden="true"></div>
             <div class="hj-login-modal-panel" role="dialog" aria-modal="true" aria-label="<?php _e('登录'); ?>" tabindex="-1" data-hj-login-panel>
+                <div class="hj-login-modal-title" aria-hidden="true"><?php _e('游客/登录'); ?></div>
                 <form class="hj-login-modal-form hj-comment-form" method="post" action="<?php $this->options->loginAction(); ?>" autocomplete="on">
                     <p class="hj-comment-field">
-                        <label for="hj-login-name" class="required"><?php _e('用户名或邮箱'); ?></label>
-                        <input type="text" id="hj-login-name" name="name" class="text" autocomplete="username" required>
+                        <label for="hj-login-name" class="required"><?php _e('用户名/昵称'); ?></label>
+                        <input type="text" id="hj-login-name" name="name" class="text" autocomplete="username" value="<?php $this->remember('author'); ?>" required>
                     </p>
                     <p class="hj-comment-field">
-                        <label for="hj-login-pass" class="required"><?php _e('密码'); ?></label>
-                        <input type="password" id="hj-login-pass" name="password" class="text" autocomplete="current-password" required>
+                        <label for="hj-login-url"<?php echo ($hjRequireUrl && !$hjUserLoggedIn) ? ' class="required"' : ''; ?>><?php _e('网站'); ?></label>
+                        <input type="url" id="hj-login-url" name="url" class="text" autocomplete="url" placeholder="http://" value="<?php $this->remember('url'); ?>">
+                    </p>
+                    <p class="hj-comment-field">
+                        <label for="hj-login-mail"<?php echo ($hjRequireMail && !$hjUserLoggedIn) ? ' class="required"' : ''; ?>><?php _e('邮箱'); ?></label>
+                        <input type="email" id="hj-login-mail" name="mail" class="text" autocomplete="email" value="<?php $this->remember('mail'); ?>">
+                    </p>
+                    <p class="hj-comment-field">
+                        <label for="hj-login-pass"><?php _e('账号密码'); ?></label>
+                        <input type="password" id="hj-login-pass" name="password" class="text" autocomplete="current-password">
                     </p>
                     <?php if ($hjLoginReferer !== ''): ?>
                         <input type="hidden" name="referer" value="<?php echo hansJackEscape($hjLoginReferer); ?>">
                     <?php endif; ?>
                     <p class="hj-comment-actions">
-                        <button type="submit" class="hj-login-modal-submit"><?php _e('登录'); ?></button>
+                        <button type="submit" class="hj-login-modal-submit"><?php _e('保存'); ?></button>
                     </p>
                 </form>
             </div>

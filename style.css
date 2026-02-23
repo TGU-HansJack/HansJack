@@ -3794,39 +3794,34 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     background-color: transparent;
 }
 
-.hj-comment-content.is-private {  
-    padding-top: 0.5rem;  
-    padding-right: 0.6rem;  
-    padding-bottom: 0.5rem;  
-    border-radius: 4px;  
-    position: relative; 
-    background: transparent; 
-} 
- 
-.hj-comment-content.is-private::before {  
-    content: "";  
-    position: absolute;  
-    top: 0;  
-    right: 0;  
-    bottom: 0;  
-    left: 0; 
-    border-radius: 4px;  
-    pointer-events: none;  
-    background: repeating-linear-gradient(  
-        135deg,  
-        rgba(42, 42, 40, 0.07) 0, 
-        rgba(42, 42, 40, 0.07) 1px, 
-        transparent 1px, 
-        transparent 6px 
-    ); 
-} 
- 
-.hj-comment-content.is-private > * { 
-    position: relative; 
-} 
- 
+.hj-comment-content.is-private {
+    /* Keep the same left alignment as normal comments, but add a subtle private marker. */
+    position: relative;
+}
+
+.hj-comment-content.is-private:not(.is-private-hidden)::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: calc(var(--hj-comment-avatar-size) + var(--hj-comment-avatar-gap));
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        135deg,
+        rgba(42, 42, 40, 0.07) 0,
+        rgba(42, 42, 40, 0.07) 1px,
+        transparent 1px,
+        transparent 6px
+    );
+}
+
+.hj-comment-content.is-private > * {
+    position: relative;
+}
+  
 .hj-comment-content.is-private-hidden { 
-    min-height: 2.2rem; 
+    min-height: 1.1rem;
 } 
 
 .hj-private-mask {
@@ -3862,16 +3857,54 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     top: 50%;
     transform: translate(-50%, -50%);
     width: min(92vw, 360px);
-    border-radius: 0;
+    border-radius: 4px;
     border: 2px solid var(--hj-day-black);
     background: var(--hj-day-bg);
     box-shadow: 0 14px 42px rgba(0, 0, 0, 0.14);
-    padding: 0.85rem 0.85rem 0.75rem;
+    padding: 0.7rem 0.75rem 0.65rem;
+}
+
+.hj-login-modal-title {
+    margin: 0 0 0.55rem;
+    text-align: center;
+    font-family: var(--hj-font-ui);
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--hj-day-black);
 }
 
 .hj-login-modal-form {
     display: grid;
-    gap: 0.75rem;
+    gap: 0.45rem;
+}
+
+.hj-login-modal-panel .hj-comment-field {
+    display: grid;
+    grid-template-columns: clamp(5.4rem, 30%, 9.2rem) minmax(0, 1fr);
+    column-gap: 0.75rem;
+    align-items: center;
+    margin: 0;
+}
+
+.hj-login-modal-panel .hj-comment-field label {
+    margin: 0;
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--hj-day-black);
+}
+
+.hj-login-modal-panel .hj-comment-form input.text {
+    min-width: 0;
+    padding: 0.3rem 0;
+    border: 0;
+    border-bottom: 2px solid var(--hj-line-day);
+    border-radius: 0;
+}
+
+.hj-login-modal-panel .hj-comment-form input.text:focus {
+    border-bottom-color: var(--hj-accent);
 }
 
 .hj-login-modal-submit {
@@ -3881,7 +3914,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     width: 100%;
     height: 36px;
     padding: 0 0.9rem;
-    border-radius: 0;
+    border-radius: 4px;
     border: 2px solid var(--hj-day-black);
     background: transparent;
     color: inherit;
@@ -3892,7 +3925,8 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 
 .hj-login-modal-submit:hover,
 .hj-login-modal-submit:focus-visible {
-    background: rgba(42, 42, 40, 0.06);
+    background: var(--hj-day-black);
+    color: var(--hj-day-white);
 }
 
 .hj-login-modal-submit:focus-visible {
@@ -4380,16 +4414,16 @@ html.hj-login-modal-open .hj-login-modal {
             transparent 6px 
         ); 
     } 
- 
-    html:not(.hj-theme-light) .hj-comment-content.is-private::before { 
-        background: repeating-linear-gradient( 
-            135deg, 
-            rgba(221, 221, 219, 0.12) 0, 
-            rgba(221, 221, 219, 0.12) 1px, 
-            transparent 1px, 
-            transparent 6px 
-        ); 
-    } 
+
+    html:not(.hj-theme-light) .hj-comment-content.is-private:not(.is-private-hidden)::before {
+        background: repeating-linear-gradient(
+            135deg,
+            rgba(221, 221, 219, 0.12) 0,
+            rgba(221, 221, 219, 0.12) 1px,
+            transparent 1px,
+            transparent 6px
+        );
+    }
  
     html:not(.hj-theme-light) .hj-comment-box.is-fullscreen { 
         background: var(--hj-night-bg); 
@@ -4404,6 +4438,18 @@ html.hj-login-modal-open .hj-login-modal {
         border-color: rgba(221, 221, 219, 0.28);
         background: var(--hj-night-bg);
         box-shadow: 0 14px 42px rgba(0, 0, 0, 0.35);
+    }
+
+    html:not(.hj-theme-light) .hj-login-modal-panel .hj-comment-field label {
+        color: var(--hj-night-white);
+    }
+
+    html:not(.hj-theme-light) .hj-login-modal-title {
+        color: var(--hj-night-white);
+    }
+
+    html:not(.hj-theme-light) .hj-login-modal-panel .hj-comment-form input.text {
+        border-bottom-color: var(--hj-line-night);
     }
 
     html:not(.hj-theme-light) .hj-login-modal-submit {
@@ -4680,16 +4726,16 @@ html.hj-theme-dark .hj-private-mask {
         transparent 6px 
     ); 
 } 
- 
-html.hj-theme-dark .hj-comment-content.is-private::before { 
-    background: repeating-linear-gradient( 
-        135deg, 
-        rgba(221, 221, 219, 0.12) 0, 
-        rgba(221, 221, 219, 0.12) 1px, 
-        transparent 1px, 
-        transparent 6px 
-    ); 
-} 
+
+html.hj-theme-dark .hj-comment-content.is-private:not(.is-private-hidden)::before {
+    background: repeating-linear-gradient(
+        135deg,
+        rgba(221, 221, 219, 0.12) 0,
+        rgba(221, 221, 219, 0.12) 1px,
+        transparent 1px,
+        transparent 6px
+    );
+}
  
 html.hj-theme-dark .hj-comment-box.is-fullscreen { 
     background: var(--hj-night-bg); 
@@ -4704,6 +4750,18 @@ html.hj-theme-dark .hj-login-modal-panel {
     border-color: rgba(221, 221, 219, 0.28);
     background: var(--hj-night-bg);
     box-shadow: 0 14px 42px rgba(0, 0, 0, 0.35);
+}
+
+html.hj-theme-dark .hj-login-modal-panel .hj-comment-field label {
+    color: var(--hj-night-white);
+}
+
+html.hj-theme-dark .hj-login-modal-title {
+    color: var(--hj-night-white);
+}
+
+html.hj-theme-dark .hj-login-modal-panel .hj-comment-form input.text {
+    border-bottom-color: var(--hj-line-night);
 }
 
 html.hj-theme-dark .hj-login-modal-submit {
