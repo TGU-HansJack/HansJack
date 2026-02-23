@@ -323,7 +323,7 @@ if ($this->is('tag')) {
                         $hasPageLink = false;
                         while ($pages->next()):
                             $slug = isset($pages->slug) ? (string) $pages->slug : '';
-                            if ($slug === 'posts' || $slug === 'notes') {
+                            if ($slug === 'posts' || $slug === 'notes' || $slug === 'memory') {
                                 continue;
                             }
                             $hasPageLink = true;
@@ -425,7 +425,7 @@ if ($this->is('tag')) {
                 $hjHasMobilePage = false;
                 while ($hjMobilePages->next()):
                     $slug = isset($hjMobilePages->slug) ? (string) $hjMobilePages->slug : '';
-                    if ($slug === 'posts' || $slug === 'notes') {
+                    if ($slug === 'posts' || $slug === 'notes' || $slug === 'memory') {
                         continue;
                     }
                     $hjHasMobilePage = true;

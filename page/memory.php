@@ -13,121 +13,6 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
 
 $this->need('header.php');
 
-// Helpers (local to this template to avoid polluting global scope).
-$hjMemoryDateRange = static function (int $days): array {
-    $days = max(1, (int) $days);
-    $end = strtotime('today 23:59:59');
-    $start = strtotime('-' . ($days - 1) . ' days', strtotime('today 00:00:00'));
-
-    $labels = [];
-    for ($i = 0; $i < $days; $i++) {
-        $labels[] = date('Y-m-d', strtotime('+' . $i . ' days', $start));
-    }
-
-    return [$start, $end, $labels];
-};
-
-$hjMemoryCollectDescendants = static function (array $categories, int $rootMid): array {
-    if ($rootMid <= 0) {
-        return [];
-    }
-
-    $childrenMap = [];
-    foreach ($categories as $cat) {
-        $mid = (int) ($cat['mid'] ?? 0);
-        $parent = (int) ($cat['parent'] ?? 0);
-        if ($mid <= 0) {
-            continue;
-        }
-        $childrenMap[$parent][] = $mid;
-    }
-
-    $out = [];
-    $queue = [$rootMid];
-    while (!empty($queue)) {
-        $cur = array_shift($queue);
-        if (isset($out[$cur])) {
-            continue;
-        }
-        $out[$cur] = true;
-        foreach (($childrenMap[$cur] ?? []) as $child) {
-            $queue[] = (int) $child;
-        }
-    }
-
-    return array_keys($out);
-};
-
-$hjMemoryCountContentsByDay = static function (array $mids, int $startTs, int $endTs): array {
-    $mids = array_values(array_filter(array_map('intval', $mids), static fn($v) => $v > 0));
-    if (empty($mids)) {
-        return [];
-    }
-
-    $rows = [];
-    try {
-        $db = \Typecho\Db::get();
-        $query = $db->select('table.contents.cid', 'table.contents.created')
-            ->from('table.contents')
-            ->join('table.relationships', 'table.contents.cid = table.relationships.cid')
-            ->where('table.relationships.mid IN ?', $mids)
-            ->where('table.contents.type = ?', 'post')
-            ->where('table.contents.status = ?', 'publish')
-            ->where('table.contents.created >= ?', $startTs)
-            ->where('table.contents.created <= ?', $endTs);
-        $rows = $db->fetchAll($query);
-    } catch (\Throwable $e) {
-        $rows = [];
-    }
-
-    // Deduplicate by cid (avoid double-counting when a post has multiple relationships within the set).
-    $seen = [];
-    foreach ($rows as $row) {
-        $cid = (int) ($row['cid'] ?? 0);
-        $created = (int) ($row['created'] ?? 0);
-        if ($cid <= 0 || $created <= 0) {
-            continue;
-        }
-        $seen[$cid] = $created;
-    }
-
-    $counts = [];
-    foreach ($seen as $created) {
-        $day = date('Y-m-d', (int) $created);
-        $counts[$day] = (int) ($counts[$day] ?? 0) + 1;
-    }
-
-    return $counts;
-};
-
-$hjMemoryCountCommentsByDay = static function (int $startTs, int $endTs): array {
-    $rows = [];
-    try {
-        $db = \Typecho\Db::get();
-        $query = $db->select('table.comments.coid', 'table.comments.created')
-            ->from('table.comments')
-            ->where('table.comments.status = ?', 'approved')
-            ->where('table.comments.type = ?', 'comment')
-            ->where('table.comments.created >= ?', $startTs)
-            ->where('table.comments.created <= ?', $endTs);
-        $rows = $db->fetchAll($query);
-    } catch (\Throwable $e) {
-        $rows = [];
-    }
-
-    $counts = [];
-    foreach ($rows as $row) {
-        $created = (int) ($row['created'] ?? 0);
-        if ($created <= 0) {
-            continue;
-        }
-        $day = date('Y-m-d', $created);
-        $counts[$day] = (int) ($counts[$day] ?? 0) + 1;
-    }
-
-    return $counts;
-};
-
 // Collect categories/tags.
 $categories = [];
 $postsRootMid = 0;
@@ -194,73 +79,27 @@ try {
     $tagsData = [];
 }
 
-// Build time-series data.
-[$publishStart, $publishEnd, $publishLabels] = $hjMemoryDateRange(30);
-[$commentStart, $commentEnd, $commentLabels] = $hjMemoryDateRange(7);
-
-$postsMids = $hjMemoryCollectDescendants($categories, $postsRootMid);
-$notesMids = $hjMemoryCollectDescendants($categories, $notesRootMid);
-
-$postsByDay = $hjMemoryCountContentsByDay($postsMids, $publishStart, $publishEnd);
-$notesByDay = $hjMemoryCountContentsByDay($notesMids, $publishStart, $publishEnd);
-$commentsByDay = $hjMemoryCountCommentsByDay($commentStart, $commentEnd);
-
-$publishPostsSeries = [];
-$publishNotesSeries = [];
-foreach ($publishLabels as $day) {
-    $publishPostsSeries[] = (int) ($postsByDay[$day] ?? 0);
-    $publishNotesSeries[] = (int) ($notesByDay[$day] ?? 0);
-}
-
-$commentsSeries = [];
-foreach ($commentLabels as $day) {
-    $commentsSeries[] = (int) ($commentsByDay[$day] ?? 0);
-}
-
 $hjMemoryPayload = [
-    'publish' => [
-        'labels' => $publishLabels,
-        'posts' => $publishPostsSeries,
-        'notes' => $publishNotesSeries,
-    ],
     'categories' => [
         'postsChildren' => $postsChildren,
     ],
     'tags' => [
         'items' => $tagsData,
     ],
-    'comments' => [
-        'labels' => $commentLabels,
-        'counts' => $commentsSeries,
-    ],
 ];
 ?>
 
 <main class="hj-main" role="main">
     <section class="hj-memory" aria-label="<?php _e('回忆'); ?>">
-        <header class="hj-memory-header">
-            <h1 class="hj-memory-title"><?php _e('回忆'); ?></h1>
-        </header>
-
         <div class="hj-memory-grid" aria-label="<?php _e('数据图表'); ?>">
-            <section class="hj-memory-block" aria-label="<?php _e('发布趋势'); ?>">
-                <h2 class="hj-memory-block-title"><?php _e('发布趋势'); ?></h2>
-                <div class="hj-memory-chart" id="hj-memory-chart-publish"></div>
-            </section>
-
             <section class="hj-memory-block" aria-label="<?php _e('博文子分类占比'); ?>">
                 <h2 class="hj-memory-block-title"><?php _e('博文子分类占比'); ?></h2>
                 <div class="hj-memory-chart" id="hj-memory-chart-categories"></div>
             </section>
 
-            <section class="hj-memory-block hj-memory-block-wide" aria-label="<?php _e('标签占比'); ?>">
+            <section class="hj-memory-block" aria-label="<?php _e('标签占比'); ?>">
                 <h2 class="hj-memory-block-title"><?php _e('标签占比'); ?></h2>
-                <div class="hj-memory-chart hj-memory-chart-tall" id="hj-memory-chart-tags"></div>
-            </section>
-
-            <section class="hj-memory-block" aria-label="<?php _e('最近 7 天评论'); ?>">
-                <h2 class="hj-memory-block-title"><?php _e('最近 7 天评论'); ?></h2>
-                <div class="hj-memory-chart" id="hj-memory-chart-comments"></div>
+                <div class="hj-memory-chart" id="hj-memory-chart-tags"></div>
             </section>
         </div>
     </section>
@@ -338,46 +177,6 @@ $hjMemoryPayload = [
         }
 
         var instances = [];
-
-        instances.push(initChart(document.getElementById("hj-memory-chart-publish"), function (colors) {
-            var labels = (payload.publish && payload.publish.labels) ? payload.publish.labels : [];
-            var posts = (payload.publish && payload.publish.posts) ? payload.publish.posts : [];
-            var notes = (payload.publish && payload.publish.notes) ? payload.publish.notes : [];
-
-            if (!labels.length) {
-                return emptyOption("暂无数据", colors);
-            }
-
-            return {
-                backgroundColor: "transparent",
-                color: [colors.primary, colors.secondary],
-                textStyle: { color: colors.text, fontFamily: cssVar("--hj-font-ui") || "serif" },
-                grid: { left: 40, right: 18, top: 26, bottom: 32 },
-                tooltip: { trigger: "axis" },
-                legend: { top: 0, left: 0, textStyle: { color: colors.muted } },
-                xAxis: {
-                    type: "category",
-                    data: labels,
-                    axisLine: { lineStyle: { color: colors.line } },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: colors.muted,
-                        formatter: function (v) { return String(v).slice(5); }
-                    }
-                },
-                yAxis: {
-                    type: "value",
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: { color: colors.muted },
-                    splitLine: { lineStyle: { color: colors.line } }
-                },
-                series: [
-                    { name: "文章", type: "line", smooth: true, data: posts, symbolSize: 4, lineStyle: { width: 2 } },
-                    { name: "手记", type: "line", smooth: true, data: notes, symbolSize: 4, lineStyle: { width: 2 } }
-                ]
-            };
-        }));
 
         instances.push(initChart(document.getElementById("hj-memory-chart-categories"), function (colors) {
             var items = payload.categories && payload.categories.postsChildren ? payload.categories.postsChildren : [];
@@ -468,41 +267,6 @@ $hjMemoryPayload = [
                         itemStyle: { borderColor: colors.line, borderWidth: 1, gapWidth: 1 },
                     }],
                     data: items
-                }]
-            };
-        }));
-
-        instances.push(initChart(document.getElementById("hj-memory-chart-comments"), function (colors) {
-            var labels = payload.comments && payload.comments.labels ? payload.comments.labels : [];
-            var counts = payload.comments && payload.comments.counts ? payload.comments.counts : [];
-            if (!labels.length) {
-                return emptyOption("暂无数据", colors);
-            }
-
-            return {
-                backgroundColor: "transparent",
-                color: [colors.primary],
-                textStyle: { color: colors.text, fontFamily: cssVar("--hj-font-ui") || "serif" },
-                grid: { left: 40, right: 18, top: 18, bottom: 32 },
-                tooltip: { trigger: "axis" },
-                xAxis: {
-                    type: "category",
-                    data: labels,
-                    axisLine: { lineStyle: { color: colors.line } },
-                    axisTick: { show: false },
-                    axisLabel: { color: colors.muted, formatter: function (v) { return String(v).slice(5); } }
-                },
-                yAxis: {
-                    type: "value",
-                    axisLine: { show: false },
-                    axisTick: { show: false },
-                    axisLabel: { color: colors.muted },
-                    splitLine: { lineStyle: { color: colors.line } }
-                },
-                series: [{
-                    type: "bar",
-                    data: counts,
-                    barMaxWidth: 18
                 }]
             };
         }));
