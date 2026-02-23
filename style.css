@@ -2231,6 +2231,20 @@ html.hj-theme-dark .hj-posts-pager.page-navigator li a:focus-visible {
     line-height: 1.6;
 }
 
+.hj-activity-bubble.is-private {
+    background: repeating-linear-gradient(
+        135deg,
+        rgba(42, 42, 40, 0.07) 0,
+        rgba(42, 42, 40, 0.07) 1px,
+        transparent 1px,
+        transparent 6px
+    ), var(--hj-recent-bubble);
+}
+
+.hj-activity-bubble.is-private-hidden {
+    min-height: 1.2em;
+}
+
 .hj-activity-empty {
     color: var(--hj-recent-muted);
 }
@@ -2255,6 +2269,16 @@ html.hj-theme-dark .hj-posts-pager.page-navigator li a:focus-visible {
         --hj-recent-blur-mid: rgba(14, 14, 12, 0.38);
         --hj-recent-blur-weak: rgba(14, 14, 12, 0);
     }
+
+    html:not(.hj-theme-light) .hj-activity-bubble.is-private {
+        background: repeating-linear-gradient(
+            135deg,
+            rgba(221, 221, 219, 0.12) 0,
+            rgba(221, 221, 219, 0.12) 1px,
+            transparent 1px,
+            transparent 6px
+        ), var(--hj-recent-bubble);
+    }
 }
 
 html.hj-theme-dark .hj-recent {
@@ -2265,6 +2289,16 @@ html.hj-theme-dark .hj-recent {
     --hj-recent-blur-strong: rgba(14, 14, 12, 0.86);
     --hj-recent-blur-mid: rgba(14, 14, 12, 0.38);
     --hj-recent-blur-weak: rgba(14, 14, 12, 0);
+}
+
+html.hj-theme-dark .hj-activity-bubble.is-private {
+    background: repeating-linear-gradient(
+        135deg,
+        rgba(221, 221, 219, 0.12) 0,
+        rgba(221, 221, 219, 0.12) 1px,
+        transparent 1px,
+        transparent 6px
+    ), var(--hj-recent-bubble);
 }
 
 .hj-terminal {
@@ -3066,6 +3100,20 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     padding-top: 0.2rem;
 }
 
+@media (min-width: 1100px) {
+    /* Keep comments aligned with the article content column when TOC sidebar is present. */
+    .hj-article-layout.is-has-toc ~ .hj-comments {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) var(--hj-posts-aside-width);
+        gap: 2.25rem;
+        align-items: start;
+    }
+
+    .hj-article-layout.is-has-toc ~ .hj-comments > * {
+        grid-column: 1;
+    }
+}
+
 .hj-comments-title,
 .hj-comments-closed,
 .hj-respond-title {
@@ -3082,7 +3130,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 .hj-comment-form {
     display: grid;
     gap: 0.9rem;
-    max-width: 680px;
+    max-width: 100%;
 }
 
 .hj-comment-field label {
@@ -3139,6 +3187,266 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 .hj-comment-submit:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
+}
+
+.hj-comment-composer-form {
+    max-width: 100%;
+}
+
+.hj-comment-box {
+    position: relative;
+    border: 2px solid var(--hj-line-day);
+    border-radius: 0;
+    background: transparent;
+}
+
+.hj-comment-box.is-private {
+    background: repeating-linear-gradient(
+        135deg,
+        rgba(42, 42, 40, 0.07) 0,
+        rgba(42, 42, 40, 0.07) 1px,
+        transparent 1px,
+        transparent 6px
+    );
+}
+
+.hj-comment-box:focus-within {
+    border-color: var(--hj-accent);
+    border-width: 2px;
+    box-shadow: none;
+}
+
+.hj-comment-textarea {
+    width: 100%;
+    max-width: 100%;
+    padding: 0.7rem 0.75rem 3rem 0.75rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    font-family: var(--hj-font-ui);
+    font-size: 0.95rem;
+    outline: none;
+    resize: none;
+    overflow-y: hidden;
+}
+
+.hj-comment-fullscreen-toggle {
+    /* Inline icon button inside .hj-comment-composer-actions (next to the private toggle). */
+}
+
+.hj-comment-fullscreen-toggle svg.hj-comment-fullscreen-icon-min {
+    display: none;
+}
+
+.hj-comment-box.is-fullscreen .hj-comment-fullscreen-icon-max {
+    display: none;
+}
+
+.hj-comment-box.is-fullscreen .hj-comment-fullscreen-icon-min {
+    display: block;
+}
+
+.hj-comment-box.is-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 2500;
+    background: var(--hj-day-bg);
+}
+
+.hj-comment-box.is-fullscreen .hj-comment-textarea {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.hj-comment-composer-actions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    pointer-events: none;
+    padding: 0.15rem 0.5rem;
+    border-radius: 0;
+    background: var(--hj-line-day);
+    color: inherit;
+}
+
+.hj-comment-box:focus-within .hj-comment-composer-actions {
+    background: var(--hj-day-black);
+    color: var(--hj-day-white);
+}
+
+.hj-comment-actions-left,
+.hj-comment-actions-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    pointer-events: auto;
+}
+
+.hj-comment-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.82;
+    transition: opacity 0.16s ease, background-color 0.16s ease, transform 0.16s ease;
+}
+
+.hj-comment-icon-btn svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+.hj-comment-icon-btn:hover,
+.hj-comment-icon-btn:focus-visible {
+    opacity: 1;
+    background-color: transparent;
+}
+
+.hj-comment-icon-btn:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.hj-comment-private .hj-private-line,
+.hj-comment-private .hj-private-dot {
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    transform-origin: center;
+    transform-box: fill-box;
+}
+
+.hj-comment-private[aria-pressed="false"] .hj-private-dot {
+    transform: translateX(-200%);
+}
+
+.hj-comment-private[aria-pressed="false"] .hj-private-line {
+    transform: translateX(50%);
+}
+
+.hj-comment-send {
+    border: 0;
+    color: inherit;
+}
+
+.hj-comment-send:hover,
+.hj-comment-send:focus-visible {
+    background-color: transparent;
+}
+
+.hj-comment-content.is-private {
+    padding: 0.5rem 0.6rem;
+    border-radius: 4px;
+    background: repeating-linear-gradient(
+        135deg,
+        rgba(42, 42, 40, 0.07) 0,
+        rgba(42, 42, 40, 0.07) 1px,
+        transparent 1px,
+        transparent 6px
+    );
+}
+
+.hj-comment-content.is-private-hidden {
+    min-height: 2.2rem;
+}
+
+.hj-private-mask {
+    height: 1.1rem;
+    border-radius: 4px;
+    background: repeating-linear-gradient(
+        135deg,
+        rgba(42, 42, 40, 0.12) 0,
+        rgba(42, 42, 40, 0.12) 1px,
+        transparent 1px,
+        transparent 6px
+    );
+}
+
+.hj-login-modal {
+    position: fixed;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+    z-index: 2600;
+}
+
+.hj-login-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(42, 42, 40, 0.22);
+}
+
+.hj-login-modal-panel {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(92vw, 360px);
+    border-radius: 0;
+    border: 2px solid var(--hj-day-black);
+    background: var(--hj-day-bg);
+    box-shadow: 0 14px 42px rgba(0, 0, 0, 0.14);
+    padding: 0.85rem 0.85rem 0.75rem;
+}
+
+.hj-login-modal-form {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.hj-login-modal-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 36px;
+    padding: 0 0.9rem;
+    border-radius: 0;
+    border: 2px solid var(--hj-day-black);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-family: var(--hj-font-ui);
+    font-size: 0.95rem;
+}
+
+.hj-login-modal-submit:hover,
+.hj-login-modal-submit:focus-visible {
+    background: rgba(42, 42, 40, 0.06);
+}
+
+.hj-login-modal-submit:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+html.hj-login-modal-open,
+html.hj-login-modal-open body {
+    overflow: hidden;
+}
+
+html.hj-comment-fullscreen-open,
+html.hj-comment-fullscreen-open body {
+    overflow: hidden;
+}
+
+html.hj-login-modal-open .hj-login-modal {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .hj-article-content a {
@@ -3543,6 +3851,46 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
         background: rgba(221, 221, 219, 0.06);
     }
 
+    html:not(.hj-theme-light) .hj-comment-box {
+        border-color: var(--hj-line-night);
+    }
+
+    html:not(.hj-theme-light) .hj-comment-composer-actions {
+        background: var(--hj-line-night);
+        color: inherit;
+    }
+
+    html:not(.hj-theme-light) .hj-comment-box.is-private,
+    html:not(.hj-theme-light) .hj-comment-content.is-private,
+    html:not(.hj-theme-light) .hj-private-mask {
+        background: repeating-linear-gradient(
+            135deg,
+            rgba(221, 221, 219, 0.12) 0,
+            rgba(221, 221, 219, 0.12) 1px,
+            transparent 1px,
+            transparent 6px
+        );
+    }
+
+    html:not(.hj-theme-light) .hj-comment-box.is-fullscreen {
+        background: var(--hj-night-bg);
+    }
+
+    html:not(.hj-theme-light) .hj-comment-icon-btn:hover,
+    html:not(.hj-theme-light) .hj-comment-icon-btn:focus-visible {
+        background-color: transparent;
+    }
+
+    html:not(.hj-theme-light) .hj-login-modal-panel {
+        border-color: rgba(221, 221, 219, 0.28);
+        background: var(--hj-night-bg);
+        box-shadow: 0 14px 42px rgba(0, 0, 0, 0.35);
+    }
+
+    html:not(.hj-theme-light) .hj-login-modal-submit {
+        border-color: rgba(221, 221, 219, 0.35);
+    }
+
     html:not(.hj-theme-light) .hj-nav {
         background: transparent;
         box-shadow: none;
@@ -3752,6 +4100,46 @@ html.hj-theme-dark .hj-comment-form textarea.textarea {
 html.hj-theme-dark .hj-comment-submit:hover,
 html.hj-theme-dark .hj-comment-submit:focus-visible {
     background: rgba(221, 221, 219, 0.06);
+}
+
+html.hj-theme-dark .hj-comment-box {
+    border-color: var(--hj-line-night);
+}
+
+html.hj-theme-dark .hj-comment-composer-actions {
+    background: var(--hj-line-night);
+    color: inherit;
+}
+
+html.hj-theme-dark .hj-comment-box.is-private,
+html.hj-theme-dark .hj-comment-content.is-private,
+html.hj-theme-dark .hj-private-mask {
+    background: repeating-linear-gradient(
+        135deg,
+        rgba(221, 221, 219, 0.12) 0,
+        rgba(221, 221, 219, 0.12) 1px,
+        transparent 1px,
+        transparent 6px
+    );
+}
+
+html.hj-theme-dark .hj-comment-box.is-fullscreen {
+    background: var(--hj-night-bg);
+}
+
+html.hj-theme-dark .hj-comment-icon-btn:hover,
+html.hj-theme-dark .hj-comment-icon-btn:focus-visible {
+    background-color: transparent;
+}
+
+html.hj-theme-dark .hj-login-modal-panel {
+    border-color: rgba(221, 221, 219, 0.28);
+    background: var(--hj-night-bg);
+    box-shadow: 0 14px 42px rgba(0, 0, 0, 0.35);
+}
+
+html.hj-theme-dark .hj-login-modal-submit {
+    border-color: rgba(221, 221, 219, 0.35);
 }
 
 html.hj-theme-dark .hj-landing-avatar {

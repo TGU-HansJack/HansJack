@@ -1394,6 +1394,246 @@
 
 <script>
     (function () {
+        var comments = document.querySelector(".hj-comments");
+        if (!comments) {
+            return;
+        }
+
+        var form = comments.querySelector("[data-hj-comment-form]");
+        if (!form) {
+            return;
+        }
+
+        var textarea = form.querySelector("textarea[name=\"text\"]");
+        var box = form.querySelector("[data-hj-comment-box]");
+        if (!textarea || !box) {
+            return;
+        }
+
+        var root = document.documentElement;
+        var modal = document.querySelector("[data-hj-login-modal]");
+        var backdrop = modal ? modal.querySelector("[data-hj-login-backdrop]") : null;
+        var panel = modal ? modal.querySelector("[data-hj-login-panel]") : null;
+        var loginOpeners = Array.prototype.slice.call(comments.querySelectorAll("[data-hj-open-login]"));
+        var loginOpenClass = "hj-login-modal-open";
+
+        var requireLogin = form.getAttribute("data-hj-require-login") === "1";
+        var privateBtn = form.querySelector("[data-hj-comment-private-toggle]");
+        var privateMarker = "<!--hj-private-->";
+        var fullscreenBtn = form.querySelector("[data-hj-comment-fullscreen-toggle]");
+        var fullscreenRootClass = "hj-comment-fullscreen-open";
+
+        // Auto-grow the composer textarea with content (no manual resize).
+        // Measure overflow against the initial (rows-based) height to avoid "jumping" on first input.
+        var minTextareaH = textarea.offsetHeight || 0;
+        function autoGrowTextarea() {
+            try {
+                if (box && box.classList && box.classList.contains("is-fullscreen")) {
+                    return;
+                }
+                if (minTextareaH) {
+                    textarea.style.height = minTextareaH + "px";
+                } else {
+                    textarea.style.height = "auto";
+                }
+
+                var next = textarea.scrollHeight || 0;
+                if (minTextareaH && next < minTextareaH) {
+                    next = minTextareaH;
+                }
+
+                // Only add a tiny buffer when we actually need to grow, to prevent clipping.
+                if (minTextareaH && next > minTextareaH) {
+                    next += 2;
+                }
+
+                if (next) {
+                    textarea.style.height = next + "px";
+                }
+            } catch (e) {}
+        }
+
+        var draftKey = "hj_comment_draft_" + (location && location.pathname ? location.pathname : "page");
+        var privateKey = draftKey + "_private";
+        function saveDraft() {
+            try {
+                sessionStorage.setItem(draftKey, textarea.value || "");
+            } catch (e) {}
+
+            if (privateBtn) {
+                try {
+                    sessionStorage.setItem(privateKey, privateBtn.getAttribute("aria-pressed") === "true" ? "1" : "0");
+                } catch (e) {}
+            }
+        }
+
+        function restoreDraft() {
+            try {
+                var saved = sessionStorage.getItem(draftKey);
+                if (saved && !textarea.value) {
+                    textarea.value = saved;
+                }
+            } catch (e) {}
+
+            if (privateBtn) {
+                try {
+                    var savedPrivate = sessionStorage.getItem(privateKey);
+                    if (savedPrivate === "1" || savedPrivate === "0") {
+                        setPrivateState(savedPrivate === "1");
+                    }
+                } catch (e) {}
+            }
+        }
+
+        function clearDraft() {
+            try {
+                sessionStorage.removeItem(draftKey);
+            } catch (e) {}
+            try {
+                sessionStorage.removeItem(privateKey);
+            } catch (e) {}
+        }
+
+        function openLogin() {
+            if (!modal || !root) {
+                return;
+            }
+            saveDraft();
+            root.classList.add(loginOpenClass);
+            modal.setAttribute("aria-hidden", "false");
+
+            var nameInput = modal.querySelector("#hj-login-name");
+            if (nameInput) {
+                window.setTimeout(function () {
+                    try {
+                        nameInput.focus();
+                    } catch (e) {}
+                }, 0);
+            } else if (panel) {
+                try {
+                    panel.focus();
+                } catch (e) {}
+            }
+        }
+
+        function closeLogin() {
+            if (!modal || !root) {
+                return;
+            }
+            root.classList.remove(loginOpenClass);
+            modal.setAttribute("aria-hidden", "true");
+        }
+
+        if (loginOpeners.length > 0) {
+            loginOpeners.forEach(function (btn) {
+                btn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    openLogin();
+                });
+            });
+        }
+
+        if (backdrop) {
+            backdrop.addEventListener("click", function () {
+                closeLogin();
+            });
+        }
+
+        window.addEventListener("keydown", function (e) {
+            if (!root || !root.classList.contains(loginOpenClass)) {
+                return;
+            }
+            var key = e && (e.key || e.code);
+            if (key === "Escape" || key === "Esc") {
+                closeLogin();
+            }
+        });
+
+        function setPrivateState(isOn) {
+            if (!privateBtn) {
+                return;
+            }
+            privateBtn.setAttribute("aria-pressed", isOn ? "true" : "false");
+            box.classList.toggle("is-private", !!isOn);
+            try {
+                sessionStorage.setItem(privateKey, isOn ? "1" : "0");
+            } catch (e) {}
+        }
+
+        if (privateBtn) {
+            privateBtn.addEventListener("click", function () {
+                var isOn = privateBtn.getAttribute("aria-pressed") === "true";
+                setPrivateState(!isOn);
+            });
+        }
+
+        function setFullscreenState(isOn) {
+            if (!fullscreenBtn || !box || !root) {
+                return;
+            }
+            fullscreenBtn.setAttribute("aria-pressed", isOn ? "true" : "false");
+            fullscreenBtn.setAttribute("aria-label", isOn ? "收起全屏" : "展开全屏");
+            fullscreenBtn.setAttribute("title", isOn ? "收起全屏" : "展开全屏");
+
+            box.classList.toggle("is-fullscreen", !!isOn);
+            root.classList.toggle(fullscreenRootClass, !!isOn);
+
+            if (isOn) {
+                // Let CSS take over the fullscreen sizing.
+                textarea.style.height = "";
+                try {
+                    textarea.focus();
+                } catch (e) {}
+            } else {
+                autoGrowTextarea();
+            }
+        }
+
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener("click", function (e) {
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+                var isOn = fullscreenBtn.getAttribute("aria-pressed") === "true";
+                setFullscreenState(!isOn);
+            });
+        }
+
+        restoreDraft();
+        textarea.addEventListener("input", function () {
+            autoGrowTextarea();
+            saveDraft();
+        });
+        autoGrowTextarea();
+
+        form.addEventListener("submit", function (e) {
+            var isPrivate = privateBtn && privateBtn.getAttribute("aria-pressed") === "true";
+
+            if (requireLogin) {
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+                openLogin();
+                return;
+            }
+
+            if (isPrivate) {
+                var value = textarea.value || "";
+                var trimmed = value.replace(/^\\s+/, "");
+                if (trimmed.indexOf(privateMarker) !== 0) {
+                    textarea.value = privateMarker + "\n" + value;
+                }
+            }
+
+            clearDraft();
+        });
+    })();
+</script>
+
+<script>
+    (function () {
         var content = document.querySelector(".hj-article-content");
         if (!content) {
             return;

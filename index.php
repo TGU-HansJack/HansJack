@@ -163,6 +163,8 @@ if ($this->is('index')) {
                         'timeWord' => (string) ($recentComments->dateWord ?? ''),
                         'author' => (string) ($recentComments->author ?? ''),
                         'mail' => (string) ($recentComments->mail ?? ''),
+                        'authorId' => (int) ($recentComments->authorId ?? 0),
+                        'ownerId' => (int) ($recentComments->ownerId ?? 0),
                         'title' => (string) ($recentComments->title ?? ''),
                         'url' => (string) ($recentComments->permalink ?? ''),
                         'text' => (string) ($recentComments->text ?? ''),
@@ -267,9 +269,27 @@ if ($this->is('index')) {
                                                     $commentAuthor = trim((string) ($activity['author'] ?? ''));
                                                     $commentMail = trim((string) ($activity['mail'] ?? ''));
                                                     $commentTextRaw = (string) ($activity['text'] ?? '');
+                                                    $commentAuthorId = (int) ($activity['authorId'] ?? 0);
+                                                    $commentOwnerId = (int) ($activity['ownerId'] ?? 0);
 
-                                                    $commentText = trim(strip_tags($commentTextRaw));
+                                                    $commentIsPrivate = hansJackIsPrivateCommentText($commentTextRaw);
+                                                    $commentCanViewPrivate = true;
+                                                    if ($commentIsPrivate) {
+                                                        $commentCanViewPrivate = hansJackCanViewPrivateComment($commentOwnerId, $commentAuthorId);
+                                                    }
+
+                                                    $commentTextSource = $commentIsPrivate ? hansJackStripPrivateCommentMarker($commentTextRaw) : $commentTextRaw;
+
+                                                    $commentText = trim(strip_tags($commentTextSource));
                                                     $commentText = (string) preg_replace('/\\s+/u', ' ', $commentText);
+
+                                                    $commentBubbleClass = 'hj-activity-bubble';
+                                                    if ($commentIsPrivate) {
+                                                        $commentBubbleClass .= ' is-private';
+                                                        if (!$commentCanViewPrivate) {
+                                                            $commentBubbleClass .= ' is-private-hidden';
+                                                        }
+                                                    }
 
                                                     $avatarHash = $commentMail !== '' ? md5(strtolower($commentMail)) : '';
                                                     $avatarUrl = $avatarHash !== '' ? ('http://www.gravatar.com/avatar/' . $avatarHash . '?s=32&d=retro') : '';
@@ -293,9 +313,13 @@ if ($this->is('index')) {
                                                 <?php endif; ?>
                                             </div>
                                             <span class="hj-activity-time"><?php echo hansJackEscape($activityTimeWord); ?></span>
-                                        </div>
-                                        <?php if ($isCommentActivity && $commentText !== ''): ?>
-                                            <div class="hj-activity-bubble"><?php echo hansJackEscape($commentText); ?></div>
+                                         </div>
+                                        <?php if ($isCommentActivity && ($commentText !== '' || $commentIsPrivate)): ?>
+                                            <div class="<?php echo hansJackEscape($commentBubbleClass); ?>"><?php
+                                                if (!$commentIsPrivate || $commentCanViewPrivate) {
+                                                    echo hansJackEscape($commentText);
+                                                }
+                                            ?></div>
                                         <?php endif; ?>
                                     </li>
                                 <?php endforeach; ?>

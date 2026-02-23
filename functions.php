@@ -444,3 +444,177 @@ function hansJackAvatarRating(Options $options): string
     $rating = strtoupper(trim((string) ($options->commentsAvatarRating ?? 'G')));
     return in_array($rating, ['G', 'PG', 'R', 'X'], true) ? $rating : 'G';
 }
+
+function hansJackPrivateCommentMarker(): string
+{
+    // Stored in comment text so the theme can render "private" comments without extra DB fields.
+    return '<!--hj-private-->';
+}
+
+function hansJackIsPrivateCommentText(string $text): bool
+{
+    $marker = hansJackPrivateCommentMarker();
+    return hansJackStartsWith(ltrim($text), $marker);
+}
+
+function hansJackStripPrivateCommentMarker(string $text): string
+{
+    $marker = hansJackPrivateCommentMarker();
+    $trimmed = ltrim($text);
+    if (!hansJackStartsWith($trimmed, $marker)) {
+        return $text;
+    }
+
+    $pos = strpos($text, $marker);
+    if ($pos === false) {
+        return $text;
+    }
+
+    $rest = (string) substr($text, $pos + strlen($marker));
+    return ltrim($rest, "\r\n\t ");
+}
+
+function hansJackCanViewPrivateComment(int $ownerId, int $authorId): bool
+{
+    $ownerId = (int) $ownerId;
+    $authorId = (int) $authorId;
+
+    try {
+        $user = \Typecho\Widget::widget('Widget_User');
+    } catch (\Throwable $e) {
+        $user = null;
+    }
+
+    if (!$user) {
+        return false;
+    }
+
+    try {
+        if (!$user->hasLogin()) {
+            return false;
+        }
+    } catch (\Throwable $e) {
+        return false;
+    }
+
+    $uid = 0;
+    try {
+        $uid = (int) ($user->uid ?? 0);
+    } catch (\Throwable $e) {
+        $uid = 0;
+    }
+
+    if ($uid > 0 && ($uid === $ownerId || $uid === $authorId)) {
+        return true;
+    }
+
+    try {
+        if ($user->pass('administrator', true) || $user->pass('editor', true)) {
+            return true;
+        }
+    } catch (\Throwable $e) {
+        // Ignore.
+    }
+
+    return false;
+}
+
+function threadedComments($comments, $singleCommentOptions): void
+{
+    if (!$comments) {
+        return;
+    }
+
+    $rawText = '';
+    try {
+        $rawText = (string) ($comments->text ?? '');
+    } catch (\Throwable $e) {
+        $rawText = '';
+    }
+
+    $isPrivate = hansJackIsPrivateCommentText($rawText);
+    $canViewPrivate = true;
+    if ($isPrivate) {
+        $ownerId = 0;
+        $authorId = 0;
+        try {
+            $ownerId = (int) ($comments->ownerId ?? 0);
+        } catch (\Throwable $e) {
+            $ownerId = 0;
+        }
+        try {
+            $authorId = (int) ($comments->authorId ?? 0);
+        } catch (\Throwable $e) {
+            $authorId = 0;
+        }
+        $canViewPrivate = hansJackCanViewPrivateComment($ownerId, $authorId);
+    }
+
+    $commentClass = '';
+    if (!empty($comments->authorId)) {
+        if ((int) $comments->authorId === (int) $comments->ownerId) {
+            $commentClass .= ' comment-by-author';
+        } else {
+            $commentClass .= ' comment-by-user';
+        }
+    }
+
+    if ($isPrivate) {
+        $commentClass .= ' hj-comment-private';
+        if (!$canViewPrivate) {
+            $commentClass .= ' is-private-hidden';
+        }
+    }
+    ?>
+    <li itemscope itemtype="http://schema.org/UserComments" id="<?php $comments->theId(); ?>" class="comment-body<?php
+    if ($comments->levels > 0) {
+        echo ' comment-child';
+        $comments->levelsAlt(' comment-level-odd', ' comment-level-even');
+    } else {
+        echo ' comment-parent';
+    }
+    $comments->alt(' comment-odd', ' comment-even');
+    echo $commentClass;
+    ?>">
+        <div class="comment-author" itemprop="creator" itemscope itemtype="http://schema.org/Person">
+            <span itemprop="image">
+                <?php $comments->gravatar(
+                    $singleCommentOptions->avatarSize,
+                    $singleCommentOptions->defaultAvatar,
+                    $singleCommentOptions->avatarHighRes
+                ); ?>
+            </span>
+            <cite class="fn" itemprop="name"><?php $singleCommentOptions->beforeAuthor();
+                $comments->author();
+                $singleCommentOptions->afterAuthor(); ?></cite>
+        </div>
+        <div class="comment-meta">
+            <a href="<?php $comments->permalink(); ?>">
+                <time itemprop="commentTime" datetime="<?php $comments->date('c'); ?>"><?php
+                    $singleCommentOptions->beforeDate();
+                    $comments->date($singleCommentOptions->dateFormat);
+                    $singleCommentOptions->afterDate();
+                ?></time>
+            </a>
+            <?php if ('approved' !== $comments->status) { ?>
+                <em class="comment-awaiting-moderation"><?php $singleCommentOptions->commentStatus(); ?></em>
+            <?php } ?>
+        </div>
+        <div class="comment-content hj-comment-content<?php echo $isPrivate ? ' is-private' : ''; ?><?php echo ($isPrivate && !$canViewPrivate) ? ' is-private-hidden' : ''; ?>" itemprop="commentText">
+            <?php if ($isPrivate && !$canViewPrivate): ?>
+                <div class="hj-private-mask" aria-hidden="true"></div>
+            <?php else: ?>
+                <?php $comments->content(); ?>
+            <?php endif; ?>
+        </div>
+        <div class="comment-reply">
+            <?php $comments->reply($singleCommentOptions->replyWord); ?>
+        </div>
+        <?php if ($comments->children) { ?>
+            <div class="comment-children" itemprop="discusses">
+                <?php $comments->threadedComments(); ?>
+            </div>
+        <?php } ?>
+    </li>
+    <?php
+}

@@ -12,54 +12,85 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
             <?php $this->commentsNum(_t('暂无评论'), _t('仅有一条评论'), _t('已有 %d 条评论')); ?>
         </h2>
 
-        <?php $comments->listComments(); ?>
+        <?php $comments->listComments(['callback' => 'threadedComments']); ?>
 
         <?php $comments->pageNav(); ?>
-    <?php else: ?>
-        <h2 class="hj-comments-title"><?php _e('暂无评论'); ?></h2>
     <?php endif; ?>
 
     <?php if ($this->allow('comment')): ?>
-        <div id="<?php $this->respondId(); ?>" class="respond hj-respond" data-hj-comment-respond>
+        <?php
+        $hjUserLoggedIn = false;
+        try {
+            $hjUserLoggedIn = (bool) ($this->user && $this->user->hasLogin());
+        } catch (\Throwable $e) {
+            $hjUserLoggedIn = false;
+        }
+        $hjLoginReferer = '';
+        try {
+            $hjLoginReferer = (string) $this->request->getRequestUrl();
+        } catch (\Throwable $e) {
+            $hjLoginReferer = '';
+        }
+        ?>
+        <div id="<?php $this->respondId(); ?>" class="respond hj-respond" data-hj-comment-respond data-hj-user-logged="<?php echo $hjUserLoggedIn ? '1' : '0'; ?>">
             <div class="cancel-comment-reply">
                 <?php $comments->cancelReply(); ?>
             </div>
 
-            <h3 id="response" class="hj-respond-title"><?php _e('添加新评论'); ?></h3>
-            <form method="post" action="<?php $this->commentUrl(); ?>" id="comment-form" class="hj-comment-form" role="form">
-                <?php if ($this->user->hasLogin()): ?>
-                    <p class="hj-respond-login">
-                        <?php _e('登录身份'); ?>:
-                        <a href="<?php $this->options->profileUrl(); ?>"><?php $this->user->screenName(); ?></a>.
-                        <a href="<?php $this->options->logoutUrl(); ?>" title="Logout"><?php _e('退出'); ?> &raquo;</a>
-                    </p>
-                <?php else: ?>
-                    <p class="hj-comment-field">
-                        <label for="author" class="required"><?php _e('称呼'); ?></label>
-                        <input type="text" name="author" id="author" class="text" value="<?php $this->remember('author'); ?>" required />
-                    </p>
-                    <p class="hj-comment-field">
-                        <label for="mail"<?php if ($this->options->commentsRequireMail): ?> class="required"<?php endif; ?>><?php _e('Email'); ?></label>
-                        <input type="email" name="mail" id="mail" class="text" value="<?php $this->remember('mail'); ?>"<?php if ($this->options->commentsRequireMail): ?> required<?php endif; ?> />
-                    </p>
-                    <p class="hj-comment-field">
-                        <label for="url"<?php if ($this->options->commentsRequireUrl): ?> class="required"<?php endif; ?>><?php _e('网站'); ?></label>
-                        <input type="url" name="url" id="url" class="text" placeholder="<?php _e('http://'); ?>" value="<?php $this->remember('url'); ?>"<?php if ($this->options->commentsRequireUrl): ?> required<?php endif; ?> />
-                    </p>
-                <?php endif; ?>
-
-                <p class="hj-comment-field">
-                    <label for="textarea" class="required"><?php _e('内容'); ?></label>
-                    <textarea rows="8" cols="50" name="text" id="textarea" class="textarea" required><?php $this->remember('text'); ?></textarea>
-                </p>
-
-                <p class="hj-comment-actions">
-                    <button type="submit" class="submit hj-comment-submit"><?php _e('提交评论'); ?></button>
-                </p>
+            <form method="post" action="<?php $this->commentUrl(); ?>" id="comment-form" class="hj-comment-form hj-comment-composer-form" role="form" data-hj-comment-form data-hj-require-login="<?php echo $hjUserLoggedIn ? '0' : '1'; ?>">
+                <div class="hj-comment-box" data-hj-comment-box>
+                    <textarea rows="6" cols="50" name="text" id="textarea" class="hj-comment-textarea" required></textarea>
+                    <div class="hj-comment-composer-actions" aria-label="<?php _e('评论操作'); ?>">
+                        <div class="hj-comment-actions-left" aria-label="<?php _e('工具'); ?>">
+                            <button class="hj-comment-icon-btn hj-comment-emoji" type="button" aria-label="<?php _e('表情'); ?>" title="<?php _e('表情'); ?>">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-smile-icon lucide-smile" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
+                            </button>
+                            <button class="hj-comment-icon-btn hj-comment-attach" type="button" aria-label="<?php _e('附件'); ?>" title="<?php _e('附件'); ?>">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip" aria-hidden="true"><path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"/></svg>
+                            </button>
+                            <button class="hj-comment-icon-btn hj-comment-private" type="button" aria-label="<?php _e('私信'); ?>" title="<?php _e('私信'); ?>" aria-pressed="false" data-hj-comment-private-toggle>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-line-dot-right-horizontal-icon lucide-line-dot-right-horizontal" aria-hidden="true"><path class="hj-private-line" d="M 3 12 L 15 12"/><circle class="hj-private-dot" cx="18" cy="12" r="3"/></svg>
+                            </button>
+                            <button class="hj-comment-icon-btn hj-comment-fullscreen-toggle" type="button" aria-label="<?php _e('展开全屏'); ?>" title="<?php _e('展开全屏'); ?>" aria-pressed="false" data-hj-comment-fullscreen-toggle>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize-icon lucide-maximize hj-comment-fullscreen-icon hj-comment-fullscreen-icon-max" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-minimize-icon lucide-minimize hj-comment-fullscreen-icon hj-comment-fullscreen-icon-min" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+                            </button>
+                        </div>
+                        <div class="hj-comment-actions-right" aria-label="<?php _e('提交'); ?>">
+                            <button class="hj-comment-icon-btn hj-comment-login" type="button" aria-label="<?php _e('登录'); ?>" title="<?php _e('登录'); ?>" data-hj-open-login>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-icon lucide-user-round" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+                            </button>
+                            <button class="hj-comment-icon-btn hj-comment-send" type="submit" aria-label="<?php _e('提交评论'); ?>" title="<?php _e('提交评论'); ?>">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send-icon lucide-send" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </form>
+        </div>
+
+        <div class="hj-login-modal" data-hj-login-modal aria-hidden="true">
+            <div class="hj-login-modal-backdrop" data-hj-login-backdrop aria-hidden="true"></div>
+            <div class="hj-login-modal-panel" role="dialog" aria-modal="true" aria-label="<?php _e('登录'); ?>" tabindex="-1" data-hj-login-panel>
+                <form class="hj-login-modal-form hj-comment-form" method="post" action="<?php $this->options->loginAction(); ?>" autocomplete="on">
+                    <p class="hj-comment-field">
+                        <label for="hj-login-name" class="required"><?php _e('用户名或邮箱'); ?></label>
+                        <input type="text" id="hj-login-name" name="name" class="text" autocomplete="username" required>
+                    </p>
+                    <p class="hj-comment-field">
+                        <label for="hj-login-pass" class="required"><?php _e('密码'); ?></label>
+                        <input type="password" id="hj-login-pass" name="password" class="text" autocomplete="current-password" required>
+                    </p>
+                    <?php if ($hjLoginReferer !== ''): ?>
+                        <input type="hidden" name="referer" value="<?php echo hansJackEscape($hjLoginReferer); ?>">
+                    <?php endif; ?>
+                    <p class="hj-comment-actions">
+                        <button type="submit" class="hj-login-modal-submit"><?php _e('登录'); ?></button>
+                    </p>
+                </form>
+            </div>
         </div>
     <?php else: ?>
         <h2 class="hj-comments-closed"><?php _e('评论已关闭'); ?></h2>
     <?php endif; ?>
 </section>
-
