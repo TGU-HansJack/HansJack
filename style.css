@@ -3137,7 +3137,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 .hj-comments .comment-body {    
     border: 0;    
     border-radius: 0;    
-    padding: 0.85rem var(--hj-comment-body-pad-x) 0;    
+    padding: 0.85rem var(--hj-comment-body-pad-x);    
     --hj-comment-avatar-size: 32px;   
     --hj-comment-avatar-gap: 0.6rem;   
     min-width: 0;    
@@ -3146,6 +3146,10 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     align-items: center;  
     column-gap: 0.6rem;
     row-gap: 0;
+}
+
+.hj-comments .comment-body.comment-parent {
+    border: 2px solid var(--hj-day-black);
 }
 
 .hj-comments .comment-author {
@@ -3164,8 +3168,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     width: var(--hj-comment-avatar-size);  
     height: var(--hj-comment-avatar-size);  
     border-radius: 999px;  
-    /* Shrink the visible avatar slightly via border-box, then add a subtle purple ring. */
-    border: 2px solid rgba(124, 58, 237, 0.3);
+    border: 0;
 }  
  
 
@@ -3322,45 +3325,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     position: relative; 
 } 
 
-/* Thread connectors (vertical trunk + horizontal branch + junction dot). */
-.hj-comments .comment-body.hj-comment-thread-parent {
-    position: relative;
-    background-image: linear-gradient(var(--hj-comment-thread-stroke), var(--hj-comment-thread-stroke));
-    background-repeat: no-repeat;
-    background-size: 2px calc(var(--hj-thread-y2, 0px) - var(--hj-thread-y1, 0px));
-    background-position: calc(var(--hj-thread-x, 0px) - 1px) var(--hj-thread-y1, 0px);
-}
-
-.hj-comments .comment-body.hj-comment-thread-child {
-    position: relative;
-}
-
-.hj-comments .comment-body.hj-comment-thread-child::before {
-    content: "";
-    position: absolute;
-    left: var(--hj-branch-x, 0px);
-    top: var(--hj-branch-y, 0px);
-    width: calc(var(--hj-branch-x2, 0px) - var(--hj-branch-x, 0px));
-    height: 2px;
-    transform: translateY(-50%);
-    background: var(--hj-comment-thread-stroke);
-    border-radius: 999px;
-    pointer-events: none;
-}
-
-.hj-comments .comment-body.hj-comment-thread-child::after {
-    content: "";
-    position: absolute;
-    left: var(--hj-branch-x, 0px);
-    top: var(--hj-branch-y, 0px);
-    transform: translate(-50%, -50%);
-    width: 8px;
-    height: 8px;
-    border: 2px solid var(--hj-comment-thread-stroke);
-    border-radius: 999px;
-    background: var(--hj-comment-thread-bg);
-    pointer-events: none;
-}
+/* Thread connector visuals are intentionally disabled (no vertical line / junction dot). */
  
  
 
@@ -4146,6 +4111,10 @@ html.hj-login-modal-open .hj-login-modal {
     html:not(.hj-theme-light) .hj-comments .comment-meta time {   
         color: var(--hj-muted-night);   
     }   
+
+    html:not(.hj-theme-light) .hj-comments .comment-body.comment-parent {
+        border-color: var(--hj-night-white);
+    }
  
     html:not(.hj-theme-light) .hj-comments .hj-comment-more-toggle {   
         color: var(--hj-muted-night);   
