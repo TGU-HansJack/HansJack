@@ -1630,12 +1630,37 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
     display: grid;
     /* Let titles keep more width; the tags column stays compact instead of stealing 50%. */
     grid-template-columns: minmax(0, 1fr) minmax(0, clamp(8rem, 30%, 14rem));
-    gap: 1.2rem;
+    column-gap: 1.2rem;
+    /* Keep the vertical rhythm controlled by the title/excerpt/time margins. */
+    row-gap: 0;
     align-items: start;
 }
 
 .hj-posts-item-left {
+    /* Flatten so the title/excerpt/date can span the full item width. */
+    display: contents;
+}
+
+.hj-posts-item .hj-posts-title,
+.hj-posts-item .hj-posts-title-row {
+    grid-column: 1 / 2;
+    grid-row: 1;
     min-width: 0;
+}
+
+.hj-posts-item .hj-posts-item-right {
+    grid-column: 2 / 3;
+    grid-row: 1;
+}
+
+.hj-posts-item .hj-posts-excerpt {
+    grid-column: 1 / -1;
+    grid-row: 2;
+}
+
+.hj-posts-item .hj-posts-date {
+    grid-column: 1 / -1;
+    grid-row: 3;
 }
 
 .hj-posts-title {
