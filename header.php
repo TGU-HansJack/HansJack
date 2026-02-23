@@ -1,13 +1,41 @@
 <?php if (!defined('__TYPECHO_ROOT_DIR__')) {
     exit;
 } ?>
-<?php $themeConfig = hansJackBuildThemeConfig($this->options); ?>
+<?php
+$themeConfig = hansJackBuildThemeConfig($this->options);
+
+// Read persisted theme choice early (cookie), so the initial HTML can render without a light flash in dark mode.
+$hjThemeCookie = '';
+try {
+    $hjThemeCookie = isset($_COOKIE['hansjack_theme_mode']) ? (string) $_COOKIE['hansjack_theme_mode'] : '';
+} catch (\Throwable $e) {
+    $hjThemeCookie = '';
+}
+$hjThemeCookie = strtolower(trim($hjThemeCookie));
+$hjHtmlThemeClass = '';
+$hjHtmlThemeStyle = '';
+if ($hjThemeCookie === 'dark') {
+    $hjHtmlThemeClass = 'hj-theme-dark';
+    $hjHtmlThemeStyle = 'background-color:#0e0e0c;color-scheme:dark;';
+} elseif ($hjThemeCookie === 'light') {
+    $hjHtmlThemeClass = 'hj-theme-light';
+    $hjHtmlThemeStyle = 'background-color:#fffffd;color-scheme:light;';
+}
+?>
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN"<?php if ($hjHtmlThemeClass !== '') {
+    echo ' class="' . htmlspecialchars($hjHtmlThemeClass, ENT_QUOTES, 'UTF-8') . '"';
+} ?><?php if ($hjHtmlThemeStyle !== '') {
+    echo ' style="' . htmlspecialchars($hjHtmlThemeStyle, ENT_QUOTES, 'UTF-8') . '"';
+} ?>>
 <head>
     <meta charset="<?php $this->options->charset(); ?>">
     <meta name="renderer" content="webkit">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
+    <meta name="theme-color" content="#fffffd" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0e0e0c" media="(prefers-color-scheme: dark)">
     <title><?php $this->archiveTitle([
             'category' => _t('分类 %s 下的文章'),
             'search'   => _t('包含关键字 %s 的文章'),
@@ -23,8 +51,69 @@
 
             var storageKey = "hansjack_theme_mode";
             var mode = "";
+            var hasExplicit = false;
+
+            function readCookie(key) {
+                var value = "";
+                try {
+                    var cookies = document.cookie ? document.cookie.split(";") : [];
+                    for (var i = 0; i < cookies.length; i++) {
+                        var part = cookies[i].trim();
+                        if (!part) {
+                            continue;
+                        }
+                        if (part.indexOf(key + "=") === 0) {
+                            value = decodeURIComponent(part.slice(key.length + 1));
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    value = "";
+                }
+                return value;
+            }
+
+            function writeCookie(value) {
+                try {
+                    var maxAge = 60 * 60 * 24 * 365;
+                    document.cookie =
+                        storageKey +
+                        "=" +
+                        encodeURIComponent(value) +
+                        "; path=/; max-age=" +
+                        maxAge +
+                        "; samesite=lax";
+                } catch (e) {}
+            }
+
+            if (root.classList.contains("hj-theme-dark")) {
+                mode = "dark";
+                hasExplicit = true;
+            } else if (root.classList.contains("hj-theme-light")) {
+                mode = "light";
+                hasExplicit = true;
+            }
+
+            if (!mode) {
+                var cookie = readCookie(storageKey);
+                if (cookie === "dark" || cookie === "light") {
+                    mode = cookie;
+                    hasExplicit = true;
+                    root.classList.add(mode === "dark" ? "hj-theme-dark" : "hj-theme-light");
+                }
+            }
+
             try {
-                mode = window.localStorage.getItem(storageKey) || "";
+                if (!mode && window.localStorage) {
+                    mode = window.localStorage.getItem(storageKey) || "";
+                    if (mode === "dark" || mode === "light") {
+                        hasExplicit = true;
+                        root.classList.add(mode === "dark" ? "hj-theme-dark" : "hj-theme-light");
+                        writeCookie(mode);
+                    } else {
+                        mode = "";
+                    }
+                }
             } catch (e) {
                 mode = "";
             }
@@ -37,25 +126,57 @@
                 }
             }
 
-            root.classList.remove("hj-theme-light", "hj-theme-dark");
-            root.classList.add(mode === "dark" ? "hj-theme-dark" : "hj-theme-light");
+            if (mode === "dark") {
+                root.classList.remove("hj-theme-light");
+                root.classList.add("hj-theme-dark");
+            } else {
+                root.classList.remove("hj-theme-dark");
+                root.classList.add("hj-theme-light");
+            }
 
             // Avoid a white flash before the main stylesheet loads.
             root.style.backgroundColor = mode === "dark" ? "#0e0e0c" : "#fffffd";
             root.style.colorScheme = mode;
+
+            // Keep localStorage and cookie in sync for explicit choices only (don't lock "auto" mode).
+            if (hasExplicit) {
+                writeCookie(mode);
+                try {
+                    if (window.localStorage) {
+                        window.localStorage.setItem(storageKey, mode);
+                    }
+                } catch (e) {}
+            }
         })();
     </script>
     <style>
+        html,
+        body {
+            background-color: #fffffd;
+            color: #2a2a28;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            html:not(.hj-theme-light),
+            html:not(.hj-theme-light) body {
+                background-color: #0e0e0c;
+                color: #dddddb;
+                color-scheme: dark;
+            }
+        }
+
         html.hj-theme-dark,
         html.hj-theme-dark body {
             background-color: #0e0e0c;
             color: #dddddb;
+            color-scheme: dark;
         }
 
         html.hj-theme-light,
         html.hj-theme-light body {
             background-color: #fffffd;
             color: #2a2a28;
+            color-scheme: light;
         }
     </style>
     <link rel="stylesheet" href="<?php $this->options->themeUrl('style.css'); ?>">

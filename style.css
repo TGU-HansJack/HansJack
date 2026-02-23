@@ -2746,12 +2746,45 @@ html.hj-theme-dark .hj-recent {
     overflow: auto;
 }
 
-.hj-article-toc-title {
+.hj-article-toc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
     margin: 0 0 0.65rem;
+}
+
+.hj-article-toc-title {
+    margin: 0;
     font-family: var(--hj-font-ui);
     font-size: 1rem;
     font-weight: 700;
     color: var(--hj-accent);
+}
+
+.hj-article-toc-close {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--hj-accent);
+    cursor: pointer;
+    opacity: 0.78;
+}
+
+.hj-article-toc-close:hover,
+.hj-article-toc-close:focus-visible {
+    opacity: 1;
+}
+
+.hj-article-toc-close:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
 }
 
 .hj-article-toc-list,
@@ -2786,6 +2819,11 @@ html.hj-theme-dark .hj-recent {
 .hj-article-toc-link:focus-visible {
     opacity: 1;
     text-decoration: none;
+}
+
+.hj-article-toc-link:not(.is-active):not([aria-current="location"]):hover,
+.hj-article-toc-link:not(.is-active):not([aria-current="location"]):focus-visible {
+    font-weight: 700;
 }
 
 .hj-article-toc-link.is-active,
@@ -2898,6 +2936,10 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
         height: 100%;
         overflow: auto;
         padding: 1rem 0.8rem calc(1rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    html.hj-mobile-toc-open .hj-article-layout.is-has-toc .hj-article-toc-close {
+        display: inline-flex;
     }
 }
 
@@ -3114,6 +3156,21 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 
 .hj-article-content a::before {
     content: none;
+}
+
+.hj-article-content a.hj-link-has-favicon::before {
+    content: "";
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.35em;
+    border-radius: 999px;
+    background-image: var(--hj-link-favicon);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    vertical-align: -0.14em;
+    text-decoration: none;
 }
 
 .hj-article-content a:hover,

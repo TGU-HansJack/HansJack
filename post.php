@@ -147,7 +147,12 @@ $this->need('header.php');
             </div>
             <aside class="hj-article-aside" aria-label="<?php _e('目录'); ?>">
                 <div class="hj-article-toc">
-                    <h2 class="hj-article-toc-title"><?php _e('目录'); ?></h2>
+                    <div class="hj-article-toc-header">
+                        <h2 class="hj-article-toc-title"><?php _e('目录'); ?></h2>
+                        <button class="hj-article-toc-close" type="button" aria-label="<?php _e('关闭目录'); ?>" title="<?php _e('关闭目录'); ?>">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        </button>
+                    </div>
                     <nav class="hj-article-toc-nav" aria-label="<?php _e('文章目录'); ?>"></nav>
                 </div>
             </aside>

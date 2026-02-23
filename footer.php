@@ -172,6 +172,7 @@
         var commentBtn = fab.querySelector(".hj-fab-comment");
         var tocBtn = fab.querySelector(".hj-fab-toc");
         var tocBackdrop = document.querySelector("[data-hj-mobile-toc-backdrop]");
+        var tocCloseBtn = document.querySelector(".hj-article-toc-close");
         var tocOpenClass = "hj-mobile-toc-open";
         var wideMql = null;
         try {
@@ -268,6 +269,15 @@
             if (tocBackdrop) {
                 tocBackdrop.setAttribute("aria-hidden", "true");
             }
+        }
+
+        if (tocCloseBtn) {
+            tocCloseBtn.addEventListener("click", function (e) {
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+                closeMobileToc();
+            });
         }
 
         function openMobileToc() {
@@ -1049,6 +1059,19 @@
             toggle.setAttribute("aria-pressed", mode === "dark" ? "true" : "false");
         }
 
+        function writeCookie(value) {
+            try {
+                var maxAge = 60 * 60 * 24 * 365;
+                document.cookie =
+                    storageKey +
+                    "=" +
+                    encodeURIComponent(value) +
+                    "; path=/; max-age=" +
+                    maxAge +
+                    "; samesite=lax";
+            } catch (e) {}
+        }
+
         function applyTheme(mode, persist) {
             root.classList.remove("hj-theme-light", "hj-theme-dark");
             if (mode === "dark") {
@@ -1059,8 +1082,11 @@
 
             setToggleText(mode);
 
-            if (persist && storageAvailable) {
-                window.localStorage.setItem(storageKey, mode);
+            if (persist) {
+                writeCookie(mode);
+                if (storageAvailable) {
+                    window.localStorage.setItem(storageKey, mode);
+                }
             }
         }
 
@@ -1363,6 +1389,125 @@
         });
 
         requestUpdate();
+    })();
+</script>
+
+<script>
+    (function () {
+        var content = document.querySelector(".hj-article-content");
+        if (!content) {
+            return;
+        }
+
+        var links = Array.prototype.slice.call(content.querySelectorAll("a[href]"));
+        if (links.length === 0) {
+            return;
+        }
+
+        var cache = Object.create(null);
+
+        function loadFavicon(host, callback) {
+            var entry = cache[host];
+            if (entry) {
+                if (entry.state === "ok") {
+                    callback(entry.url);
+                    return;
+                }
+                if (entry.state === "bad") {
+                    callback("");
+                    return;
+                }
+                entry.cbs.push(callback);
+                return;
+            }
+
+            var url = "//" + host + "/favicon.ico";
+            cache[host] = { state: "pending", url: url, cbs: [callback] };
+
+            var img = new Image();
+            img.onload = function () {
+                var e = cache[host];
+                if (!e) {
+                    return;
+                }
+                e.state = "ok";
+                var cbs = e.cbs.slice();
+                e.cbs.length = 0;
+                for (var i = 0; i < cbs.length; i++) {
+                    try {
+                        cbs[i](e.url);
+                    } catch (err) {}
+                }
+            };
+            img.onerror = function () {
+                var e = cache[host];
+                if (!e) {
+                    return;
+                }
+                e.state = "bad";
+                var cbs = e.cbs.slice();
+                e.cbs.length = 0;
+                for (var i = 0; i < cbs.length; i++) {
+                    try {
+                        cbs[i]("");
+                    } catch (err) {}
+                }
+            };
+            img.src = url;
+        }
+
+        function shouldSkipHref(href) {
+            if (!href) {
+                return true;
+            }
+
+            var lower = href.toLowerCase();
+            if (lower.indexOf("mailto:") === 0 || lower.indexOf("tel:") === 0 || lower.indexOf("javascript:") === 0) {
+                return true;
+            }
+            if (href.charAt(0) === "#") {
+                return true;
+            }
+            if (!(lower.indexOf("http://") === 0 || lower.indexOf("https://") === 0)) {
+                return true;
+            }
+            return false;
+        }
+
+        links.forEach(function (a) {
+            if (!a || (a.classList && a.classList.contains("hj-link-has-favicon"))) {
+                return;
+            }
+
+            var text = ((a.textContent || "") + "").trim();
+            if (!text) {
+                return;
+            }
+
+            var href = a.getAttribute("href") || "";
+            if (shouldSkipHref(href)) {
+                return;
+            }
+
+            var url;
+            try {
+                url = new URL(href);
+            } catch (e) {
+                return;
+            }
+            if (!url || !url.host) {
+                return;
+            }
+
+            loadFavicon(url.host, function (faviconUrl) {
+                if (!faviconUrl) {
+                    return;
+                }
+
+                a.style.setProperty("--hj-link-favicon", "url(\"" + faviconUrl.replace(/\"/g, "\\\"") + "\")");
+                a.classList.add("hj-link-has-favicon");
+            });
+        });
     })();
 </script>
 
