@@ -360,7 +360,7 @@ if ($this->is('tag')) {
                         </div>
                     </div>
                 <?php else: ?>
-                    <a class="hj-login-btn" href="<?php $this->options->adminUrl('login.php'); ?>" aria-label="<?php _e('登录'); ?>" title="<?php _e('登录'); ?>">
+                    <a class="hj-login-btn" href="<?php $this->options->adminUrl('login.php'); ?>" aria-label="<?php _e('登录'); ?>" title="<?php _e('登录'); ?>" data-hj-open-login-modal>
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-round-icon lucide-user-round" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
                     </a>
                 <?php endif; ?>
@@ -461,7 +461,7 @@ if ($this->is('tag')) {
                         <span class="hj-user-dropdown-text"><?php _e('退出'); ?></span>
                     </a>
                 <?php else: ?>
-                    <a class="hj-user-dropdown-item" role="menuitem" href="<?php $this->options->adminUrl('login.php'); ?>">
+                    <a class="hj-user-dropdown-item" role="menuitem" href="<?php $this->options->adminUrl('login.php'); ?>" data-hj-open-login-modal>
                         <span class="hj-user-dropdown-icon" aria-hidden="true">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
                         </span>

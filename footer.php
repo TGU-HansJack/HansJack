@@ -1981,6 +1981,25 @@
             }
         });
 
+        // Header/mobile "login" links: open the same modal instead of navigating to /admin/login.php.
+        (function setupHeaderLoginModalTriggers() {
+            var triggers = document.querySelectorAll("[data-hj-open-login-modal]");
+            if (!triggers || triggers.length === 0) {
+                return;
+            }
+            triggers.forEach(function (el) {
+                el.addEventListener("click", function (e) {
+                    if (!modal) {
+                        return;
+                    }
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    openLogin(null, el);
+                });
+            });
+        })();
+
         // The "login" modal doubles as the guest identity editor:
         // - If password is empty: save author/url/mail and close.
         // - If password is filled: submit to Typecho login action as usual.
