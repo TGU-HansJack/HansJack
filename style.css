@@ -3156,7 +3156,10 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 .hj-article-content h6 {
     position: relative;
     font-weight: 700;
-    text-decoration: none;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.16em;
+    text-decoration-skip-ink: auto;
     scroll-margin-top: 12px;
 }
 
@@ -3247,6 +3250,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     .hj-article-content h6::after {
         content: "";
         display: inline-block;
+        text-decoration: none;
         width: 0.95em;
         height: 0.95em;
         margin-left: 0.35em;
