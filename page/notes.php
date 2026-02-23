@@ -117,10 +117,37 @@ if ($hjNotesRootMid) {
     <section class="hj-posts" aria-label="<?php _e('手记列表'); ?>">
         <div class="hj-posts-layout">
             <div class="hj-posts-main">
-                <ul class="hj-posts-list" aria-label="<?php _e('手记'); ?>">
+                    <ul class="hj-posts-list" aria-label="<?php _e('手记'); ?>">
                     <?php if ($posts && $posts->have()): ?>
                         <?php while ($posts->next()): ?>
-                            <li class="hj-posts-item">
+                            <?php
+                            $hjPostCreated = 0;
+                            $hjPostModified = 0;
+                            try {
+                                $hjPostCreated = (int) ($posts->created ?? 0);
+                            } catch (\Throwable $e) {
+                                $hjPostCreated = 0;
+                            }
+                            try {
+                                $hjPostModified = (int) ($posts->modified ?? 0);
+                            } catch (\Throwable $e) {
+                                $hjPostModified = 0;
+                            }
+
+                            $hjPostExcerpt = '';
+                            ob_start();
+                            try {
+                                $posts->excerpt(100, '...');
+                            } catch (\Throwable $e) {
+                                // Ignore.
+                            }
+                            $hjPostExcerpt = (string) ob_get_clean();
+                            $hjPostExcerpt = trim((string) preg_replace('/\\s+/u', ' ', $hjPostExcerpt));
+                            ?>
+                            <li class="hj-posts-item"
+                                data-hj-post-created="<?php echo (int) $hjPostCreated; ?>"
+                                data-hj-post-modified="<?php echo (int) $hjPostModified; ?>"
+                                data-hj-post-excerpt="<?php echo hansJackEscape($hjPostExcerpt); ?>">
                                 <div class="hj-posts-item-left">
                                     <?php
                                     $hjColumnName = '';

@@ -25,6 +25,17 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-to-line-icon lucide-arrow-up-to-line" aria-hidden="true"><path d="M5 3h14"/><path d="m18 13-6-6-6 6"/><path d="M12 7v14"/></svg>
         </span>
     </button>
+    <button class="hj-fab-btn hj-fab-settings" type="button" aria-label="<?php _e('设置'); ?>" title="<?php _e('设置'); ?>" aria-haspopup="true" aria-expanded="false">
+        <span class="hj-fab-ring" aria-hidden="true">
+            <svg class="hj-fab-ring-svg" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+                <circle class="hj-fab-ring-bg" cx="20" cy="20" r="18"></circle>
+                <circle class="hj-fab-ring-fg" cx="20" cy="20" r="18"></circle>
+            </svg>
+        </span>
+        <span class="hj-fab-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sliders-vertical-icon lucide-sliders-vertical" aria-hidden="true"><path d="M10 8h4"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M17 16h4"/><path d="M19 12V3"/><path d="M19 21v-5"/><path d="M3 14h4"/><path d="M5 10V3"/><path d="M5 21v-7"/></svg>
+        </span>
+    </button>
     <button class="hj-fab-btn hj-fab-comment" type="button" aria-label="<?php _e('评论'); ?>" title="<?php _e('评论'); ?>">
         <span class="hj-fab-ring" aria-hidden="true">
             <svg class="hj-fab-ring-svg" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
@@ -47,6 +58,33 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-table-of-contents-icon lucide-table-of-contents" aria-hidden="true"><path d="M16 5H3"/><path d="M16 12H3"/><path d="M16 19H3"/><path d="M21 5h.01"/><path d="M21 12h.01"/><path d="M21 19h.01"/></svg>
         </span>
     </button>
+</div>
+
+<div class="hj-fab-settings-popover" data-hj-posts-settings-popover aria-hidden="true" hidden>
+    <div class="hj-fab-settings-panel" role="dialog" aria-modal="true" aria-label="<?php _e('设置'); ?>" data-hj-posts-settings-panel>
+        <div class="hj-fab-settings-row">
+            <span class="hj-fab-settings-label"><?php _e('排序模式'); ?></span>
+            <select class="hj-fab-settings-select" data-hj-posts-setting-sort-mode>
+                <option value="default"><?php _e('默认'); ?></option>
+                <option value="published"><?php _e('按照发布时间'); ?></option>
+                <option value="updated"><?php _e('按照更新时间'); ?></option>
+            </select>
+        </div>
+        <div class="hj-fab-settings-row">
+            <span class="hj-fab-settings-label"><?php _e('顺序'); ?></span>
+            <select class="hj-fab-settings-select" data-hj-posts-setting-order>
+                <option value="desc"><?php _e('降序'); ?></option>
+                <option value="asc"><?php _e('升序'); ?></option>
+            </select>
+        </div>
+        <div class="hj-fab-settings-row">
+            <span class="hj-fab-settings-label"><?php _e('列表模式'); ?></span>
+            <select class="hj-fab-settings-select" data-hj-posts-setting-list-mode>
+                <option value="compact"><?php _e('紧凑模式'); ?></option>
+                <option value="preview"><?php _e('预览模式'); ?></option>
+            </select>
+        </div>
+    </div>
 </div>
 
 <div class="hj-mobile-toc-backdrop" data-hj-mobile-toc-backdrop aria-hidden="true"></div>
@@ -169,16 +207,25 @@
         }
 
         var topBtn = fab.querySelector(".hj-fab-top");
+        var settingsBtn = fab.querySelector(".hj-fab-settings");
         var commentBtn = fab.querySelector(".hj-fab-comment");
         var tocBtn = fab.querySelector(".hj-fab-toc");
+        var settingsPopover = document.querySelector("[data-hj-posts-settings-popover]");
+        var settingsPanel = settingsPopover ? settingsPopover.querySelector("[data-hj-posts-settings-panel]") : null;
+        var settingsSortModeSelect = settingsPopover ? settingsPopover.querySelector("[data-hj-posts-setting-sort-mode]") : null;
+        var settingsOrderSelect = settingsPopover ? settingsPopover.querySelector("[data-hj-posts-setting-order]") : null;
+        var settingsListModeSelect = settingsPopover ? settingsPopover.querySelector("[data-hj-posts-setting-list-mode]") : null;
         var tocBackdrop = document.querySelector("[data-hj-mobile-toc-backdrop]");
         var tocCloseBtn = document.querySelector(".hj-article-toc-close");
         var tocOpenClass = "hj-mobile-toc-open";
         var wideMql = null;
+        var narrowMql = null;
         try {
             wideMql = window.matchMedia ? window.matchMedia("(min-width: 1100px)") : null;
+            narrowMql = window.matchMedia ? window.matchMedia("(max-width: 980px)") : null;
         } catch (e) {
             wideMql = null;
+            narrowMql = null;
         }
         var raf = window.requestAnimationFrame
             ? window.requestAnimationFrame.bind(window)
@@ -188,6 +235,13 @@
 
         function isWideScreen() {
             return !!(wideMql && wideMql.matches);
+        }
+
+        function isNarrowScreen() {
+            if (narrowMql) {
+                return !!narrowMql.matches;
+            }
+            return (window.innerWidth || 0) <= 980;
         }
 
         function findTocLayout() {
@@ -318,6 +372,427 @@
                 closeMobileToc();
             }
         }
+
+        var postsSettingsStorageKey = "hj_posts_list_settings_v1";
+        var postsSettingsDefaults = { sortMode: "default", order: "desc", listMode: "compact" };
+        var postsSettings = null;
+
+        function normalizePostsSettings(next) {
+            var s = next && typeof next === "object" ? next : {};
+
+            var sortMode = String(s.sortMode || postsSettingsDefaults.sortMode);
+            if (sortMode !== "default" && sortMode !== "published" && sortMode !== "updated") {
+                sortMode = postsSettingsDefaults.sortMode;
+            }
+
+            var order = String(s.order || postsSettingsDefaults.order);
+            if (order !== "asc" && order !== "desc") {
+                order = postsSettingsDefaults.order;
+            }
+
+            var listMode = String(s.listMode || postsSettingsDefaults.listMode);
+            if (listMode !== "compact" && listMode !== "preview") {
+                listMode = postsSettingsDefaults.listMode;
+            }
+
+            return { sortMode: sortMode, order: order, listMode: listMode };
+        }
+
+        function loadPostsSettings() {
+            var raw = "";
+            try {
+                raw = window.localStorage ? String(localStorage.getItem(postsSettingsStorageKey) || "") : "";
+            } catch (e) {
+                raw = "";
+            }
+            if (!raw) {
+                return normalizePostsSettings(postsSettingsDefaults);
+            }
+            try {
+                return normalizePostsSettings(JSON.parse(raw));
+            } catch (e) {
+                return normalizePostsSettings(postsSettingsDefaults);
+            }
+        }
+
+        function savePostsSettings(next) {
+            postsSettings = normalizePostsSettings(next);
+            try {
+                if (window.localStorage) {
+                    localStorage.setItem(postsSettingsStorageKey, JSON.stringify(postsSettings));
+                }
+            } catch (e) {}
+        }
+
+        function syncPostsSettingsUI() {
+            if (!postsSettings) {
+                return;
+            }
+            if (settingsSortModeSelect) {
+                settingsSortModeSelect.value = postsSettings.sortMode;
+            }
+            if (settingsOrderSelect) {
+                settingsOrderSelect.value = postsSettings.order;
+            }
+            if (settingsListModeSelect) {
+                settingsListModeSelect.value = postsSettings.listMode;
+            }
+        }
+
+        function findPostsLists() {
+            return Array.prototype.slice.call(document.querySelectorAll(".hj-posts-list"));
+        }
+
+        function ensureOriginalOrder(items) {
+            if (!items || items.length === 0) {
+                return;
+            }
+            items.forEach(function (item, idx) {
+                if (!item || !item.setAttribute) {
+                    return;
+                }
+                if (!item.hasAttribute("data-hj-post-original-index")) {
+                    item.setAttribute("data-hj-post-original-index", String(idx));
+                }
+            });
+        }
+
+        function readIntAttr(el, name) {
+            if (!el || !el.getAttribute) {
+                return 0;
+            }
+            var v = parseInt(el.getAttribute(name) || "0", 10);
+            return isFinite(v) ? v : 0;
+        }
+
+        function applyPostsListSort(list) {
+            if (!postsSettings || !list) {
+                return;
+            }
+
+            var items = Array.prototype.slice.call(list.querySelectorAll(".hj-posts-item"));
+            if (!items || items.length === 0) {
+                return;
+            }
+
+            ensureOriginalOrder(items);
+
+            var sorted = items.slice();
+            var mode = postsSettings.sortMode;
+            var asc = postsSettings.order === "asc";
+
+            sorted.sort(function (a, b) {
+                var aIdx = readIntAttr(a, "data-hj-post-original-index");
+                var bIdx = readIntAttr(b, "data-hj-post-original-index");
+
+                if (mode === "default") {
+                    // Preserve server order; "asc" just reverses the original list.
+                    return asc ? bIdx - aIdx : aIdx - bIdx;
+                }
+
+                var aVal = 0;
+                var bVal = 0;
+                if (mode === "published") {
+                    aVal = readIntAttr(a, "data-hj-post-created");
+                    bVal = readIntAttr(b, "data-hj-post-created");
+                } else if (mode === "updated") {
+                    aVal = readIntAttr(a, "data-hj-post-modified") || readIntAttr(a, "data-hj-post-created");
+                    bVal = readIntAttr(b, "data-hj-post-modified") || readIntAttr(b, "data-hj-post-created");
+                }
+
+                if (aVal === bVal) {
+                    return aIdx - bIdx;
+                }
+
+                return asc ? aVal - bVal : bVal - aVal;
+            });
+
+            var frag = document.createDocumentFragment();
+            sorted.forEach(function (item) {
+                frag.appendChild(item);
+            });
+            list.appendChild(frag);
+        }
+
+        function ensurePostExcerpt(item) {
+            if (!item || !item.querySelector) {
+                return;
+            }
+            var text = "";
+            try {
+                text = String(item.getAttribute("data-hj-post-excerpt") || "");
+            } catch (e) {
+                text = "";
+            }
+            text = text.trim();
+            if (!text) {
+                return;
+            }
+
+            var existing = item.querySelector("[data-hj-posts-excerpt]");
+            if (existing) {
+                existing.textContent = text;
+                return;
+            }
+
+            var node = document.createElement("div");
+            node.className = "hj-posts-excerpt";
+            node.setAttribute("data-hj-posts-excerpt", "true");
+            node.textContent = text;
+
+            var left = item.querySelector(".hj-posts-item-left");
+            if (!left) {
+                item.appendChild(node);
+                return;
+            }
+
+            var time = left.querySelector(".hj-posts-date");
+            if (time && time.parentNode === left) {
+                left.insertBefore(node, time);
+            } else {
+                left.appendChild(node);
+            }
+        }
+
+        function removePostExcerpt(item) {
+            if (!item || !item.querySelectorAll) {
+                return;
+            }
+            var nodes = item.querySelectorAll("[data-hj-posts-excerpt]");
+            if (!nodes || nodes.length === 0) {
+                return;
+            }
+            Array.prototype.slice.call(nodes).forEach(function (n) {
+                if (n && n.parentNode) {
+                    n.parentNode.removeChild(n);
+                }
+            });
+        }
+
+        function applyPostsListMode(list) {
+            if (!postsSettings || !list) {
+                return;
+            }
+            var items = Array.prototype.slice.call(list.querySelectorAll(".hj-posts-item"));
+            if (!items || items.length === 0) {
+                return;
+            }
+
+            var isPreview = postsSettings.listMode === "preview";
+            items.forEach(function (item) {
+                if (isPreview) {
+                    ensurePostExcerpt(item);
+                } else {
+                    removePostExcerpt(item);
+                }
+            });
+        }
+
+        function applyPostsSettingsToAllLists() {
+            if (!postsSettings) {
+                return;
+            }
+
+            var root = document.documentElement;
+            if (root && root.classList) {
+                root.classList.toggle("hj-posts-preview-mode", postsSettings.listMode === "preview");
+            }
+
+            var lists = findPostsLists();
+            if (!lists || lists.length === 0) {
+                return;
+            }
+
+            lists.forEach(function (list) {
+                applyPostsListSort(list);
+                applyPostsListMode(list);
+            });
+        }
+
+        function shouldShowSettingsFab() {
+            if (!settingsBtn) {
+                return false;
+            }
+            var body = document.body;
+            var isPostsPage = !!(body && body.classList && body.classList.contains("hj-page-posts"));
+            if (isPostsPage) {
+                return true;
+            }
+            if (!isNarrowScreen()) {
+                return false;
+            }
+            return !!document.querySelector(".hj-posts-list");
+        }
+
+        function positionSettingsPopover() {
+            if (!settingsPopover || !settingsPanel || !settingsBtn) {
+                return;
+            }
+
+            var btnRect = settingsBtn.getBoundingClientRect();
+            var panelRect = settingsPanel.getBoundingClientRect();
+            var gap = 10;
+            var viewportPad = 8;
+
+            var left = btnRect.left - gap - panelRect.width;
+            if (left < viewportPad) {
+                left = viewportPad;
+            }
+
+            var top = btnRect.top + btnRect.height / 2 - panelRect.height / 2;
+            var maxTop = Math.max(viewportPad, window.innerHeight - panelRect.height - viewportPad);
+            if (top < viewportPad) {
+                top = viewportPad;
+            } else if (top > maxTop) {
+                top = maxTop;
+            }
+
+            settingsPopover.style.left = left.toFixed(0) + "px";
+            settingsPopover.style.top = top.toFixed(0) + "px";
+        }
+
+        function isSettingsPopoverOpen() {
+            return !!(settingsPopover && settingsPopover.classList && settingsPopover.classList.contains("is-open"));
+        }
+
+        var settingsPopoverHideTimer = null;
+
+        function closeSettingsPopover() {
+            if (!settingsPopover) {
+                return;
+            }
+            if (settingsPopoverHideTimer) {
+                window.clearTimeout(settingsPopoverHideTimer);
+                settingsPopoverHideTimer = null;
+            }
+            settingsPopover.classList.remove("is-open");
+            settingsPopover.setAttribute("aria-hidden", "true");
+            if (settingsBtn) {
+                settingsBtn.setAttribute("aria-expanded", "false");
+            }
+            settingsPopoverHideTimer = window.setTimeout(function () {
+                settingsPopoverHideTimer = null;
+                settingsPopover.hidden = true;
+                settingsPopover.style.left = "";
+                settingsPopover.style.top = "";
+            }, 180);
+        }
+
+        function openSettingsPopover() {
+            if (!settingsPopover || !settingsBtn) {
+                return;
+            }
+            if (settingsPopoverHideTimer) {
+                window.clearTimeout(settingsPopoverHideTimer);
+                settingsPopoverHideTimer = null;
+            }
+            settingsPopover.hidden = false;
+            settingsPopover.setAttribute("aria-hidden", "false");
+            settingsBtn.setAttribute("aria-expanded", "true");
+            syncPostsSettingsUI();
+            positionSettingsPopover();
+            window.setTimeout(function () {
+                settingsPopover.classList.add("is-open");
+            }, 0);
+        }
+
+        function toggleSettingsPopover() {
+            if (isSettingsPopoverOpen()) {
+                closeSettingsPopover();
+            } else {
+                openSettingsPopover();
+            }
+        }
+
+        function updateSettingsFabVisibility() {
+            if (!settingsBtn) {
+                return;
+            }
+            var show = shouldShowSettingsFab();
+            settingsBtn.style.display = show ? "inline-flex" : "none";
+            if (!show) {
+                closeSettingsPopover();
+            }
+        }
+
+        postsSettings = loadPostsSettings();
+        syncPostsSettingsUI();
+        applyPostsSettingsToAllLists();
+        updateSettingsFabVisibility();
+
+        if (settingsSortModeSelect) {
+            settingsSortModeSelect.addEventListener("change", function () {
+                savePostsSettings({
+                    sortMode: settingsSortModeSelect.value,
+                    order: settingsOrderSelect ? settingsOrderSelect.value : postsSettings.order,
+                    listMode: settingsListModeSelect ? settingsListModeSelect.value : postsSettings.listMode
+                });
+                applyPostsSettingsToAllLists();
+            });
+        }
+
+        if (settingsOrderSelect) {
+            settingsOrderSelect.addEventListener("change", function () {
+                savePostsSettings({
+                    sortMode: settingsSortModeSelect ? settingsSortModeSelect.value : postsSettings.sortMode,
+                    order: settingsOrderSelect.value,
+                    listMode: settingsListModeSelect ? settingsListModeSelect.value : postsSettings.listMode
+                });
+                applyPostsSettingsToAllLists();
+            });
+        }
+
+        if (settingsListModeSelect) {
+            settingsListModeSelect.addEventListener("change", function () {
+                savePostsSettings({
+                    sortMode: settingsSortModeSelect ? settingsSortModeSelect.value : postsSettings.sortMode,
+                    order: settingsOrderSelect ? settingsOrderSelect.value : postsSettings.order,
+                    listMode: settingsListModeSelect.value
+                });
+                applyPostsSettingsToAllLists();
+                // Ensure the popover doesn't drift after layout changes (excerpt insertion).
+                if (isSettingsPopoverOpen()) {
+                    window.setTimeout(positionSettingsPopover, 0);
+                }
+            });
+        }
+
+        if (settingsBtn) {
+            settingsBtn.addEventListener("click", function () {
+                toggleSettingsPopover();
+            });
+        }
+
+        document.addEventListener("mousedown", function (e) {
+            if (!isSettingsPopoverOpen()) {
+                return;
+            }
+            var t = e ? e.target : null;
+            if (!t || !t.closest) {
+                return;
+            }
+            if (t.closest(".hj-fab-settings-popover") || t.closest(".hj-fab-settings")) {
+                return;
+            }
+            closeSettingsPopover();
+        }, true);
+
+        window.addEventListener("keydown", function (e) {
+            if (!isSettingsPopoverOpen()) {
+                return;
+            }
+            var key = e && (e.key || e.code);
+            if (key === "Escape" || key === "Esc") {
+                closeSettingsPopover();
+            }
+        });
+
+        window.addEventListener("resize", function () {
+            updateSettingsFabVisibility();
+            if (isSettingsPopoverOpen()) {
+                positionSettingsPopover();
+            }
+        });
 
         if (commentBtn) {
             var target = findCommentTarget();

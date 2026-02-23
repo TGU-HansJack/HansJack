@@ -1678,6 +1678,17 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
     letter-spacing: 0.02em;
 }
 
+.hj-posts-excerpt {
+    display: block;
+    margin-top: 0.38rem;
+    font-family: var(--hj-font-ui);
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: var(--hj-muted-day);
+    opacity: 0.92;
+    overflow-wrap: anywhere;
+}
+
 .hj-posts-item-right {
     min-width: 0;
     display: flex;
@@ -1964,6 +1975,18 @@ html.hj-theme-dark .hj-posts-pager.page-navigator.is-affixed {
         margin-top: 0;
         line-height: 1.25;
     }
+
+    html.hj-posts-preview-mode .hj-posts-excerpt {
+        order: 2;
+    }
+
+    html.hj-posts-preview-mode .hj-posts-item-right {
+        order: 3;
+    }
+
+    html.hj-posts-preview-mode .hj-posts-date {
+        order: 4;
+    }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1972,6 +1995,7 @@ html.hj-theme-dark .hj-posts-pager.page-navigator.is-affixed {
     }
 
     html:not(.hj-theme-light) .hj-posts-date,
+    html:not(.hj-theme-light) .hj-posts-excerpt,
     html:not(.hj-theme-light) .hj-posts-item-right,
     html:not(.hj-theme-light) .hj-posts-empty,
     html:not(.hj-theme-light) .hj-posts-pager.page-navigator li a,
@@ -1991,6 +2015,7 @@ html.hj-theme-dark .hj-posts {
 }
 
 html.hj-theme-dark .hj-posts-date,
+html.hj-theme-dark .hj-posts-excerpt,
 html.hj-theme-dark .hj-posts-item-right,
 html.hj-theme-dark .hj-posts-empty,
 html.hj-theme-dark .hj-posts-pager.page-navigator li a,
@@ -3020,6 +3045,71 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     transition: background-color 0.18s ease;
 }
 
+.hj-fab-btn.hj-fab-settings {
+    display: none;
+}
+
+.hj-fab-settings-popover {
+    position: fixed;
+    z-index: 2100;
+    opacity: 0;
+    transform: translateY(4px);
+    pointer-events: none;
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.hj-fab-settings-popover.is-open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.hj-fab-settings-panel {
+    width: min(92vw, 320px);
+    border-radius: 4px;
+    border: 2px solid var(--hj-day-black);
+    background: var(--hj-day-bg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 0.55rem 0.6rem;
+}
+
+.hj-fab-settings-row {
+    display: grid;
+    grid-template-columns: 4.6em minmax(0, 1fr);
+    gap: 0.65rem;
+    align-items: center;
+    font-family: var(--hj-font-ui);
+    font-size: 0.82rem;
+    line-height: 1.2;
+}
+
+.hj-fab-settings-row + .hj-fab-settings-row {
+    margin-top: 0.5rem;
+}
+
+.hj-fab-settings-label {
+    color: var(--hj-muted-day);
+    white-space: nowrap;
+}
+
+.hj-fab-settings-select {
+    width: 100%;
+    min-width: 0;
+    height: 32px;
+    padding: 0 0.45rem;
+    border-radius: 4px;
+    border: 2px solid var(--hj-line-day);
+    background: transparent;
+    color: inherit;
+    font-family: var(--hj-font-ui);
+    font-size: 0.82rem;
+    outline: none;
+}
+
+.hj-fab-settings-select:focus {
+    border-color: var(--hj-accent);
+}
+
 .hj-fab-ring {
     position: absolute;
     inset: 0;
@@ -3055,6 +3145,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 }
 
 .hj-fab-comment .hj-fab-ring-bg,
+.hj-fab-settings .hj-fab-ring-bg,
 .hj-fab-toc .hj-fab-ring-bg {
     opacity: 0;
 }
@@ -4499,10 +4590,19 @@ html.hj-login-modal-open .hj-login-modal {
 
     html:not(.hj-theme-light) .hj-pages-dropdown,
     html:not(.hj-theme-light) .hj-user-dropdown,
-    html:not(.hj-theme-light) .hj-nav-dropdown {
+    html:not(.hj-theme-light) .hj-nav-dropdown,
+    html:not(.hj-theme-light) .hj-fab-settings-panel {
         background: var(--hj-night-bg);
         border-color: var(--hj-night-white);
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    }
+
+    html:not(.hj-theme-light) .hj-fab-settings-label {
+        color: var(--hj-muted-night);
+    }
+
+    html:not(.hj-theme-light) .hj-fab-settings-select {
+        border-color: var(--hj-line-night);
     }
 
     html:not(.hj-theme-light) .hj-mobile-nav-panel {
@@ -4816,10 +4916,19 @@ html.hj-theme-dark .hj-user-chip {
 
 html.hj-theme-dark .hj-pages-dropdown,
 html.hj-theme-dark .hj-user-dropdown,
-html.hj-theme-dark .hj-nav-dropdown {
+html.hj-theme-dark .hj-nav-dropdown,
+html.hj-theme-dark .hj-fab-settings-panel {
     background: var(--hj-night-bg);
     border-color: var(--hj-night-white);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+html.hj-theme-dark .hj-fab-settings-label {
+    color: var(--hj-muted-night);
+}
+
+html.hj-theme-dark .hj-fab-settings-select {
+    border-color: var(--hj-line-night);
 }
 
 html.hj-theme-dark .hj-mobile-nav-panel {
