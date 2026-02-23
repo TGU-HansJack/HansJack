@@ -3100,6 +3100,8 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     padding-top: 0.2rem;   
     --hj-comment-body-pad-x: 0.85rem;  
     --hj-comment-indent: 1.25rem;   
+    --hj-comment-thread-stroke: #7c3aed;
+    --hj-comment-thread-bg: var(--hj-day-bg);
 }   
 
 .hj-comments .comment-list {
@@ -3162,6 +3164,8 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     width: var(--hj-comment-avatar-size);  
     height: var(--hj-comment-avatar-size);  
     border-radius: 999px;  
+    /* Shrink the visible avatar slightly via border-box, then add a subtle purple ring. */
+    border: 2px solid rgba(124, 58, 237, 0.3);
 }  
  
 
@@ -3317,6 +3321,46 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 .hj-comments .comment-children > .comment-list > .comment-body { 
     position: relative; 
 } 
+
+/* Thread connectors (vertical trunk + horizontal branch + junction dot). */
+.hj-comments .comment-body.hj-comment-thread-parent {
+    position: relative;
+    background-image: linear-gradient(var(--hj-comment-thread-stroke), var(--hj-comment-thread-stroke));
+    background-repeat: no-repeat;
+    background-size: 2px calc(var(--hj-thread-y2, 0px) - var(--hj-thread-y1, 0px));
+    background-position: calc(var(--hj-thread-x, 0px) - 1px) var(--hj-thread-y1, 0px);
+}
+
+.hj-comments .comment-body.hj-comment-thread-child {
+    position: relative;
+}
+
+.hj-comments .comment-body.hj-comment-thread-child::before {
+    content: "";
+    position: absolute;
+    left: var(--hj-branch-x, 0px);
+    top: var(--hj-branch-y, 0px);
+    width: calc(var(--hj-branch-x2, 0px) - var(--hj-branch-x, 0px));
+    height: 2px;
+    transform: translateY(-50%);
+    background: var(--hj-comment-thread-stroke);
+    border-radius: 999px;
+    pointer-events: none;
+}
+
+.hj-comments .comment-body.hj-comment-thread-child::after {
+    content: "";
+    position: absolute;
+    left: var(--hj-branch-x, 0px);
+    top: var(--hj-branch-y, 0px);
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border: 2px solid var(--hj-comment-thread-stroke);
+    border-radius: 999px;
+    background: var(--hj-comment-thread-bg);
+    pointer-events: none;
+}
  
  
 
@@ -4110,6 +4154,10 @@ html.hj-login-modal-open .hj-login-modal {
     html:not(.hj-theme-light) .hj-comments .comment-reply {   
         background: transparent; 
     }   
+
+    html:not(.hj-theme-light) .hj-comments {
+        --hj-comment-thread-bg: var(--hj-night-bg);
+    }
  
     html:not(.hj-theme-light) .hj-comment-box.is-private,  
     html:not(.hj-theme-light) .hj-private-mask {  
@@ -4380,8 +4428,12 @@ html.hj-theme-dark .hj-comments .hj-comment-more-toggle {
 }    
  
 html.hj-theme-dark .hj-comments .comment-reply {   
-    background: transparent;  
+    background: transparent; 
 }   
+
+html.hj-theme-dark .hj-comments {
+    --hj-comment-thread-bg: var(--hj-night-bg);
+}
  
 html.hj-theme-dark .hj-comment-box.is-private,  
 html.hj-theme-dark .hj-private-mask {  

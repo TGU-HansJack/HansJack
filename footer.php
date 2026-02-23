@@ -1530,6 +1530,207 @@
                 item.insertBefore(btn, children); 
             }); 
         })(); 
+
+        (function setupCommentThreadGuides() {
+            var parentClass = "hj-comment-thread-parent";
+            var childClass = "hj-comment-thread-child";
+
+            function clearParent(el) {
+                if (!el || !el.classList) {
+                    return;
+                }
+                el.classList.remove(parentClass);
+                el.style.removeProperty("--hj-thread-x");
+                el.style.removeProperty("--hj-thread-y1");
+                el.style.removeProperty("--hj-thread-y2");
+            }
+
+            function clearChild(el) {
+                if (!el || !el.classList) {
+                    return;
+                }
+                el.classList.remove(childClass);
+                el.style.removeProperty("--hj-branch-x");
+                el.style.removeProperty("--hj-branch-x2");
+                el.style.removeProperty("--hj-branch-y");
+            }
+
+            function isVisible(el) {
+                if (!el) {
+                    return false;
+                }
+                if (el.hidden) {
+                    return false;
+                }
+                try {
+                    return !!(el.getClientRects && el.getClientRects().length);
+                } catch (e) {
+                    return true;
+                }
+            }
+
+            function findDirectChildrenContainer(parent) {
+                if (!parent || !parent.children) {
+                    return null;
+                }
+                for (var i = 0; i < parent.children.length; i++) {
+                    var el = parent.children[i];
+                    if (el && el.classList && el.classList.contains("comment-children")) {
+                        return el;
+                    }
+                }
+                return null;
+            }
+
+            function update() {
+                // Clear previous state.
+                Array.prototype.slice.call(comments.querySelectorAll("." + parentClass)).forEach(clearParent);
+                Array.prototype.slice.call(comments.querySelectorAll("." + childClass)).forEach(clearChild);
+
+                var parents = Array.prototype.slice.call(comments.querySelectorAll(".comment-body"));
+                parents.forEach(function (parent) {
+                    var childrenWrap = findDirectChildrenContainer(parent);
+                    if (!childrenWrap || !isVisible(childrenWrap)) {
+                        return;
+                    }
+
+                    var list = childrenWrap.querySelector(".comment-list");
+                    if (!list || !isVisible(list)) {
+                        return;
+                    }
+
+                    var direct = Array.prototype.slice.call(list.children || []).filter(function (n) {
+                        return n && n.classList && n.classList.contains("comment-body");
+                    });
+                    if (!direct || direct.length === 0) {
+                        return;
+                    }
+
+                    var parentAvatar = parent.querySelector(".comment-author img.avatar");
+                    if (!parentAvatar || !isVisible(parentAvatar)) {
+                        return;
+                    }
+
+                    // Only consider visible children for the line end.
+                    var visibleChildren = direct.filter(function (c) {
+                        return isVisible(c);
+                    });
+                    if (visibleChildren.length === 0) {
+                        return;
+                    }
+
+                    // Vertical trunk stops at the last direct child avatar.
+                    var last = visibleChildren[visibleChildren.length - 1];
+                    var lastAvatar = last.querySelector(".comment-author img.avatar");
+                    if (!lastAvatar || !isVisible(lastAvatar)) {
+                        return;
+                    }
+
+                    var parentRect = parent.getBoundingClientRect();
+                    var parentAvatarRect = parentAvatar.getBoundingClientRect();
+                    var lastAvatarRect = lastAvatar.getBoundingClientRect();
+
+                    var x = (parentAvatarRect.left - parentRect.left) + (parentAvatarRect.width / 2);
+                    var y1 = (parentAvatarRect.bottom - parentRect.top);
+                    var y2 = (lastAvatarRect.top - parentRect.top) + (lastAvatarRect.height / 2);
+                    if (!isFinite(x) || !isFinite(y1) || !isFinite(y2) || y2 <= y1) {
+                        return;
+                    }
+
+                    parent.classList.add(parentClass);
+                    parent.style.setProperty("--hj-thread-x", x.toFixed(2) + "px");
+                    parent.style.setProperty("--hj-thread-y1", y1.toFixed(2) + "px");
+                    parent.style.setProperty("--hj-thread-y2", y2.toFixed(2) + "px");
+
+                    // Branch lines + junction dots for each direct child.
+                    visibleChildren.forEach(function (child) {
+                        var childAvatar = child.querySelector(".comment-author img.avatar");
+                        if (!childAvatar || !isVisible(childAvatar)) {
+                            return;
+                        }
+
+                        var childRect = child.getBoundingClientRect();
+                        var childAvatarRect = childAvatar.getBoundingClientRect();
+
+                        var childOffsetX = (childRect.left - parentRect.left);
+                        var branchX = x - childOffsetX;
+                        var branchY = (childAvatarRect.top - childRect.top) + (childAvatarRect.height / 2);
+                        var branchX2 = (childAvatarRect.left - childRect.left);
+
+                        if (!isFinite(branchX) || !isFinite(branchY) || !isFinite(branchX2)) {
+                            return;
+                        }
+
+                        // Ensure we have a visible segment.
+                        if (branchX2 <= branchX) {
+                            return;
+                        }
+
+                        child.classList.add(childClass);
+                        child.style.setProperty("--hj-branch-x", branchX.toFixed(2) + "px");
+                        child.style.setProperty("--hj-branch-y", branchY.toFixed(2) + "px");
+                        child.style.setProperty("--hj-branch-x2", branchX2.toFixed(2) + "px");
+                    });
+                });
+            }
+
+            var raf = window.requestAnimationFrame || function (fn) { return window.setTimeout(fn, 16); };
+            var ticking = false;
+            function requestUpdate() {
+                if (ticking) {
+                    return;
+                }
+                ticking = true;
+                raf(function () {
+                    ticking = false;
+                    update();
+                });
+            }
+
+            // Recompute on resize.
+            window.addEventListener("resize", requestUpdate);
+
+            // Recompute after toggling "more replies".
+            comments.addEventListener("click", function (e) {
+                var t = e && e.target;
+                if (!t) {
+                    return;
+                }
+                if (t.closest && t.closest("[data-hj-comment-more-toggle]")) {
+                    requestUpdate();
+                }
+            });
+
+            // Recompute after Typecho moves the reply form in/out (reply/cancel).
+            (function hookTypechoReply() {
+                if (!window || !window.TypechoComment) {
+                    return;
+                }
+                var tc = window.TypechoComment;
+                if (!tc || tc.__hj_thread_guides_hooked) {
+                    return;
+                }
+                var origReply = tc.reply;
+                var origCancel = tc.cancelReply;
+                if (typeof origReply === "function") {
+                    tc.reply = function () {
+                        var r = origReply.apply(tc, arguments);
+                        requestUpdate();
+                        return r;
+                    };
+                }
+                if (typeof origCancel === "function") {
+                    tc.cancelReply = function () {
+                        var r = origCancel.apply(tc, arguments);
+                        requestUpdate();
+                        return r;
+                    };
+                }
+                tc.__hj_thread_guides_hooked = true;
+            })();
+
+            requestUpdate();
+        })();
  
         // Typecho's built-in reply script toggles #cancel-comment-reply-link.
         // We removed the button, so make the helper tolerant of null.
