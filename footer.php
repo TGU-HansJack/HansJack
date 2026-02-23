@@ -5,11 +5,39 @@
 
 <footer class="hj-footer" id="hj-footer">
     <div class="hj-shell">
-        <p>
-            &copy; <?php echo date('Y'); ?>
-            <a href="<?php $this->options->siteUrl(); ?>"><?php $this->options->title(); ?></a>
-            · Theme HansJack
-        </p>
+        <div class="hj-footer-row">
+            <p class="hj-footer-left">
+                &copy; <?php echo date('Y'); ?>
+                <a href="<?php $this->options->siteUrl(); ?>"><?php $this->options->title(); ?></a>
+                <?php
+                $hjIcpBeian = trim((string) $this->options->hjIcpBeian);
+                $hjMpsBeian = trim((string) $this->options->hjMpsBeian);
+                ?>
+                <?php if ($hjIcpBeian !== ''): ?>
+                    <span class="hj-footer-sep" aria-hidden="true">·</span>
+                    <a class="hj-footer-beian" href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer"><?php echo hansJackEscape($hjIcpBeian); ?></a>
+                <?php endif; ?>
+                <?php if ($hjMpsBeian !== ''): ?>
+                    <span class="hj-footer-sep" aria-hidden="true">·</span>
+                    <a class="hj-footer-beian" href="<?php echo hansJackEscape(hansJackBuildMpsBeianUrl($hjMpsBeian)); ?>" target="_blank" rel="noreferrer"><?php echo hansJackEscape($hjMpsBeian); ?></a>
+                <?php endif; ?>
+            </p>
+            <p class="hj-footer-right">
+                <code class="hj-footer-power">
+                    <span>Powered by</span>
+                    <a href="https://typecho.org/" aria-label="Typecho" target="_blank" rel="noreferrer" class="hj-footer-icon-link">
+                        <svg class="hj-footer-icon hj-footer-icon-typecho" viewBox="0 0 1024 1024" aria-hidden="true" focusable="false">
+                            <path d="M512 1024C132.647385 1024 0 891.313231 0 512S132.647385 0 512 0s512 132.686769 512 512-132.647385 512-512 512zM236.307692 354.461538h551.384616V275.692308H236.307692v78.76923z m0 196.923077h393.846154v-78.76923H236.307692v78.76923z m0 196.923077h472.615385v-78.76923H236.307692v78.76923z" fill="currentColor"></path>
+                        </svg>
+                    </a>
+                    <span class="hj-footer-sep" aria-hidden="true">·</span>
+                    <a href="https://github.com/tuyuritio/astro-theme-thought-lite" aria-label="移植+二改主题: ThoughtLite" target="_blank" rel="noreferrer" class="hj-footer-icon-link hj-footer-theme-link">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hj-footer-icon hj-footer-icon-github" aria-hidden="true" focusable="false"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+                        <span class="hj-footer-icon-tip" aria-hidden="true">模范主题: ThoughtLite</span>
+                    </a>
+                </code>
+            </p>
+        </div>
     </div>
 </footer>
 

@@ -13,8 +13,23 @@ use Widget\Options;
  */
 function themeConfig($form)
 {
-    // Intentionally left blank: this theme keeps its UI stable and does not
-    // expose per-site visual tweaks in the admin panel.
+    $icpBeian = new \Typecho\Widget\Helper\Form\Element\Text(
+        'hjIcpBeian',
+        null,
+        '',
+        _t('ICP备案号'),
+        _t('留空则不显示；示例：京ICP备12345678号-1。链接会跳转到工信部备案查询。')
+    );
+    $form->addInput($icpBeian);
+
+    $mpsBeian = new \Typecho\Widget\Helper\Form\Element\Text(
+        'hjMpsBeian',
+        null,
+        '',
+        _t('公安备案号'),
+        _t('留空则不显示；示例：京公网安备 11000002000001号。链接会跳转到公安备案查询。')
+    );
+    $form->addInput($mpsBeian);
 }
 
 /**
@@ -271,6 +286,30 @@ function hansJackCssBackground(string $url): string
 function hansJackEscape(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+}
+
+function hansJackBuildMpsBeianUrl(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    // Allow users to paste the full URL if they want.
+    if (preg_match('/^(https?:)?\\/\\//i', $value)) {
+        return $value;
+    }
+
+    $code = '';
+    if (preg_match('/(\\d{10,})/', $value, $match)) {
+        $code = (string) $match[1];
+    }
+
+    if ($code === '') {
+        return 'https://beian.mps.gov.cn/#/query/webSearch';
+    }
+
+    return 'https://beian.mps.gov.cn/#/query/webSearch?code=' . rawurlencode($code);
 }
 
 function hansJackAsciiBanner(string $raw, int $maxLineChars = 0, int $weight = 2): string
