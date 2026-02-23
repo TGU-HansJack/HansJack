@@ -14,6 +14,50 @@
             'tag'      => _t('标签 %s 下的文章'),
             'author'   => _t('%s 发布的文章')
         ], '', ' - '); ?><?php $this->options->title(); ?></title>
+    <script>
+        (function () {
+            var root = document.documentElement;
+            if (!root) {
+                return;
+            }
+
+            var storageKey = "hansjack_theme_mode";
+            var mode = "";
+            try {
+                mode = window.localStorage.getItem(storageKey) || "";
+            } catch (e) {
+                mode = "";
+            }
+
+            if (mode !== "dark" && mode !== "light") {
+                try {
+                    mode = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+                } catch (e) {
+                    mode = "light";
+                }
+            }
+
+            root.classList.remove("hj-theme-light", "hj-theme-dark");
+            root.classList.add(mode === "dark" ? "hj-theme-dark" : "hj-theme-light");
+
+            // Avoid a white flash before the main stylesheet loads.
+            root.style.backgroundColor = mode === "dark" ? "#0e0e0c" : "#fffffd";
+            root.style.colorScheme = mode;
+        })();
+    </script>
+    <style>
+        html.hj-theme-dark,
+        html.hj-theme-dark body {
+            background-color: #0e0e0c;
+            color: #dddddb;
+        }
+
+        html.hj-theme-light,
+        html.hj-theme-light body {
+            background-color: #fffffd;
+            color: #2a2a28;
+        }
+    </style>
     <link rel="stylesheet" href="<?php $this->options->themeUrl('style.css'); ?>">
     <?php $this->header(); ?>
 </head>

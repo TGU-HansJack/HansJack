@@ -43,6 +43,8 @@
     /* Desktop: widen spacing between the right-side icon buttons, but allow it to shrink on narrower screens. */
     --hj-header-actions-gap: clamp(0.9em, 2.2vw, 2em);
     --hj-header-h: 56px;
+    /* Height budget for the sticky pager (used as clearance for the floating action buttons). */
+    --hj-pager-float-h: calc(3rem + env(safe-area-inset-bottom, 0px));
     /* Posts/Article sidebar width should roughly match the header-right actions width. */
     --hj-posts-aside-width: calc(5 * var(--hj-header-action-size) + 4 * var(--hj-header-actions-gap));
     --hj-dropdown-gap: 6px;
@@ -72,6 +74,21 @@ body {
     min-height: 100vh;
     line-height: 1.75;
     font-family: var(--hj-font-main);
+}
+
+/* Mobile browsers often apply a default focus/tap highlight (blue rectangle) after tapping links/buttons. */
+@media (hover: none) and (pointer: coarse) {
+    a,
+    button,
+    [role="button"] {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    a:focus,
+    button:focus,
+    [role="button"]:focus {
+        outline: none;
+    }
 }
 
 .hj-theme-curtain {
@@ -964,7 +981,6 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
     :root {
         --hj-header-h: 52px;
         --hj-header-actions-gap: 0.8em;
-        --hj-mobile-pager-h: calc(3rem + env(safe-area-inset-bottom, 0px));
     }
 
     html,
@@ -1691,7 +1707,7 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
 
 .hj-posts-pager.page-navigator {
     list-style: none;
-    margin: 1.1rem 0 0;
+    margin: 1.1rem 0 0.55rem;
     padding: 0;
     display: flex;
     align-items: flex-end;
@@ -1790,66 +1806,53 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
     display: block;
 }
 
+/* Affixed pager (handled by JS): keep the original pager fixed to the viewport bottom until
+   it reaches its natural location, then return it back into the normal flow. */
+.hj-posts-pager.page-navigator.is-affixed {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1800;
+    margin: 0;
+    background: var(--hj-day-bg);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html.hj-theme-dark .hj-posts-pager.page-navigator.is-affixed {
+    background: var(--hj-night-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not(.hj-theme-light) .hj-posts-pager.page-navigator.is-affixed {
+        background: var(--hj-night-bg);
+    }
+}
+
 @media (max-width: 980px) {
-    /* Narrow screens: show a floating pager only while you're above the real pager. */
-    .hj-page-posts .hj-posts-pager-float.page-navigator,
-    .hj-page-notes .hj-posts-pager-float.page-navigator {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 2200;
-        margin: 0;
-        padding: 0.4rem 0.6rem calc(0.4rem + env(safe-area-inset-bottom, 0px));
-        background: var(--hj-day-bg);
-        gap: 0.6rem;
-        justify-content: center;
+    .hj-page-posts .hj-posts-pager.page-navigator,
+    .hj-page-notes .hj-posts-pager.page-navigator {
         flex-wrap: nowrap;
         overflow-x: auto;
         overflow-y: hidden;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
+    }
+
+    .hj-page-posts .hj-posts-pager.page-navigator::-webkit-scrollbar,
+    .hj-page-notes .hj-posts-pager.page-navigator::-webkit-scrollbar {
         display: none;
     }
+}
 
-    .hj-page-posts .hj-posts-pager-float.page-navigator.is-visible,
-    .hj-page-notes .hj-posts-pager-float.page-navigator.is-visible {
-        display: flex;
-    }
-
-    .hj-page-posts .hj-posts-pager-float.page-navigator::-webkit-scrollbar,
-    .hj-page-notes .hj-posts-pager-float.page-navigator::-webkit-scrollbar {
-        display: none;
-    }
-
-    .hj-page-posts .hj-main-shell,
-    .hj-page-notes .hj-main-shell {
-        padding-bottom: calc(2.4rem + var(--hj-mobile-pager-h));
-    }
-
-    .hj-page-posts .hj-fab,
-    .hj-page-notes .hj-fab {
-        bottom: calc(0.8rem + var(--hj-mobile-pager-h));
-    }
-
-    html.hj-mobile-nav-open .hj-posts-pager-float.page-navigator {
-        opacity: 0;
-        pointer-events: none;
-    }
-
-    html.hj-theme-dark .hj-page-posts .hj-posts-pager-float.page-navigator,
-    html.hj-theme-dark .hj-page-notes .hj-posts-pager-float.page-navigator {
-        background: var(--hj-night-bg);
-    }
+/* Keep the floating action buttons from overlapping the sticky pager. */
+.hj-page-posts .hj-fab,
+.hj-page-notes .hj-fab {
+    bottom: calc(0.8rem + var(--hj-pager-float-h));
 }
 
 @media (max-width: 980px) and (prefers-color-scheme: dark) {
     html:not(.hj-theme-light) .hj-header {
-        background: var(--hj-night-bg);
-    }
-
-    html:not(.hj-theme-light) .hj-page-posts .hj-posts-pager-float.page-navigator,
-    html:not(.hj-theme-light) .hj-page-notes .hj-posts-pager-float.page-navigator {
         background: var(--hj-night-bg);
     }
 }
@@ -2899,6 +2902,22 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 }
 
 @media (max-width: 980px) {
+    /* The header is fixed on narrow screens; the mobile TOC should cover it. */
+    html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
+        z-index: 2450;
+    }
+
+    html.hj-mobile-toc-open .hj-article-layout.is-has-toc .hj-article-aside {
+        z-index: 2500;
+    }
+
+    /* Restore normal top padding (since the panel covers the header). */
+    html.hj-mobile-toc-open .hj-article-layout.is-has-toc .hj-article-toc {
+        padding-top: 1rem;
+    }
+}
+
+@media (max-width: 980px) {
     .hj-fab {
         right: calc(0.6rem + env(safe-area-inset-right, 0px));
     }
@@ -2914,12 +2933,15 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     position: relative;
     border-radius: 9999px;
     border: none;
-    background: transparent;
+    /* Opaque background so page content won't show through the button. */
+    background: var(--hj-day-bg);
     color: var(--hj-accent);
     cursor: pointer;
-    opacity: 0.9;
+    /* Keep the button fully opaque; do not use opacity on the container,
+       otherwise the background becomes translucent. */
+    opacity: 1;
     pointer-events: auto;
-    transition: background-color 0.18s ease, opacity 0.18s ease;
+    transition: background-color 0.18s ease;
 }
 
 .hj-fab-ring {
@@ -2947,7 +2969,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 
 .hj-fab-ring-bg {
     stroke: var(--hj-fab-ring-muted);
-    opacity: 0.9;
+    opacity: 1;
     stroke-linecap: round;
 }
 
@@ -2987,8 +3009,9 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 
 .hj-fab-btn:hover,
 .hj-fab-btn:focus-visible {
-    opacity: 0.96;
-    background-color: rgba(42, 42, 40, 0.06);
+    /* Keep hover feedback, but stay fully opaque (no alpha). */
+    background-color: var(--hj-day-bg);
+    background-color: color-mix(in oklab, var(--hj-day-bg) 94%, var(--hj-day-black) 6%);
 }
 
 .hj-fab-btn:focus-visible {
@@ -3431,9 +3454,14 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
         border-bottom-color: rgba(221, 221, 219, 0.35);
     }
 
+    html:not(.hj-theme-light) .hj-fab-btn {
+        background: var(--hj-night-bg);
+    }
+
     html:not(.hj-theme-light) .hj-fab-btn:hover,
     html:not(.hj-theme-light) .hj-fab-btn:focus-visible {
-        background-color: rgba(221, 221, 219, 0.06);
+        background-color: var(--hj-night-bg);
+        background-color: color-mix(in oklab, var(--hj-night-bg) 94%, var(--hj-night-white) 6%);
     }
 
     html:not(.hj-theme-light) .hj-fab {
@@ -3637,9 +3665,14 @@ html.hj-theme-dark .hj-article-content table caption {
     color: var(--hj-muted-night);
 }
 
+html.hj-theme-dark .hj-fab-btn {
+    background: var(--hj-night-bg);
+}
+
 html.hj-theme-dark .hj-fab-btn:hover,
 html.hj-theme-dark .hj-fab-btn:focus-visible {
-    background-color: rgba(221, 221, 219, 0.06);
+    background-color: var(--hj-night-bg);
+    background-color: color-mix(in oklab, var(--hj-night-bg) 94%, var(--hj-night-white) 6%);
 }
 
 html.hj-theme-dark .hj-fab {

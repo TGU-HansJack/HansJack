@@ -634,122 +634,6 @@
 
 <script>
     (function () {
-        var root = document.documentElement;
-        var body = document.body;
-        if (!root || !body) {
-            return;
-        }
-
-        var isListPage = body.classList.contains("hj-page-posts") || body.classList.contains("hj-page-notes");
-        if (!isListPage) {
-            return;
-        }
-
-        var pager = document.querySelector("ol.page-navigator.hj-posts-pager");
-        if (!pager) {
-            return;
-        }
-
-        var mq = null;
-        try {
-            mq = window.matchMedia ? window.matchMedia("(max-width: 980px)") : null;
-        } catch (e) {
-            mq = null;
-        }
-
-        var floatPager = null;
-        var ticking = false;
-        var raf = window.requestAnimationFrame
-            ? window.requestAnimationFrame.bind(window)
-            : function (callback) {
-                return window.setTimeout(callback, 16);
-            };
-
-        function isNarrow() {
-            if (mq) {
-                return mq.matches;
-            }
-            var width = window.innerWidth || document.documentElement.clientWidth || 0;
-            return width > 0 && width <= 980;
-        }
-
-        function ensureFloatPager() {
-            if (floatPager) {
-                return;
-            }
-
-            floatPager = pager.cloneNode(true);
-            floatPager.classList.add("hj-posts-pager-float");
-            floatPager.setAttribute("aria-hidden", "true");
-            document.body.appendChild(floatPager);
-        }
-
-        function setVisible(visible) {
-            if (!floatPager) {
-                return;
-            }
-
-            if (visible) {
-                floatPager.classList.add("is-visible");
-                floatPager.removeAttribute("aria-hidden");
-            } else {
-                floatPager.classList.remove("is-visible");
-                floatPager.setAttribute("aria-hidden", "true");
-            }
-        }
-
-        function shouldShowFloatPager() {
-            var rect = pager.getBoundingClientRect();
-            var viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
-            if (!viewportH) {
-                return false;
-            }
-
-            // Show the floating pager only while you're above the real pager.
-            return rect.top > viewportH;
-        }
-
-        function update() {
-            if (!isNarrow()) {
-                if (floatPager) {
-                    floatPager.remove();
-                    floatPager = null;
-                }
-                return;
-            }
-
-            ensureFloatPager();
-            setVisible(shouldShowFloatPager());
-        }
-
-        function scheduleUpdate() {
-            if (ticking) {
-                return;
-            }
-            ticking = true;
-            raf(function () {
-                ticking = false;
-                update();
-            });
-        }
-
-        window.addEventListener("scroll", scheduleUpdate, { passive: true });
-        window.addEventListener("resize", scheduleUpdate);
-
-        if (mq) {
-            if (typeof mq.addEventListener === "function") {
-                mq.addEventListener("change", scheduleUpdate);
-            } else if (typeof mq.addListener === "function") {
-                mq.addListener(scheduleUpdate);
-            }
-        }
-
-        update();
-    })();
-</script>
-
-<script>
-    (function () {
         var menu = document.querySelector(".hj-pages-menu");
         if (!menu) {
             return;
@@ -1326,6 +1210,159 @@
                 media.addListener(handleSystemThemeChange);
             }
         }
+    })();
+</script>
+
+<script>
+    (function () {
+        var body = document.body;
+        if (!body) {
+            return;
+        }
+
+        var isPosts = body.classList.contains("hj-page-posts");
+        var isNotes = body.classList.contains("hj-page-notes");
+        if (!isPosts && !isNotes) {
+            return;
+        }
+
+        var pager = body.querySelector(".hj-posts-pager.page-navigator");
+        if (!pager) {
+            return;
+        }
+
+        var host = null;
+        if (typeof pager.closest === "function") {
+            host = pager.closest(".hj-posts-main");
+        }
+        if (!host) {
+            host = pager.parentElement || body;
+        }
+
+        var spacer = document.createElement("div");
+        spacer.className = "hj-posts-pager-spacer";
+        spacer.style.height = "0px";
+        spacer.setAttribute("aria-hidden", "true");
+        if (!pager.parentNode) {
+            return;
+        }
+        pager.parentNode.insertBefore(spacer, pager);
+
+        var affixClass = "is-affixed";
+        var naturalMarginTop = 0;
+        var naturalMarginBottom = 0;
+        var raf = window.requestAnimationFrame
+            ? window.requestAnimationFrame.bind(window)
+            : function (callback) {
+                return window.setTimeout(callback, 16);
+            };
+
+        function readNaturalMargins() {
+            var styles = null;
+            try {
+                styles = window.getComputedStyle(pager);
+            } catch (e) {
+                styles = null;
+            }
+
+            if (!styles) {
+                naturalMarginTop = 0;
+                naturalMarginBottom = 0;
+                return;
+            }
+
+            naturalMarginTop = parseFloat(styles.marginTop) || 0;
+            naturalMarginBottom = parseFloat(styles.marginBottom) || 0;
+        }
+
+        readNaturalMargins();
+
+        function setSpacerHeight(px) {
+            var h = Math.max(0, Math.ceil(px || 0));
+            spacer.style.height = h ? h + "px" : "0px";
+        }
+
+        function applyFixedSizing() {
+            var rect = null;
+            try {
+                rect = host.getBoundingClientRect();
+            } catch (e) {
+                rect = null;
+            }
+
+            if (!rect || !rect.width) {
+                pager.style.left = "0px";
+                pager.style.width = "100%";
+                return;
+            }
+
+            pager.style.left = Math.round(rect.left) + "px";
+            pager.style.width = Math.round(rect.width) + "px";
+        }
+
+        function clearFixedSizing() {
+            pager.style.left = "";
+            pager.style.width = "";
+        }
+
+        function update() {
+            var viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
+            if (!viewportH) {
+                return;
+            }
+
+            var pagerRect = pager.getBoundingClientRect();
+            var pagerH = pagerRect ? pagerRect.height : 0;
+            if (!pagerH || pagerH <= 0) {
+                pagerH = pager.offsetHeight || 0;
+            }
+
+            var spacerRect = spacer.getBoundingClientRect();
+            var threshold = viewportH - pagerH;
+            var shouldAffix = spacerRect && typeof spacerRect.top === "number"
+                ? spacerRect.top + naturalMarginTop > threshold
+                : false;
+
+            var isAffixed = pager.classList.contains(affixClass);
+            if (shouldAffix) {
+                if (!isAffixed) {
+                    pager.classList.add(affixClass);
+                }
+
+                // Height can change after affixing (safe-area padding), so re-measure.
+                pagerRect = pager.getBoundingClientRect();
+                pagerH = pagerRect ? pagerRect.height : (pager.offsetHeight || pagerH);
+
+                setSpacerHeight(pagerH + naturalMarginTop + naturalMarginBottom);
+                applyFixedSizing();
+            } else {
+                if (isAffixed) {
+                    pager.classList.remove(affixClass);
+                    clearFixedSizing();
+                }
+                setSpacerHeight(0);
+            }
+        }
+
+        var ticking = false;
+        function requestUpdate() {
+            if (ticking) {
+                return;
+            }
+            ticking = true;
+            raf(function () {
+                ticking = false;
+                update();
+            });
+        }
+
+        window.addEventListener("scroll", requestUpdate, { passive: true });
+        window.addEventListener("resize", function () {
+            readNaturalMargins();
+            requestUpdate();
+        });
+
+        requestUpdate();
     })();
 </script>
 
