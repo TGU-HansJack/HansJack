@@ -566,54 +566,55 @@ function threadedComments($comments, $singleCommentOptions): void
         }
     }
     ?>
-    <li itemscope itemtype="http://schema.org/UserComments" id="<?php $comments->theId(); ?>" class="comment-body<?php
-    if ($comments->levels > 0) {
-        echo ' comment-child';
-        $comments->levelsAlt(' comment-level-odd', ' comment-level-even');
-    } else {
+    <li itemscope itemtype="http://schema.org/UserComments" id="<?php $comments->theId(); ?>" class="comment-body<?php 
+    if ($comments->levels > 0) { 
+        echo ' comment-child'; 
+        $comments->levelsAlt(' comment-level-odd', ' comment-level-even'); 
+    } else { 
         echo ' comment-parent';
     }
     $comments->alt(' comment-odd', ' comment-even');
-    echo $commentClass;
-    ?>">
-        <div class="comment-author" itemprop="creator" itemscope itemtype="http://schema.org/Person">
-            <span itemprop="image">
-                <?php $comments->gravatar(
-                    $singleCommentOptions->avatarSize,
-                    $singleCommentOptions->defaultAvatar,
-                    $singleCommentOptions->avatarHighRes
-                ); ?>
+    echo $commentClass; 
+    ?>" data-hj-comment-level="<?php echo (int) $comments->levels; ?>"> 
+        <div class="comment-author" itemprop="creator" itemscope itemtype="http://schema.org/Person">  
+            <span itemprop="image">  
+                <?php $comments->gravatar(  
+                    $singleCommentOptions->avatarSize,  
+                    $singleCommentOptions->defaultAvatar,  
+                    $singleCommentOptions->avatarHighRes  
+                ); ?>  
             </span>
             <cite class="fn" itemprop="name"><?php $singleCommentOptions->beforeAuthor();
                 $comments->author();
                 $singleCommentOptions->afterAuthor(); ?></cite>
-        </div>
-        <div class="comment-meta">
-            <a href="<?php $comments->permalink(); ?>">
-                <time itemprop="commentTime" datetime="<?php $comments->date('c'); ?>"><?php
-                    $singleCommentOptions->beforeDate();
-                    $comments->date($singleCommentOptions->dateFormat);
-                    $singleCommentOptions->afterDate();
-                ?></time>
-            </a>
-            <?php if ('approved' !== $comments->status) { ?>
-                <em class="comment-awaiting-moderation"><?php $singleCommentOptions->commentStatus(); ?></em>
-            <?php } ?>
-        </div>
+        </div> 
+        <div class="comment-meta"> 
+            <time itemprop="commentTime" datetime="<?php $comments->date('c'); ?>"><?php 
+                $singleCommentOptions->beforeDate(); 
+                $comments->date($singleCommentOptions->dateFormat); 
+                $singleCommentOptions->afterDate(); 
+            ?></time> 
+            <?php if ('approved' !== $comments->status) { ?> 
+                <em class="comment-awaiting-moderation"><?php $singleCommentOptions->commentStatus(); ?></em> 
+            <?php } ?> 
+        </div> 
         <div class="comment-content hj-comment-content<?php echo $isPrivate ? ' is-private' : ''; ?><?php echo ($isPrivate && !$canViewPrivate) ? ' is-private-hidden' : ''; ?>" itemprop="commentText">
             <?php if ($isPrivate && !$canViewPrivate): ?>
                 <div class="hj-private-mask" aria-hidden="true"></div>
             <?php else: ?>
                 <?php $comments->content(); ?>
             <?php endif; ?>
-        </div>
-        <div class="comment-reply">
-            <?php $comments->reply($singleCommentOptions->replyWord); ?>
-        </div>
-        <?php if ($comments->children) { ?>
-            <div class="comment-children" itemprop="discusses">
-                <?php $comments->threadedComments(); ?>
-            </div>
+        </div> 
+        <div class="comment-reply"> 
+            <?php $comments->reply($singleCommentOptions->replyWord); ?> 
+            <button class="hj-comment-share-btn" type="button" aria-label="<?php _e('分享'); ?>" title="<?php _e('分享'); ?>" data-hj-comment-share="<?php $comments->permalink(); ?>"> 
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-share2-icon lucide-share-2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg> 
+            </button> 
+        </div> 
+        <?php if ($comments->children) { ?> 
+            <div class="comment-children" itemprop="discusses"> 
+                <?php $comments->threadedComments(); ?> 
+            </div> 
         <?php } ?>
     </li>
     <?php
