@@ -2961,6 +2961,100 @@
 
 <script>
     (function () {
+        var blocks = document.querySelectorAll(".hj-links-apply");
+        if (!blocks || blocks.length === 0) {
+            return;
+        }
+
+        function setup(block) {
+            if (!block || !block.querySelector) {
+                return;
+            }
+
+            var stepCheck = block.querySelector(".hj-links-step-check");
+            var stepForm = block.querySelector(".hj-links-step-form");
+            if (!stepCheck || !stepForm) {
+                return;
+            }
+
+            var cbs = Array.prototype.slice.call(stepCheck.querySelectorAll(".hj-links-check-input"));
+            if (!cbs || cbs.length === 0) {
+                return;
+            }
+
+            function allChecked() {
+                for (var i = 0; i < cbs.length; i++) {
+                    if (!cbs[i] || !cbs[i].checked) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            function setFormEnabled(enabled) {
+                var form = stepForm.querySelector("form");
+                if (!form) {
+                    return;
+                }
+                var controls = form.querySelectorAll("input, select, textarea, button");
+                for (var i = 0; i < controls.length; i++) {
+                    var el = controls[i];
+                    if (!el) {
+                        continue;
+                    }
+                    if (el.tagName === "INPUT" && String(el.type || "").toLowerCase() === "hidden") {
+                        continue;
+                    }
+                    try {
+                        el.disabled = !enabled;
+                    } catch (e) {}
+                }
+            }
+
+            function sync() {
+                var ok = allChecked();
+                stepForm.hidden = !ok;
+                stepForm.setAttribute("aria-hidden", ok ? "false" : "true");
+                if (btn) {
+                    try {
+                        btn.disabled = !!ok;
+                        btn.setAttribute("aria-disabled", ok ? "true" : "false");
+                    } catch (e) {}
+                }
+                setFormEnabled(ok);
+            }
+
+            var btn = stepCheck.querySelector("[data-hj-links-confirm]");
+            if (btn && btn.addEventListener) {
+                btn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    for (var i = 0; i < cbs.length; i++) {
+                        try {
+                            cbs[i].checked = true;
+                        } catch (err) {}
+                    }
+                    sync();
+                });
+            }
+
+            cbs.forEach(function (cb) {
+                if (!cb || !cb.addEventListener) {
+                    return;
+                }
+                cb.addEventListener("change", sync);
+            });
+
+            sync();
+        }
+
+        Array.prototype.slice.call(blocks).forEach(setup);
+    })();
+</script>
+
+<script>
+    (function () {
         var content = document.querySelector(".hj-article-content");
         if (!content) {
             return;
