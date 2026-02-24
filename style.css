@@ -500,10 +500,11 @@ img {
     max-width: calc(100vw - 16px);
     padding: 0;
     font-size: 0.82rem;
-    border-radius: 0;
+    border-radius: 4px;
     border: 2px solid var(--hj-day-black);
     background: var(--hj-day-bg);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
     opacity: 0;
     transform: translateX(-50%) translateY(-1px);
     pointer-events: none;
@@ -847,10 +848,11 @@ html.hj-theme-dark .hj-theme-icon-moon {
     max-width: calc(100vw - 16px);
     padding: 0;
     font-size: 0.82rem;
-    border-radius: 0;
+    border-radius: 4px;
     border: 2px solid var(--hj-day-black);
     background: var(--hj-day-bg);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
     opacity: 0;
     transform: translateX(-50%) translateY(-1px);
     pointer-events: none;
@@ -874,10 +876,11 @@ html.hj-theme-dark .hj-theme-icon-moon {
     max-width: calc(100vw - 16px);
     padding: 0;
     font-size: 0.82rem;
-    border-radius: 0;
+    border-radius: 4px;
     border: 2px solid var(--hj-day-black);
     background: var(--hj-day-bg);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
     opacity: 0;
     transform: translateX(-50%) translateY(-1px);
     pointer-events: none;
@@ -4246,7 +4249,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     max-width: 100%;
     padding: 0.55rem 0.7rem;
     border: 1px solid var(--hj-line-day);
-    border-radius: 0;
+    border-radius: 4px;
     background: transparent;
     color: inherit;
     font-family: var(--hj-font-ui);
@@ -4269,7 +4272,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     justify-content: center;
     height: 36px;
     padding: 0 0.9rem;
-    border-radius: 0;
+    border-radius: 4px;
     border: 2px solid var(--hj-accent);
     background: transparent;
     color: inherit;
@@ -4295,7 +4298,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 .hj-comment-box {
     position: relative;
     border: 2px solid var(--hj-line-day);
-    border-radius: 0;
+    border-radius: 4px;
     background: transparent;
 }
 
@@ -4351,6 +4354,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     inset: 0;
     z-index: 2500;
     background: var(--hj-day-bg);
+    border-radius: 0;
 }
 
 .hj-comment-box.is-fullscreen .hj-comment-textarea {
@@ -4370,7 +4374,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     gap: 0.6rem;
     pointer-events: none;
     padding: 0.15rem 0.5rem;
-    border-radius: 0;
+    border-radius: 0 0 4px 4px;
     background: var(--hj-line-day);
     color: inherit;
 }
@@ -4378,6 +4382,10 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 .hj-comment-box:focus-within .hj-comment-composer-actions {
     background: var(--hj-day-black);
     color: var(--hj-day-white);
+}
+
+.hj-comment-box.is-fullscreen .hj-comment-composer-actions {
+    border-radius: 0;
 }
 
 .hj-emoji-picker {
@@ -4389,7 +4397,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     overflow: auto;
     padding: 0.4rem;
     border: 2px solid var(--hj-day-black);
-    border-radius: 0;
+    border-radius: 4px;
     background: var(--hj-day-bg);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     z-index: 40;
