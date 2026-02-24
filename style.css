@@ -2560,7 +2560,8 @@ html.hj-theme-dark .hj-posts-pager.page-navigator li a:focus-visible {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: 0.6em;
+    --hj-activity-gap: 0.6em;
+    gap: var(--hj-activity-gap);
     font-family: var(--hj-font-ui);
     font-size: 0.98rem;
     line-height: 1.35;
@@ -2606,6 +2607,13 @@ html.hj-theme-dark .hj-posts-pager.page-navigator li a:focus-visible {
 .hj-activity-muted {
     color: inherit;
     font-size: 0.86em;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+.hj-activity-muted + .hj-activity-post {
+    /* Remove the visual gap between "发布了" and the post title. */
+    margin-left: calc(-1 * var(--hj-activity-gap));
 }
 
 .hj-activity-post-text {
@@ -2630,6 +2638,23 @@ html.hj-theme-dark .hj-posts-pager.page-navigator li a:focus-visible {
 .hj-activity-post:hover .hj-activity-post-text::after,
 .hj-activity-post:focus-visible .hj-activity-post-text::after {
     transform: scaleX(1);
+}
+
+@media (max-width: 480px) {
+    .hj-activity-left {
+        flex-wrap: nowrap;
+    }
+
+    .hj-activity-post {
+        flex: 1 1 auto;
+    }
+
+    .hj-activity-post-text {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 }
 
 .hj-activity-bubble {

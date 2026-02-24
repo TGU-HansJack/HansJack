@@ -73,6 +73,7 @@ if ($this->is('index')) {
             </div>
         </section>
 
+        <?php if (false): ?>
         <section class="hj-recent" id="hj-recent" aria-label="<?php _e('最近内容'); ?>">
             <?php
             $recentBlog = null;
@@ -332,6 +333,7 @@ if ($this->is('index')) {
                 </div>
             </div>
         </section>
+        <?php endif; ?>
     <?php else: ?>
         <?php
         $categories = null;
