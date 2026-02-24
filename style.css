@@ -5057,6 +5057,72 @@ html.hj-login-modal-open .hj-login-modal {
     background: rgba(18, 18, 18, 0.08);
 }
 
+.hj-article-content .hj-term {
+    position: relative;
+}
+
+.hj-article-content ruby.hj-term-ruby {
+    ruby-position: over;
+}
+
+.hj-article-content ruby.hj-term-ruby rt {
+    font-size: 0.72em;
+    line-height: 1.05;
+    font-weight: 500;
+    color: var(--hj-muted-day);
+}
+
+.hj-article-content .hj-term-tooltip {
+    display: inline-block;
+    cursor: help;
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.12em;
+    text-decoration-color: color-mix(in oklab, currentColor 60%, transparent);
+}
+
+.hj-article-content .hj-term-tooltip:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.hj-article-content .hj-term-tooltip::after {
+    content: attr(data-hj-term);
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translate(-50%, 0);
+    display: inline-block;
+    box-sizing: border-box;
+    width: max-content;
+    padding: 0.12rem 0.35rem;
+    border-radius: 4px;
+    background: var(--hj-nav-block-bg);
+    color: var(--hj-nav-block-fg);
+    font-family: var(--hj-font-ui);
+    font-size: 0.72rem;
+    line-height: 1.2;
+    text-align: center;
+    max-width: min(280px, 78vw);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 20;
+    transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
+}
+
+.hj-article-content .hj-term-tooltip:hover::after,
+.hj-article-content .hj-term-tooltip:focus-visible::after,
+.hj-article-content .hj-term-tooltip.is-open::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -0.18rem);
+}
+
 .hj-article-content pre {
     font-size: 0.9em;
     background: rgba(18, 18, 18, 0.08);
@@ -5792,6 +5858,10 @@ html.hj-login-modal-open .hj-login-modal {
         background: rgba(240, 240, 240, 0.08);
     }
 
+    html:not(.hj-theme-light) .hj-article-content ruby.hj-term-ruby rt {
+        color: var(--hj-muted-night);
+    }
+
     html:not(.hj-theme-light) .hj-article-content blockquote {
         border-left-color: rgba(221, 221, 219, 0.55);
         background: rgba(240, 240, 240, 0.06);
@@ -5885,6 +5955,10 @@ html.hj-theme-dark .hj-article-content table {
 
 html.hj-theme-dark .hj-article-content hr {
     border-top-color: rgba(221, 221, 219, 0.55);
+}
+
+html.hj-theme-dark .hj-article-content ruby.hj-term-ruby rt {
+    color: var(--hj-muted-night);
 }
 
 html.hj-theme-dark .hj-article-content thead th {

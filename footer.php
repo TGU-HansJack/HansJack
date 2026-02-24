@@ -3345,6 +3345,255 @@
                 return;
             }
 
+            function isBlockedParent(node) {
+                var p = node && node.parentNode ? node.parentNode : null;
+                while (p && p !== content) {
+                    if (p.nodeType !== 1) {
+                        p = p.parentNode;
+                        continue;
+                    }
+
+                    var tag = (p.tagName || "").toUpperCase();
+                    if (
+                        tag === "CODE" ||
+                        tag === "PRE" ||
+                        tag === "A" ||
+                        tag === "SCRIPT" ||
+                        tag === "STYLE" ||
+                        tag === "TEXTAREA" ||
+                        tag === "RUBY" ||
+                        tag === "RT"
+                    ) {
+                        return true;
+                    }
+                    p = p.parentNode;
+                }
+                return false;
+            }
+
+            function buildRuby(baseText, annotation) {
+                var ruby = document.createElement("ruby");
+                ruby.className = "hj-term hj-term-ruby";
+                ruby.appendChild(document.createTextNode(baseText));
+
+                var rt = document.createElement("rt");
+                rt.textContent = annotation;
+                ruby.appendChild(rt);
+
+                return ruby;
+            }
+
+            function buildTooltip(baseText, annotation) {
+                var span = document.createElement("span");
+                span.className = "hj-term hj-term-tooltip";
+                span.setAttribute("data-hj-term", annotation);
+                span.setAttribute("tabindex", "0");
+                span.textContent = baseText;
+                return span;
+            }
+
+            function splitAnnotation(raw) {
+                var inner = String(raw || "").trim();
+                if (!inner) {
+                    return null;
+                }
+
+                var mode = "ruby";
+                var annotation = inner;
+
+                var pipe = inner.lastIndexOf("|");
+                if (pipe !== -1) {
+                    var left = inner.slice(0, pipe).trim();
+                    var right = inner.slice(pipe + 1).trim().toLowerCase();
+                    if (left) {
+                        annotation = left;
+                    }
+                    if (right === "ruby" || right === "tooltip") {
+                        mode = right;
+                    }
+                }
+
+                if (!annotation) {
+                    return null;
+                }
+
+                return { annotation: annotation, mode: mode };
+            }
+
+            function parseTextNode(node) {
+                var text = node && node.nodeValue ? String(node.nodeValue) : "";
+                if (!text || text.indexOf("^(") === -1) {
+                    return;
+                }
+
+                var frag = document.createDocumentFragment();
+                var pos = 0;
+
+                while (pos < text.length) {
+                    var caret = text.indexOf("^(", pos);
+                    if (caret === -1) {
+                        frag.appendChild(document.createTextNode(text.slice(pos)));
+                        break;
+                    }
+
+                    // BaseText: take the token immediately before ^(, delimited by whitespace.
+                    var start = caret - 1;
+                    while (start >= pos) {
+                        var ch = text.charAt(start);
+                        if (ch === "" || /\\s/.test(ch)) {
+                            break;
+                        }
+                        start--;
+                    }
+                    start++;
+
+                    if (start >= caret) {
+                        // No base text found, keep scanning.
+                        frag.appendChild(document.createTextNode(text.slice(pos, caret + 2)));
+                        pos = caret + 2;
+                        continue;
+                    }
+
+                    // Find closing ')'
+                    var close = text.indexOf(")", caret + 2);
+                    if (close === -1) {
+                        frag.appendChild(document.createTextNode(text.slice(pos)));
+                        break;
+                    }
+
+                    var baseText = text.slice(start, caret);
+                    var inner = text.slice(caret + 2, close);
+                    var parsed = splitAnnotation(inner);
+
+                    if (!parsed) {
+                        frag.appendChild(document.createTextNode(text.slice(pos, close + 1)));
+                        pos = close + 1;
+                        continue;
+                    }
+
+                    frag.appendChild(document.createTextNode(text.slice(pos, start)));
+
+                    if (parsed.mode === "tooltip") {
+                        frag.appendChild(buildTooltip(baseText, parsed.annotation));
+                    } else {
+                        frag.appendChild(buildRuby(baseText, parsed.annotation));
+                    }
+
+                    pos = close + 1;
+                }
+
+                try {
+                    node.parentNode.replaceChild(frag, node);
+                } catch (e) {}
+            }
+
+            if (!document.createTreeWalker) {
+                return;
+            }
+
+            var walker = document.createTreeWalker(
+                content,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode: function (node) {
+                        try {
+                            if (!node || !node.nodeValue) {
+                                return NodeFilter.FILTER_REJECT;
+                            }
+                            if (String(node.nodeValue).indexOf("^(") === -1) {
+                                return NodeFilter.FILTER_REJECT;
+                            }
+                            if (isBlockedParent(node)) {
+                                return NodeFilter.FILTER_REJECT;
+                            }
+                            return NodeFilter.FILTER_ACCEPT;
+                        } catch (e) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                    }
+                },
+                false
+            );
+
+            var nodes = [];
+            while (walker.nextNode()) {
+                nodes.push(walker.currentNode);
+            }
+            for (var i = 0; i < nodes.length; i++) {
+                parseTextNode(nodes[i]);
+            }
+
+            // Tooltip interactions on touch devices: click to toggle, click outside to close.
+            var tooltips = content.querySelectorAll(".hj-term-tooltip[data-hj-term]");
+            if (!tooltips || tooltips.length === 0) {
+                return;
+            }
+
+            var useClick = false;
+            try {
+                useClick = !!(window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches);
+            } catch (e) {
+                useClick = false;
+            }
+            if (!useClick) {
+                return;
+            }
+
+            function closeAll() {
+                for (var i = 0; i < tooltips.length; i++) {
+                    try {
+                        tooltips[i].classList.remove("is-open");
+                    } catch (e) {}
+                }
+            }
+
+            for (var i = 0; i < tooltips.length; i++) {
+                (function (el) {
+                    if (!el || !el.addEventListener) {
+                        return;
+                    }
+                    el.addEventListener("click", function (e) {
+                        if (e && e.preventDefault) {
+                            e.preventDefault();
+                        }
+                        if (e && e.stopPropagation) {
+                            e.stopPropagation();
+                        }
+                        var isOpen = false;
+                        try {
+                            isOpen = el.classList.contains("is-open");
+                        } catch (err) {
+                            isOpen = false;
+                        }
+                        closeAll();
+                        if (!isOpen) {
+                            try {
+                                el.classList.add("is-open");
+                            } catch (err) {}
+                        }
+                    });
+                })(tooltips[i]);
+            }
+
+            document.addEventListener("click", function () {
+                closeAll();
+            });
+
+            document.addEventListener("keydown", function (e) {
+                var key = e && e.key ? String(e.key) : "";
+                if (key === "Escape" || key === "Esc") {
+                    closeAll();
+                }
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            var content = document.querySelector(".hj-article-content");
+            if (!content) {
+                return;
+            }
+
             var blocks = content.querySelectorAll("pre");
             if (!blocks || blocks.length === 0) {
                 return;
