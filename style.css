@@ -1216,6 +1216,48 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
     letter-spacing: 0.01em;
 }
 
+.hj-landing-actions {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.hj-landing-icon-btn {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: var(--hj-day-black);
+    color: var(--hj-day-white);
+    text-decoration: none;
+    flex: 0 0 auto;
+    cursor: pointer;
+    opacity: 0.92;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.hj-landing-icon-btn svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+.hj-landing-icon-btn:hover {
+    opacity: 1;
+    transform: translateY(-1px);
+}
+
+.hj-landing-icon-btn:focus-visible {
+    outline: 2px solid var(--hj-day-black);
+    outline-offset: 2px;
+    opacity: 1;
+}
+
 .hj-landing-prompt {
     font-size: 0.78em;
     letter-spacing: 0.12em;
@@ -5553,6 +5595,10 @@ html.hj-login-modal-open .hj-login-modal {
 
     html:not(.hj-theme-light) .hj-avatar-fallback {
         color: var(--hj-night-white);
+    }
+
+    html:not(.hj-theme-light) .hj-landing-icon-btn:focus-visible {
+        outline-color: var(--hj-night-white);
     }
 
     html:not(.hj-theme-light) .hj-article-content pre {
