@@ -4690,6 +4690,11 @@ html.hj-login-modal-open .hj-login-modal {
     text-decoration: none;
     text-decoration-skip-ink: auto;
     overflow-wrap: anywhere;
+    --hj-article-link-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%237c3aed%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M15%203h6v6%22/%3E%3Cpath%20d%3D%22M10%2014%2021%203%22/%3E%3Cpath%20d%3D%22M18%2013v6a2%202%200%200%201-2%202H5a2%202%200%200%201-2-2V8a2%202%200%200%201%202-2h6%22/%3E%3C/svg%3E");
+}
+
+.hj-article-content a.hj-link-internal {
+    --hj-article-link-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%237c3aed%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2011V4a2%202%200%200%201%202-2h8a2.4%202.4%200%200%201%201.706.706l3.588%203.588A2.4%202.4%200%200%201%2020%208v12a2%202%200%200%201-2%202H6a2%202%200%200%201-2-2v-3a2%202%200%200%201%202-2h7%22/%3E%3Cpath%20d%3D%22M14%202v5a1%201%200%200%200%201%201h5%22/%3E%3Cpath%20d%3D%22m10%2018%203-3-3-3%22/%3E%3C/svg%3E");
 }
 
 .hj-article-content a:visited {
@@ -4733,13 +4738,18 @@ html.hj-login-modal-open .hj-login-modal {
     /* Slightly lower than center so the icon aligns with the text baseline better. */
     background-position: right calc(50% + 0.12em);
     background-size: 0.92em 0.92em;
-    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%237c3aed%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M15%203h6v6%22/%3E%3Cpath%20d%3D%22M10%2014%2021%203%22/%3E%3Cpath%20d%3D%22M18%2013v6a2%202%200%200%201-2%202H5a2%202%200%200%201-2-2V8a2%202%200%200%201%202-2h6%22/%3E%3C/svg%3E");
+    background-image: var(--hj-article-link-icon);
 }
 
 .hj-article-content a.footnote-ref::after,
 .hj-article-content a.footnote-backref::after {
     content: none;
     background-image: none;
+}
+
+.hj-article-content ol > li[id^="fn-"]::marker {
+    content: "[" counter(list-item) "] ";
+    color: inherit;
 }
 
 .hj-article-content h1,

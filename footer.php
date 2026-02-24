@@ -3947,6 +3947,43 @@
             return false;
         }
 
+        function markLinkKind(a, href) {
+            if (!a || !a.classList) {
+                return;
+            }
+            var raw = (href || a.getAttribute("href") || "") + "";
+            if (!raw) {
+                return;
+            }
+
+            var lower = raw.toLowerCase();
+            if (lower.indexOf("mailto:") === 0 || lower.indexOf("tel:") === 0 || lower.indexOf("javascript:") === 0) {
+                return;
+            }
+
+            var url;
+            try {
+                url = new URL(raw, window.location.href);
+            } catch (e) {
+                return;
+            }
+            if (!url || !url.host) {
+                return;
+            }
+
+            var isInternal = false;
+            try {
+                isInternal = url.host === window.location.host;
+            } catch (e) {
+                isInternal = false;
+            }
+
+            try {
+                a.classList.toggle("hj-link-internal", isInternal);
+                a.classList.toggle("hj-link-external", !isInternal);
+            } catch (e) {}
+        }
+
         links.forEach(function (a) {
             if (!a || (a.classList && a.classList.contains("hj-link-has-favicon"))) {
                 return;
@@ -3958,6 +3995,10 @@
             }
 
             var href = a.getAttribute("href") || "";
+
+            // Mark internal/external link kinds for icon rendering (CSS).
+            markLinkKind(a, href);
+
             if (shouldSkipHref(href)) {
                 return;
             }
