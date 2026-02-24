@@ -1,11 +1,3 @@
-@font-face {
-    font-family: "HJ Source Han Serif";
-    src: url("assets/fonts/SourceHanSerifCN.ttf") format("truetype");
-    font-style: normal;
-    font-weight: 250 900;
-    font-display: swap;
-}
-
 :root {
     /* Global palette (softer than pure black/white). */
     --hj-day-black: #2a2a28;
@@ -22,7 +14,7 @@
     --hj-day-text: var(--hj-day-black);
     --hj-night-text: var(--hj-night-white);
     --hj-desktop-width: 86%;
-    --hj-font-main: "HJ Source Han Serif", "Source Han Serif SC", "Source Han Serif CN", "Songti SC", "SimSun", Georgia, serif;
+    --hj-font-main: "Source Han Serif CN VF", "Source Han Serif SC", "Source Han Serif CN", "Songti SC", "SimSun", Georgia, serif;
     --hj-font-ui: var(--hj-font-main);
 
     --hj-surface-day: rgba(255, 255, 253, 0.82);

@@ -220,6 +220,7 @@ if ($hjThemeCookie === 'dark') {
             } catch (e) {}
         })();
     </script>
+    <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/fonts/SourceHanSerifCN/result.css'); ?>">
     <link rel="stylesheet" href="<?php $this->options->themeUrl('style.css'); ?>">
     <?php $this->header(); ?>
 </head>
