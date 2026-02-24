@@ -4710,7 +4710,7 @@ html.hj-login-modal-open .hj-login-modal {
     padding: 0.65rem 0.85rem;
     border-left: 2px solid rgba(42, 42, 40, 0.55);
     background: rgba(18, 18, 18, 0.06);
-    border-radius: 4px;
+    border-radius: 0 4px 4px 0;
 }
 
 .hj-article-content blockquote p {
@@ -4724,6 +4724,66 @@ html.hj-login-modal-open .hj-login-modal {
 .hj-article-content img {
     border-radius: 0;
     margin: 1rem 0;
+    max-height: 60vh;
+    max-height: min(60vh, 520px);
+}
+
+.hj-article-content figure {
+    margin: 1rem 0;
+}
+
+.hj-article-content figure.hj-figure {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    margin: 1rem 0;
+    text-align: left;
+}
+
+.hj-article-content figure.hj-figure > a {
+    display: inline-block;
+    max-width: 100%;
+}
+
+.hj-article-content figure.hj-figure > img {
+    display: block;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.hj-article-content figure.hj-figure > a::after,
+.hj-article-content figure.hj-figure > a:hover::after,
+.hj-article-content figure.hj-figure > a:focus-visible::after {
+    content: none;
+    background-image: none;
+}
+
+.hj-article-content figure.hj-figure > a:hover,
+.hj-article-content figure.hj-figure > a:focus-visible {
+    text-decoration: none;
+}
+
+.hj-article-content figure img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0;
+}
+
+.hj-article-content figcaption {
+    margin-top: 0.45rem;
+    font-family: var(--hj-font-ui);
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--hj-day-text);
+    font-weight: 700;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.hj-article-content figure.hj-figure figcaption {
+    width: 100%;
 }
 
 .hj-article-content table {
@@ -4772,12 +4832,14 @@ html.hj-login-modal-open .hj-login-modal {
 }
 
 .hj-article-content :not(pre) > code {
+    font-size: 0.9em;
     padding: 0.08em 0.35em 0.12em;
     border-radius: 4px;
     background: rgba(18, 18, 18, 0.08);
 }
 
 .hj-article-content pre {
+    font-size: 0.9em;
     background: rgba(18, 18, 18, 0.08);
     border-radius: 4px;
     padding: 0.75rem 0.85rem;
@@ -5488,6 +5550,10 @@ html.hj-login-modal-open .hj-login-modal {
         background: rgba(240, 240, 240, 0.06);
     }
 
+    html:not(.hj-theme-light) .hj-article-content figcaption {
+        color: var(--hj-night-text);
+    }
+
     html:not(.hj-theme-light) .hj-article-content pre .hj-code-fold {
         background: linear-gradient(to bottom, rgba(14, 14, 12, 0), rgba(14, 14, 12, 0.88));
     }
@@ -5879,6 +5945,10 @@ html.hj-theme-dark .hj-article-content :not(pre) > code {
 html.hj-theme-dark .hj-article-content blockquote {
     border-left-color: rgba(221, 221, 219, 0.55);
     background: rgba(240, 240, 240, 0.06);
+}
+
+html.hj-theme-dark .hj-article-content figcaption {
+    color: var(--hj-night-text);
 }
 
 html.hj-theme-dark .hj-article-content pre .hj-code-fold {

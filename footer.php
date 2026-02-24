@@ -3264,6 +3264,87 @@
                 return;
             }
 
+            function hasOnlyImageParagraph(p, carrier) {
+                if (!p) {
+                    return false;
+                }
+
+                var nodes = p.childNodes || [];
+                for (var i = 0; i < nodes.length; i++) {
+                    var n = nodes[i];
+                    if (!n) {
+                        continue;
+                    }
+                    if (n.nodeType === 3) {
+                        if (String(n.textContent || "").trim() !== "") {
+                            return false;
+                        }
+                        continue;
+                    }
+                    if (n.nodeType === 8) {
+                        continue;
+                    }
+                    if (n.nodeType === 1) {
+                        if (n !== carrier) {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            }
+
+            var imgs = Array.prototype.slice.call(content.querySelectorAll("img"));
+            imgs.forEach(function (img) {
+                if (!img || !img.parentNode) {
+                    return;
+                }
+                if (img.closest && img.closest("figure")) {
+                    return;
+                }
+
+                var carrier = img;
+                var p = img.parentNode;
+                if (p && p.tagName === "A") {
+                    carrier = p;
+                    p = p.parentNode;
+                }
+
+                if (!p || p.tagName !== "P") {
+                    return;
+                }
+                if (!hasOnlyImageParagraph(p, carrier)) {
+                    return;
+                }
+
+                var caption = String(img.getAttribute("alt") || "").trim();
+                if (!caption) {
+                    caption = String(img.getAttribute("title") || "").trim();
+                }
+
+                var figure = document.createElement("figure");
+                figure.className = "hj-figure";
+                figure.appendChild(carrier);
+
+                if (caption) {
+                    var figcaption = document.createElement("figcaption");
+                    figcaption.textContent = caption;
+                    figure.appendChild(figcaption);
+                }
+
+                try {
+                    p.parentNode.replaceChild(figure, p);
+                } catch (e) {}
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            var content = document.querySelector(".hj-article-content");
+            if (!content) {
+                return;
+            }
+
             var blocks = content.querySelectorAll("pre");
             if (!blocks || blocks.length === 0) {
                 return;
