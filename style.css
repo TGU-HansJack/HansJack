@@ -3388,6 +3388,8 @@ html.hj-theme-dark .hj-activity-bubble.is-private {
 .hj-article-content {
     color: inherit;
     min-width: 0;
+    --hj-spoiler-blur: 3.5px;
+    --hj-spoiler-transition: 0.24s;
 }
 
 .hj-article-layout {
@@ -5234,6 +5236,28 @@ html.hj-login-modal-open .hj-login-modal {
     opacity: 1;
     visibility: visible;
     transform: translate(-50%, -0.08rem);
+}
+
+.hj-article-content .hj-term-spoiler,
+.hj-article-content .spoiler {
+    cursor: pointer;
+    filter: blur(var(--hj-spoiler-blur));
+    transition: filter var(--hj-spoiler-transition) ease;
+}
+
+.hj-article-content .hj-term-spoiler:hover,
+.hj-article-content .hj-term-spoiler:focus-visible,
+.hj-article-content .hj-term-spoiler.is-open,
+.hj-article-content .spoiler:hover,
+.hj-article-content .spoiler:focus-visible,
+.hj-article-content .spoiler.is-open {
+    filter: blur(0);
+}
+
+.hj-article-content .hj-term-spoiler:focus-visible,
+.hj-article-content .spoiler:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
 }
 
 .hj-article-content pre {

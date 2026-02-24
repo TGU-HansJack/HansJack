@@ -3409,6 +3409,59 @@
                 return wrap;
             }
 
+            function buildSpoiler(text) {
+                var span = document.createElement("span");
+                span.className = "hj-term hj-term-spoiler spoiler";
+                span.setAttribute("tabindex", "0");
+                span.textContent = text;
+                return span;
+            }
+
+            function appendTextWithSpoiler(target, rawText) {
+                var text = String(rawText || "");
+                if (!text) {
+                    return;
+                }
+                if (text.indexOf("!") === -1) {
+                    target.appendChild(document.createTextNode(text));
+                    return;
+                }
+
+                var pos = 0;
+                while (pos < text.length) {
+                    var open = text.indexOf("!", pos);
+                    if (open === -1) {
+                        target.appendChild(document.createTextNode(text.slice(pos)));
+                        break;
+                    }
+
+                    var close = text.indexOf("!", open + 1);
+                    if (close === -1) {
+                        target.appendChild(document.createTextNode(text.slice(pos)));
+                        break;
+                    }
+
+                    var spoilerText = text.slice(open + 1, close);
+                    var isValid =
+                        spoilerText !== "" &&
+                        spoilerText.trim() === spoilerText &&
+                        spoilerText.indexOf("\n") === -1 &&
+                        spoilerText.indexOf("\r") === -1;
+
+                    if (!isValid) {
+                        target.appendChild(document.createTextNode(text.slice(pos, open + 1)));
+                        pos = open + 1;
+                        continue;
+                    }
+
+                    if (open > pos) {
+                        target.appendChild(document.createTextNode(text.slice(pos, open)));
+                    }
+                    target.appendChild(buildSpoiler(spoilerText));
+                    pos = close + 1;
+                }
+            }
+
             function splitAnnotation(raw) {
                 var inner = String(raw || "").trim();
                 if (!inner) {
@@ -3435,6 +3488,15 @@
                 }
 
                 return { annotation: annotation, mode: mode };
+            }
+
+            function hasSpoilerMarker(text) {
+                var s = String(text || "");
+                var first = s.indexOf("!");
+                if (first === -1) {
+                    return false;
+                }
+                return s.indexOf("!", first + 1) !== -1;
             }
 
             function findBaseToken(text, pos, caret) {
@@ -3470,7 +3532,7 @@
 
             function parseTextNode(node) {
                 var text = node && node.nodeValue ? String(node.nodeValue) : "";
-                if (!text || text.indexOf("^(") === -1) {
+                if (!text || (text.indexOf("^(") === -1 && !hasSpoilerMarker(text))) {
                     return;
                 }
 
@@ -3480,7 +3542,7 @@
                 while (pos < text.length) {
                     var caret = text.indexOf("^(", pos);
                     if (caret === -1) {
-                        frag.appendChild(document.createTextNode(text.slice(pos)));
+                        appendTextWithSpoiler(frag, text.slice(pos));
                         break;
                     }
 
@@ -3488,7 +3550,7 @@
                     var base = findBaseToken(text, pos, caret);
                     if (!base) {
                         // No base text found, keep scanning.
-                        frag.appendChild(document.createTextNode(text.slice(pos, caret + 2)));
+                        appendTextWithSpoiler(frag, text.slice(pos, caret + 2));
                         pos = caret + 2;
                         continue;
                     }
@@ -3496,7 +3558,7 @@
                     // Find closing ')'
                     var close = text.indexOf(")", caret + 2);
                     if (close === -1) {
-                        frag.appendChild(document.createTextNode(text.slice(pos)));
+                        appendTextWithSpoiler(frag, text.slice(pos));
                         break;
                     }
 
@@ -3506,12 +3568,12 @@
                     var parsed = splitAnnotation(inner);
 
                     if (!parsed) {
-                        frag.appendChild(document.createTextNode(text.slice(pos, close + 1)));
+                        appendTextWithSpoiler(frag, text.slice(pos, close + 1));
                         pos = close + 1;
                         continue;
                     }
 
-                    frag.appendChild(document.createTextNode(text.slice(pos, start)));
+                    appendTextWithSpoiler(frag, text.slice(pos, start));
 
                     if (parsed.mode === "tooltip") {
                         frag.appendChild(buildTooltip(baseText, parsed.annotation));
@@ -3542,7 +3604,8 @@
                             if (!node || !node.nodeValue) {
                                 return NodeFilter.FILTER_REJECT;
                             }
-                            if (String(node.nodeValue).indexOf("^(") === -1) {
+                            var nodeText = String(node.nodeValue);
+                            if (nodeText.indexOf("^(") === -1 && !hasSpoilerMarker(nodeText)) {
                                 return NodeFilter.FILTER_REJECT;
                             }
                             if (isBlockedParent(node)) {
@@ -3565,12 +3628,7 @@
                 parseTextNode(nodes[i]);
             }
 
-            // Tooltip interactions on touch devices: click to toggle, click outside to close.
-            var tooltips = content.querySelectorAll(".hj-term-tooltip[data-hj-term]");
-            if (!tooltips || tooltips.length === 0) {
-                return;
-            }
-
+            // Tooltip/Spoiler interactions on touch devices: click to toggle, click outside to close.
             var useClick = false;
             try {
                 useClick = !!(window.matchMedia && window.matchMedia("(hover: none) and (pointer: coarse)").matches);
@@ -3581,15 +3639,28 @@
                 return;
             }
 
+            var toggles = [];
+            var tooltips = content.querySelectorAll(".hj-term-tooltip[data-hj-term]");
+            var spoilers = content.querySelectorAll(".hj-term-spoiler");
+            for (var i = 0; i < tooltips.length; i++) {
+                toggles.push(tooltips[i]);
+            }
+            for (var j = 0; j < spoilers.length; j++) {
+                toggles.push(spoilers[j]);
+            }
+            if (toggles.length === 0) {
+                return;
+            }
+
             function closeAll() {
-                for (var i = 0; i < tooltips.length; i++) {
+                for (var i = 0; i < toggles.length; i++) {
                     try {
-                        tooltips[i].classList.remove("is-open");
+                        toggles[i].classList.remove("is-open");
                     } catch (e) {}
                 }
             }
 
-            for (var i = 0; i < tooltips.length; i++) {
+            for (var i = 0; i < toggles.length; i++) {
                 (function (el) {
                     if (!el || !el.addEventListener) {
                         return;
@@ -3614,7 +3685,7 @@
                             } catch (err) {}
                         }
                     });
-                })(tooltips[i]);
+                })(toggles[i]);
             }
 
             document.addEventListener("click", function () {
