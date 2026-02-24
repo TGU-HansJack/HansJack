@@ -4686,19 +4686,19 @@ html.hj-login-modal-open .hj-login-modal {
 .hj-article-content a {
     position: relative;
     display: inline;
-    color: #7c3aed;
+    color: var(--hj-day-black);
     text-decoration: none;
     text-decoration-skip-ink: auto;
     overflow-wrap: anywhere;
-    --hj-article-link-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%237c3aed%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M15%203h6v6%22/%3E%3Cpath%20d%3D%22M10%2014%2021%203%22/%3E%3Cpath%20d%3D%22M18%2013v6a2%202%200%200%201-2%202H5a2%202%200%200%201-2-2V8a2%202%200%200%201%202-2h6%22/%3E%3C/svg%3E");
+    --hj-article-link-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M15%203h6v6%22/%3E%3Cpath%20d%3D%22M10%2014%2021%203%22/%3E%3Cpath%20d%3D%22M18%2013v6a2%202%200%200%201-2%202H5a2%202%200%200%201-2-2V8a2%202%200%200%201%202-2h6%22/%3E%3C/svg%3E");
 }
 
 .hj-article-content a.hj-link-internal {
-    --hj-article-link-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%237c3aed%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2011V4a2%202%200%200%201%202-2h8a2.4%202.4%200%200%201%201.706.706l3.588%203.588A2.4%202.4%200%200%201%2020%208v12a2%202%200%200%201-2%202H6a2%202%200%200%201-2-2v-3a2%202%200%200%201%202-2h7%22/%3E%3Cpath%20d%3D%22M14%202v5a1%201%200%200%200%201%201h5%22/%3E%3Cpath%20d%3D%22m10%2018%203-3-3-3%22/%3E%3C/svg%3E");
+    --hj-article-link-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2011V4a2%202%200%200%201%202-2h8a2.4%202.4%200%200%201%201.706.706l3.588%203.588A2.4%202.4%200%200%201%2020%208v12a2%202%200%200%201-2%202H6a2%202%200%200%201-2-2v-3a2%202%200%200%201%202-2h7%22/%3E%3Cpath%20d%3D%22M14%202v5a1%201%200%200%200%201%201h5%22/%3E%3Cpath%20d%3D%22m10%2018%203-3-3-3%22/%3E%3C/svg%3E");
 }
 
 .hj-article-content a:visited {
-    color: #7c3aed;
+    color: var(--hj-day-black);
 }
 
 .hj-article-content a::before {
@@ -4714,7 +4714,7 @@ html.hj-login-modal-open .hj-login-modal {
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 0.12em;
-    text-decoration-color: #7c3aed;
+    text-decoration-color: currentColor;
     text-decoration-skip-ink: auto;
 }
 
@@ -4724,7 +4724,7 @@ html.hj-login-modal-open .hj-login-modal {
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 0.12em;
-    text-decoration-color: #7c3aed;
+    text-decoration-color: currentColor;
     text-decoration-skip-ink: auto;
 }
 
@@ -4738,7 +4738,16 @@ html.hj-login-modal-open .hj-login-modal {
     /* Slightly lower than center so the icon aligns with the text baseline better. */
     background-position: right calc(50% + 0.12em);
     background-size: 0.92em 0.92em;
-    background-image: var(--hj-article-link-icon);
+    background-image: none;
+    background-color: currentColor;
+    -webkit-mask-image: var(--hj-article-link-mask);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: right calc(50% + 0.12em);
+    -webkit-mask-size: 0.92em 0.92em;
+    mask-image: var(--hj-article-link-mask);
+    mask-repeat: no-repeat;
+    mask-position: right calc(50% + 0.12em);
+    mask-size: 0.92em 0.92em;
 }
 
 .hj-article-content a.footnote-ref::after,
@@ -4750,6 +4759,24 @@ html.hj-login-modal-open .hj-login-modal {
 .hj-article-content ol > li[id^="fn-"]::marker {
     content: "[" counter(list-item) "] ";
     color: inherit;
+}
+
+.hj-article-content ol:has(> li[id^="fn-"]) {
+    padding-left: 0;
+    margin-left: 0;
+    list-style-position: inside;
+}
+
+.hj-article-content ol:has(> li[id^="fn-"]) > li {
+    color: var(--hj-muted-day);
+}
+
+.hj-article-content ol:has(> li[id^="fn-"]) a {
+    color: var(--hj-muted-day);
+}
+
+.hj-article-content ol:has(> li[id^="fn-"]) a:visited {
+    color: var(--hj-muted-day);
 }
 
 .hj-article-content h1,
@@ -5909,6 +5936,23 @@ html.hj-login-modal-open .hj-login-modal {
         background: rgba(240, 240, 240, 0.06);
     }
 
+    html:not(.hj-theme-light) .hj-article-content a {
+        color: var(--hj-night-white);
+    }
+
+    html:not(.hj-theme-light) .hj-article-content a:visited {
+        color: var(--hj-night-white);
+    }
+
+    html:not(.hj-theme-light) .hj-article-content ol:has(> li[id^="fn-"]) > li {
+        color: var(--hj-muted-night);
+    }
+
+    html:not(.hj-theme-light) .hj-article-content ol:has(> li[id^="fn-"]) a,
+    html:not(.hj-theme-light) .hj-article-content ol:has(> li[id^="fn-"]) a:visited {
+        color: var(--hj-muted-night);
+    }
+
     html:not(.hj-theme-light) .hj-article-content hr {
         border-top-color: rgba(221, 221, 219, 0.55);
     }
@@ -5988,6 +6032,23 @@ html.hj-theme-dark .hj-cv-full-btn:hover,
 html.hj-theme-dark .hj-cv-full-btn:focus-visible {
     background: var(--hj-night-white);
     color: var(--hj-night-black);
+}
+
+html.hj-theme-dark .hj-article-content a {
+    color: var(--hj-night-white);
+}
+
+html.hj-theme-dark .hj-article-content a:visited {
+    color: var(--hj-night-white);
+}
+
+html.hj-theme-dark .hj-article-content ol:has(> li[id^="fn-"]) > li {
+    color: var(--hj-muted-night);
+}
+
+html.hj-theme-dark .hj-article-content ol:has(> li[id^="fn-"]) a,
+html.hj-theme-dark .hj-article-content ol:has(> li[id^="fn-"]) a:visited {
+    color: var(--hj-muted-night);
 }
 
 html.hj-theme-dark .hj-article-content table {
