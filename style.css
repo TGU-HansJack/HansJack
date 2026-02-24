@@ -1527,7 +1527,7 @@ html.hj-header-dropdown-open .hj-nav-item:focus-within .hj-nav-dropdown {
 .hj-recent-link-text {
     position: relative;
     display: inline-block;
-    font-size: 0.98rem;
+    font-size: 0.9rem;
     line-height: 1.35;
     padding-bottom: 0.02em;
 }
@@ -2588,6 +2588,7 @@ html.hj-theme-dark .hj-posts-pager.page-navigator li a:focus-visible {
 .hj-activity-post {
     color: inherit;
     font-weight: 400;
+    font-size: 0.92em;
     min-width: 0;
     overflow-wrap: anywhere;
     text-decoration: none;
