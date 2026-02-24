@@ -3905,7 +3905,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 
 .hj-comments .comment-body {    
     border: 0;    
-    border-radius: 0;    
+    border-radius: 4px;    
     padding: 0.85rem var(--hj-comment-body-pad-x);    
     --hj-comment-avatar-size: 32px;   
     --hj-comment-avatar-gap: 0.6rem;   
