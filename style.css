@@ -4032,6 +4032,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     display: inline-flex;  
     align-items: center;  
     justify-content: flex-start;  
+    position: relative;
     width: 34px;  
     height: 34px; 
     padding: 0;  
@@ -4040,6 +4041,36 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     cursor: pointer; 
     opacity: 0.86; 
 } 
+
+.hj-comments .comment-reply a::after,
+.hj-comments .comment-reply button::after {
+    position: absolute;
+    left: 9px;
+    bottom: 100%;
+    transform: translate(-50%, -0.12rem);
+    padding: 0.12rem 0.35rem;
+    border-radius: 4px;
+    background: var(--hj-nav-block-bg);
+    color: var(--hj-nav-block-fg);
+    font-family: var(--hj-font-ui);
+    font-size: 0.72rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 20;
+    transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
+}
+
+.hj-comments .comment-reply a::after {
+    content: "回复";
+    left: 7px;
+}
+
+.hj-comments .comment-reply button::after {
+    content: attr(aria-label);
+}
  
 .hj-comments .comment-reply a svg,  
 .hj-comments .comment-reply button svg {  
@@ -4060,6 +4091,15 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     opacity: 1; 
     text-decoration: none; 
 } 
+
+.hj-comments .comment-reply a:hover::after,
+.hj-comments .comment-reply a:focus-visible::after,
+.hj-comments .comment-reply button:hover::after,
+.hj-comments .comment-reply button:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -0.24rem);
+}
  
 .hj-comments .comment-reply a:focus-visible,  
 .hj-comments .comment-reply button:focus-visible {  
@@ -4471,7 +4511,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     position: absolute;
     left: 50%;
     bottom: 100%;
-    transform: translate(-50%, -0.35rem);
+    transform: translate(-50%, -0.12rem);
     padding: 0.12rem 0.35rem;
     border-radius: 4px;
     background: var(--hj-nav-block-bg);
@@ -4491,7 +4531,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
 .hj-comment-icon-btn:focus-visible::after {
     opacity: 1;
     visibility: visible;
-    transform: translate(-50%, -0.6rem);
+    transform: translate(-50%, -0.24rem);
 }
 
 .hj-comment-icon-btn svg {
@@ -5193,7 +5233,7 @@ html.hj-login-modal-open .hj-login-modal {
 .hj-article-content .hj-term-tooltip.is-open::after {
     opacity: 1;
     visibility: visible;
-    transform: translate(-50%, -0.18rem);
+    transform: translate(-50%, -0.08rem);
 }
 
 .hj-article-content pre {
@@ -5351,7 +5391,7 @@ html.hj-login-modal-open .hj-login-modal {
     position: absolute;
     left: 50%;
     bottom: 100%;
-    transform: translate(-50%, -0.35rem);
+    transform: translate(-50%, -0.12rem);
     padding: 0.12rem 0.35rem;
     border-radius: 4px;
     background: var(--hj-nav-block-bg);
@@ -5371,7 +5411,7 @@ html.hj-login-modal-open .hj-login-modal {
 .hj-article-content pre .hj-code-copy-btn.is-copied::after {
     opacity: 1;
     visibility: visible;
-    transform: translate(-50%, -0.6rem);
+    transform: translate(-50%, -0.24rem);
 }
 
 @media (hover: none) {
@@ -5487,7 +5527,7 @@ html.hj-login-modal-open .hj-login-modal {
     position: absolute;
     left: 50%;
     bottom: 100%;
-    transform: translate(-50%, -0.35rem);
+    transform: translate(-50%, -0.12rem);
     padding: 0.12rem 0.35rem;
     border-radius: 4px;
     background: var(--hj-nav-block-bg);
@@ -5506,7 +5546,7 @@ html.hj-login-modal-open .hj-login-modal {
 .hj-footer-theme-link:focus-visible .hj-footer-icon-tip {
     opacity: 1;
     visibility: visible;
-    transform: translate(-50%, -0.6rem);
+    transform: translate(-50%, -0.24rem);
 }
 
 @media (max-width: 768px) {
