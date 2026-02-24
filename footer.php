@@ -12,6 +12,7 @@
                 <?php
                 $hjIcpBeian = trim((string) $this->options->hjIcpBeian);
                 $hjMpsBeian = trim((string) $this->options->hjMpsBeian);
+                $hjFooterCustomCode = trim((string) $this->options->hjFooterCustomCode);
                 ?>
                 <?php if ($hjIcpBeian !== ''): ?>
                     <span class="hj-footer-sep" aria-hidden="true">·</span>
@@ -20,6 +21,10 @@
                 <?php if ($hjMpsBeian !== ''): ?>
                     <span class="hj-footer-sep" aria-hidden="true">·</span>
                     <a class="hj-footer-beian" href="<?php echo hansJackEscape(hansJackBuildMpsBeianUrl($hjMpsBeian)); ?>" target="_blank" rel="noreferrer"><?php echo hansJackEscape($hjMpsBeian); ?></a>
+                <?php endif; ?>
+                <?php if ($hjFooterCustomCode !== ''): ?>
+                    <span class="hj-footer-sep" aria-hidden="true">·</span>
+                    <?php echo $hjFooterCustomCode; ?>
                 <?php endif; ?>
             </p>
             <p class="hj-footer-right">
@@ -1163,6 +1168,12 @@
 
         var openClass = "is-open";
         var margin = 8;  // px from viewport edges
+        var hoverCapable = false;
+        try {
+            hoverCapable = !!(window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+        } catch (e) {
+            hoverCapable = false;
+        }
         var raf = window.requestAnimationFrame
             ? window.requestAnimationFrame.bind(window)
             : function (callback) {
@@ -1267,6 +1278,11 @@
             event.preventDefault();
             event.stopPropagation();
 
+            if (hoverCapable) {
+                openMenu();
+                return;
+            }
+
             if (menu.classList.contains(openClass)) {
                 closeMenu();
             } else {
@@ -1274,13 +1290,56 @@
             }
         });
 
-        menu.addEventListener("mouseenter", function () {
-            raf(positionDropdown);
-        });
+        if (hoverCapable) {
+            var closeTimer = null;
+            function cancelClose() {
+                if (!closeTimer) {
+                    return;
+                }
+                window.clearTimeout(closeTimer);
+                closeTimer = null;
+            }
+            function scheduleClose(event) {
+                var next = event ? event.relatedTarget : null;
+                if (next && menu.contains(next)) {
+                    return;
+                }
 
-        menu.addEventListener("focusin", function () {
-            raf(positionDropdown);
-        });
+                cancelClose();
+                closeTimer = window.setTimeout(function () {
+                    closeTimer = null;
+                    closeMenu();
+                }, 240);
+            }
+
+            menu.addEventListener("mouseenter", function () {
+                cancelClose();
+                openMenu();
+            });
+            menu.addEventListener("mouseleave", scheduleClose);
+            dropdown.addEventListener("mouseenter", cancelClose);
+            dropdown.addEventListener("mouseleave", scheduleClose);
+            menu.addEventListener("focusin", function () {
+                cancelClose();
+                openMenu();
+            });
+            menu.addEventListener("focusout", function (event) {
+                var next = event ? event.relatedTarget : null;
+                if (next && menu.contains(next)) {
+                    return;
+                }
+                cancelClose();
+                closeMenu();
+            });
+        } else {
+            menu.addEventListener("mouseenter", function () {
+                raf(positionDropdown);
+            });
+
+            menu.addEventListener("focusin", function () {
+                raf(positionDropdown);
+            });
+        }
 
         document.addEventListener("click", function (event) {
             var target = event ? event.target : null;
@@ -1346,6 +1405,12 @@
 
         var openClass = "is-open";
         var margin = 8;  // px from viewport edges
+        var hoverCapable = false;
+        try {
+            hoverCapable = !!(window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+        } catch (e) {
+            hoverCapable = false;
+        }
         var raf = window.requestAnimationFrame
             ? window.requestAnimationFrame.bind(window)
             : function (callback) {
@@ -1451,6 +1516,11 @@
             event.preventDefault();
             event.stopPropagation();
 
+            if (hoverCapable) {
+                openMenu();
+                return;
+            }
+
             if (menu.classList.contains(openClass)) {
                 closeMenu();
             } else {
@@ -1458,13 +1528,56 @@
             }
         });
 
-        menu.addEventListener("mouseenter", function () {
-            raf(positionDropdown);
-        });
+        if (hoverCapable) {
+            var closeTimer = null;
+            function cancelClose() {
+                if (!closeTimer) {
+                    return;
+                }
+                window.clearTimeout(closeTimer);
+                closeTimer = null;
+            }
+            function scheduleClose(event) {
+                var next = event ? event.relatedTarget : null;
+                if (next && menu.contains(next)) {
+                    return;
+                }
 
-        menu.addEventListener("focusin", function () {
-            raf(positionDropdown);
-        });
+                cancelClose();
+                closeTimer = window.setTimeout(function () {
+                    closeTimer = null;
+                    closeMenu();
+                }, 240);
+            }
+
+            menu.addEventListener("mouseenter", function () {
+                cancelClose();
+                openMenu();
+            });
+            menu.addEventListener("mouseleave", scheduleClose);
+            dropdown.addEventListener("mouseenter", cancelClose);
+            dropdown.addEventListener("mouseleave", scheduleClose);
+            menu.addEventListener("focusin", function () {
+                cancelClose();
+                openMenu();
+            });
+            menu.addEventListener("focusout", function (event) {
+                var next = event ? event.relatedTarget : null;
+                if (next && menu.contains(next)) {
+                    return;
+                }
+                cancelClose();
+                closeMenu();
+            });
+        } else {
+            menu.addEventListener("mouseenter", function () {
+                raf(positionDropdown);
+            });
+
+            menu.addEventListener("focusin", function () {
+                raf(positionDropdown);
+            });
+        }
 
         document.addEventListener("click", function (event) {
             var target = event ? event.target : null;

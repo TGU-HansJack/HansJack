@@ -30,6 +30,15 @@ function themeConfig($form)
         _t('留空则不显示；示例：京公网安备 11000002000001号。链接会跳转到公安备案查询。')
     );
     $form->addInput($mpsBeian);
+
+    $footerCustomCode = new \Typecho\Widget\Helper\Form\Element\Textarea(
+        'hjFooterCustomCode',
+        null,
+        '',
+        _t('底部自定义代码'),
+        _t('将输出到页脚左侧。支持 HTML（请自行确保代码安全）。')
+    );
+    $form->addInput($footerCustomCode);
 }
 
 /**
