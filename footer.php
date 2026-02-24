@@ -3422,26 +3422,26 @@
                 if (!text) {
                     return;
                 }
-                if (text.indexOf("!") === -1) {
+                if (text.indexOf("!!") === -1) {
                     target.appendChild(document.createTextNode(text));
                     return;
                 }
 
                 var pos = 0;
                 while (pos < text.length) {
-                    var open = text.indexOf("!", pos);
+                    var open = text.indexOf("!!", pos);
                     if (open === -1) {
                         target.appendChild(document.createTextNode(text.slice(pos)));
                         break;
                     }
 
-                    var close = text.indexOf("!", open + 1);
+                    var close = text.indexOf("!!", open + 2);
                     if (close === -1) {
                         target.appendChild(document.createTextNode(text.slice(pos)));
                         break;
                     }
 
-                    var spoilerText = text.slice(open + 1, close);
+                    var spoilerText = text.slice(open + 2, close);
                     var isValid =
                         spoilerText !== "" &&
                         spoilerText.trim() === spoilerText &&
@@ -3449,8 +3449,8 @@
                         spoilerText.indexOf("\r") === -1;
 
                     if (!isValid) {
-                        target.appendChild(document.createTextNode(text.slice(pos, open + 1)));
-                        pos = open + 1;
+                        target.appendChild(document.createTextNode(text.slice(pos, open + 2)));
+                        pos = open + 2;
                         continue;
                     }
 
@@ -3458,7 +3458,7 @@
                         target.appendChild(document.createTextNode(text.slice(pos, open)));
                     }
                     target.appendChild(buildSpoiler(spoilerText));
-                    pos = close + 1;
+                    pos = close + 2;
                 }
             }
 
@@ -3492,11 +3492,11 @@
 
             function hasSpoilerMarker(text) {
                 var s = String(text || "");
-                var first = s.indexOf("!");
+                var first = s.indexOf("!!");
                 if (first === -1) {
                     return false;
                 }
-                return s.indexOf("!", first + 1) !== -1;
+                return s.indexOf("!!", first + 2) !== -1;
             }
 
             function findBaseToken(text, pos, caret) {
