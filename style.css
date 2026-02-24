@@ -4701,18 +4701,7 @@ html.hj-login-modal-open .hj-login-modal {
 }
 
 .hj-article-content a.hj-link-has-favicon::before {
-    content: "";
-    display: inline-block;
-    width: 1em;
-    height: 1em;
-    margin-right: 0.35em;
-    border-radius: 999px;
-    background-image: var(--hj-link-favicon);
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: cover;
-    vertical-align: -0.14em;
-    text-decoration: none;
+    content: none;
 }
 
 .hj-article-content a:hover,
@@ -4836,6 +4825,15 @@ html.hj-login-modal-open .hj-login-modal {
 }
 
 @media (max-width: 1099px) {
+    .hj-article-content h1,
+    .hj-article-content h2,
+    .hj-article-content h3,
+    .hj-article-content h4,
+    .hj-article-content h5,
+    .hj-article-content h6 {
+        text-decoration: none;
+    }
+
     /* On narrow screens the heading icon should sit next to the title text,
        not pinned to the right edge of the full-width <h*> block. */
     .hj-article-content h1::before,
@@ -4934,6 +4932,12 @@ html.hj-login-modal-open .hj-login-modal {
 
 .hj-article-content blockquote p:last-child {
     margin-bottom: 0;
+}
+
+.hj-article-content hr {
+    border: 0;
+    border-top: 1.5px dashed rgba(42, 42, 40, 0.35);
+    margin: 1.25rem 0;
 }
 
 .hj-article-content img {
@@ -5793,6 +5797,10 @@ html.hj-login-modal-open .hj-login-modal {
         background: rgba(240, 240, 240, 0.06);
     }
 
+    html:not(.hj-theme-light) .hj-article-content hr {
+        border-top-color: rgba(221, 221, 219, 0.55);
+    }
+
     html:not(.hj-theme-light) .hj-article-content figcaption {
         color: var(--hj-night-text);
     }
@@ -5873,6 +5881,10 @@ html.hj-theme-dark .hj-cv-full-btn:focus-visible {
 html.hj-theme-dark .hj-article-content table {
     border-top-color: rgba(221, 221, 219, 0.65);
     border-bottom-color: rgba(221, 221, 219, 0.65);
+}
+
+html.hj-theme-dark .hj-article-content hr {
+    border-top-color: rgba(221, 221, 219, 0.55);
 }
 
 html.hj-theme-dark .hj-article-content thead th {
