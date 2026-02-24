@@ -787,6 +787,35 @@ function threadedComments($comments, $singleCommentOptions): void
     if ($hjHasChildren) {
         $commentClass .= ' hj-comment-has-children';
     }
+
+    $hjAvatarSize = max(1, (int) ($singleCommentOptions->avatarSize ?? 32));
+    $hjAvatarDefault = '';
+    try {
+        $hjAvatarDefault = trim((string) ($singleCommentOptions->defaultAvatar ?? ''));
+    } catch (\Throwable $e) {
+        $hjAvatarDefault = '';
+    }
+    if ($hjAvatarDefault === '') {
+        $hjAvatarDefault = 'mp';
+    }
+
+    $hjAvatarEmail = '';
+    try {
+        $hjAvatarEmail = strtolower(trim((string) ($comments->mail ?? '')));
+    } catch (\Throwable $e) {
+        $hjAvatarEmail = '';
+    }
+
+    // Use Sep CDN as the avatar endpoint with Gravatar-compatible parameters.
+    $hjAvatarHash = md5($hjAvatarEmail);
+    $hjAvatarBase = 'https://cdn.sep.cc/avatar/' . $hjAvatarHash;
+    $hjAvatarQuery = '&d=' . rawurlencode($hjAvatarDefault) . '&r=g';
+    $hjAvatarUrl = $hjAvatarBase . '?s=' . $hjAvatarSize . $hjAvatarQuery;
+    $hjAvatarSrcset = '';
+    if (!empty($singleCommentOptions->avatarHighRes)) {
+        $hjAvatarSrcset = $hjAvatarBase . '?s=' . ($hjAvatarSize * 2) . $hjAvatarQuery . ' 2x, '
+            . $hjAvatarBase . '?s=' . ($hjAvatarSize * 3) . $hjAvatarQuery . ' 3x';
+    }
     ?>
     <li itemscope itemtype="http://schema.org/UserComments" id="<?php $comments->theId(); ?>" class="comment-body<?php 
     if ($comments->levels > 0) { 
@@ -800,11 +829,17 @@ function threadedComments($comments, $singleCommentOptions): void
     ?>" data-hj-comment-level="<?php echo (int) $comments->levels; ?>"> 
         <div class="comment-author" itemprop="creator" itemscope itemtype="http://schema.org/Person">  
             <span itemprop="image">  
-                <?php $comments->gravatar(  
-                    $singleCommentOptions->avatarSize,  
-                    $singleCommentOptions->defaultAvatar,  
-                    $singleCommentOptions->avatarHighRes  
-                ); ?>  
+                <img
+                    class="avatar"
+                    src="<?php echo hansJackEscape($hjAvatarUrl); ?>"
+                    <?php if ($hjAvatarSrcset !== ''): ?>srcset="<?php echo hansJackEscape($hjAvatarSrcset); ?>"<?php endif; ?>
+                    alt=""
+                    width="<?php echo (int) $hjAvatarSize; ?>"
+                    height="<?php echo (int) $hjAvatarSize; ?>"
+                    loading="lazy"
+                    decoding="async"
+                    referrerpolicy="no-referrer"
+                >
             </span>
             <div class="hj-comment-author-meta">
                 <cite class="fn" itemprop="name"><?php $singleCommentOptions->beforeAuthor();
