@@ -3194,6 +3194,305 @@
     })();
 </script>
 
+<?php if ($this->is('post') || $this->is('page')): ?>
+    <script src="<?php $this->options->themeUrl('assets/vendor/highlight/highlight.min.js'); ?>"></script>
+    <script>
+        (function () {
+            var content = document.querySelector(".hj-article-content");
+            if (!content) {
+                return;
+            }
+
+            var blocks = content.querySelectorAll("pre code");
+            if (!blocks || blocks.length === 0) {
+                return;
+            }
+
+            if (typeof window.hljs === "undefined" || !window.hljs) {
+                return;
+            }
+
+            try {
+                window.hljs.configure({ ignoreUnescapedHTML: true });
+            } catch (e) {}
+
+            function normalizeLang(code) {
+                if (!code || !code.classList) {
+                    return;
+                }
+
+                var raw = (code.getAttribute("class") || "").trim();
+                if (!raw) {
+                    return;
+                }
+
+                var parts = raw.split(/\\s+/);
+                for (var i = 0; i < parts.length; i++) {
+                    var cls = parts[i];
+                    if (!cls || cls.indexOf("lang-") !== 0) {
+                        continue;
+                    }
+                    var lang = cls.slice(5);
+                    if (!lang) {
+                        continue;
+                    }
+                    try {
+                        code.classList.add("language-" + lang);
+                    } catch (e) {}
+                }
+            }
+
+            for (var i = 0; i < blocks.length; i++) {
+                var code = blocks[i];
+                if (!code) {
+                    continue;
+                }
+                if (code.dataset && code.dataset.highlighted) {
+                    continue;
+                }
+                normalizeLang(code);
+                try {
+                    window.hljs.highlightElement(code);
+                } catch (e) {}
+            }
+        })();
+    </script>
+    <script>
+        (function () {
+            var content = document.querySelector(".hj-article-content");
+            if (!content) {
+                return;
+            }
+
+            var blocks = content.querySelectorAll("pre");
+            if (!blocks || blocks.length === 0) {
+                return;
+            }
+
+            function fallbackCopy(text) {
+                var ok = false;
+                var ta = document.createElement("textarea");
+                ta.value = text;
+                ta.setAttribute("readonly", "");
+                ta.style.position = "absolute";
+                ta.style.left = "-9999px";
+                ta.style.top = "0";
+                document.body.appendChild(ta);
+                ta.select();
+                try {
+                    ta.setSelectionRange(0, ta.value.length);
+                } catch (e) {}
+                try {
+                    ok = document.execCommand("copy");
+                } catch (e) {
+                    ok = false;
+                }
+                document.body.removeChild(ta);
+                return ok;
+            }
+
+            function copyText(text) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    return navigator.clipboard.writeText(text).then(
+                        function () {
+                            return true;
+                        },
+                        function () {
+                            return fallbackCopy(text);
+                        }
+                    );
+                }
+                return Promise.resolve(fallbackCopy(text));
+            }
+
+            function setTip(btn, msg) {
+                if (!btn || !btn.classList) {
+                    return;
+                }
+                try {
+                    btn.classList.add("is-copied");
+                    btn.setAttribute("data-hj-code-tip", msg);
+                } catch (e) {}
+
+                if (btn._hjCopyTimer) {
+                    clearTimeout(btn._hjCopyTimer);
+                }
+                btn._hjCopyTimer = setTimeout(function () {
+                    try {
+                        btn.classList.remove("is-copied");
+                        btn.setAttribute("data-hj-code-tip", "复制");
+                    } catch (e) {}
+                }, 1200);
+            }
+
+            var maxLines = 10;
+
+            function countLines(text) {
+                var t = String(text || "");
+                t = t.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+                while (t.length > 0 && t.charAt(t.length - 1) === "\n") {
+                    t = t.slice(0, -1);
+                }
+                if (!t) {
+                    return 0;
+                }
+                return t.split("\n").length;
+            }
+
+            function isAtBottom(el) {
+                if (!el) {
+                    return true;
+                }
+
+                var threshold = 2;
+                var maxScrollTop = el.scrollHeight - el.clientHeight;
+                if (maxScrollTop <= threshold) {
+                    return true;
+                }
+                return el.scrollTop + el.clientHeight >= el.scrollHeight - threshold;
+            }
+
+            function syncFoldState(preEl, codeEl) {
+                if (!preEl || !codeEl || !preEl.classList) {
+                    return;
+                }
+
+                if (!preEl.classList.contains("hj-code-collapsed")) {
+                    try {
+                        preEl.classList.remove("hj-code-at-bottom");
+                    } catch (e) {}
+                    return;
+                }
+
+                var atBottom = isAtBottom(codeEl);
+                try {
+                    if (atBottom) {
+                        preEl.classList.add("hj-code-at-bottom");
+                    } else {
+                        preEl.classList.remove("hj-code-at-bottom");
+                    }
+                } catch (e) {}
+            }
+
+            for (var i = 0; i < blocks.length; i++) {
+                var pre = blocks[i];
+                if (!pre || !pre.querySelector) {
+                    continue;
+                }
+
+                var code = pre.querySelector("code");
+                if (!code) {
+                    continue;
+                }
+
+                var btn = pre.querySelector(".hj-code-copy-btn");
+                if (!btn) {
+                    btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.className = "hj-code-copy-btn";
+                    btn.setAttribute("aria-label", "复制");
+                    btn.setAttribute("data-hj-code-tip", "复制");
+                    btn.innerHTML =
+                        '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy-icon lucide-copy" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+                    btn.addEventListener("click", function (e) {
+                        if (e && e.preventDefault) {
+                            e.preventDefault();
+                        }
+                        if (e && e.stopPropagation) {
+                            e.stopPropagation();
+                        }
+
+                        var button = e && e.currentTarget ? e.currentTarget : null;
+                        if (!button || !button.parentNode) {
+                            return;
+                        }
+                        var preEl = button.parentNode;
+                        if (!preEl || !preEl.querySelector) {
+                            return;
+                        }
+                        var codeEl = preEl.querySelector("code");
+                        var text = codeEl ? String(codeEl.textContent || "") : "";
+                        if (!text) {
+                            setTip(button, "无内容");
+                            return;
+                        }
+
+                        copyText(text).then(function (ok) {
+                            setTip(button, ok ? "已复制" : "复制失败");
+                        });
+                    });
+
+                    pre.appendChild(btn);
+                }
+
+                var lineCount = countLines(code.textContent || "");
+                if (lineCount > maxLines) {
+                    try {
+                        pre.classList.add("hj-code-collapsed");
+                    } catch (e) {}
+
+                    if (!pre.querySelector(".hj-code-fold")) {
+                        var fold = document.createElement("div");
+                        fold.className = "hj-code-fold";
+
+                        var expand = document.createElement("button");
+                        expand.type = "button";
+                        expand.className = "hj-code-expand-btn";
+                        expand.setAttribute("aria-label", "展开");
+                        expand.innerHTML =
+                            '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down-to-line-icon lucide-arrow-down-to-line" aria-hidden="true"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg><span>展开</span>';
+                        expand.addEventListener("click", function (e) {
+                            if (e && e.preventDefault) {
+                                e.preventDefault();
+                            }
+                            if (e && e.stopPropagation) {
+                                e.stopPropagation();
+                            }
+
+                            var button = e && e.currentTarget ? e.currentTarget : null;
+                            var foldEl = button && button.parentNode ? button.parentNode : null;
+                            var preEl = foldEl && foldEl.parentNode ? foldEl.parentNode : null;
+                        if (!preEl || !preEl.classList) {
+                            return;
+                        }
+                        try {
+                            preEl.classList.remove("hj-code-collapsed");
+                            preEl.classList.remove("hj-code-at-bottom");
+                        } catch (err) {}
+                        try {
+                            if (foldEl && foldEl.remove) {
+                                foldEl.remove();
+                                } else if (foldEl) {
+                                    foldEl.hidden = true;
+                                }
+                            } catch (err) {}
+                        });
+
+                        fold.appendChild(expand);
+                        pre.appendChild(fold);
+                    }
+
+                    if (!pre._hjFoldScrollBound && code.addEventListener) {
+                        pre._hjFoldScrollBound = true;
+                        var handler = (function (preEl, codeEl) {
+                            return function () {
+                                syncFoldState(preEl, codeEl);
+                            };
+                        })(pre, code);
+                        try {
+                            code.addEventListener("scroll", handler, { passive: true });
+                        } catch (err) {
+                            code.addEventListener("scroll", handler);
+                        }
+                    }
+
+                    syncFoldState(pre, code);
+                }
+            }
+        })();
+    </script>
+<?php endif; ?>
+
 <script>
     (function () {
         var content = document.querySelector(".hj-article-content");

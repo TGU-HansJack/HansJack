@@ -4751,9 +4751,187 @@ html.hj-login-modal-open .hj-login-modal {
 
 .hj-article-content pre {
     background: rgba(18, 18, 18, 0.08);
-    border-radius: 10px;
+    border-radius: 4px;
     padding: 0.75rem 0.85rem;
-    overflow-x: auto;
+    overflow: visible;
+    position: relative;
+}
+
+.hj-article-content pre > code {
+    display: block;
+    overflow-x: hidden;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.hj-article-content pre.hj-code-collapsed > code {
+    max-height: calc(10 * 1.55em);
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge legacy */
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 2.2rem), transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - 2.2rem), transparent 100%);
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+}
+
+.hj-article-content pre.hj-code-at-bottom > code {
+    -webkit-mask-image: none;
+    mask-image: none;
+}
+
+.hj-article-content pre.hj-code-at-bottom .hj-code-fold {
+    display: none;
+}
+
+.hj-article-content pre.hj-code-collapsed > code::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+.hj-article-content pre code.hljs {
+    padding: 0;
+    background: transparent;
+}
+
+.hj-article-content pre .hj-code-fold {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2.2rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 0.35rem;
+    pointer-events: none;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+
+.hj-article-content pre .hj-code-expand-btn {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.02em 0.12em 0.06em;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-family: var(--hj-font-ui);
+    font-size: 0.82rem;
+    line-height: 1.2;
+    border-bottom: 0;
+    opacity: 0.9;
+}
+
+.hj-article-content pre .hj-code-expand-btn svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.hj-article-content pre .hj-code-expand-btn:hover,
+.hj-article-content pre .hj-code-expand-btn:focus-visible {
+    opacity: 1;
+}
+
+.hj-article-content pre .hj-code-expand-btn:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.hj-article-content pre .hj-code-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 2;
+    transition: opacity 0.16s ease, visibility 0.16s ease;
+}
+
+.hj-article-content pre .hj-code-copy-btn svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.hj-article-content pre:hover .hj-code-copy-btn,
+.hj-article-content pre:focus-within .hj-code-copy-btn,
+.hj-article-content pre .hj-code-copy-btn.is-copied {
+    opacity: 0.82;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.hj-article-content pre .hj-code-copy-btn:hover,
+.hj-article-content pre .hj-code-copy-btn:focus-visible {
+    opacity: 1;
+    background: transparent;
+    color: inherit;
+}
+
+.hj-article-content pre .hj-code-copy-btn:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.hj-article-content pre .hj-code-copy-btn::after {
+    content: attr(data-hj-code-tip);
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translate(-50%, -0.35rem);
+    padding: 0.12rem 0.35rem;
+    border-radius: 4px;
+    background: var(--hj-nav-block-bg);
+    color: var(--hj-nav-block-fg);
+    font-family: var(--hj-font-ui);
+    font-size: 0.72rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
+}
+
+.hj-article-content pre .hj-code-copy-btn:hover::after,
+.hj-article-content pre .hj-code-copy-btn:focus-visible::after,
+.hj-article-content pre .hj-code-copy-btn.is-copied::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -0.6rem);
+}
+
+@media (hover: none) {
+    .hj-article-content pre .hj-code-copy-btn {
+        opacity: 0.82;
+        visibility: visible;
+        pointer-events: auto;
+    }
 }
 
 .page-navigator {
@@ -5273,6 +5451,10 @@ html.hj-login-modal-open .hj-login-modal {
         background: rgba(240, 240, 240, 0.08);
     }
 
+    html:not(.hj-theme-light) .hj-article-content pre .hj-code-fold {
+        background: linear-gradient(to bottom, rgba(14, 14, 12, 0), rgba(14, 14, 12, 0.88));
+    }
+
     html:not(.hj-theme-light) .page-navigator li a,
     html:not(.hj-theme-light) .page-navigator li span {
         border-color: var(--hj-line-night);
@@ -5651,6 +5833,10 @@ html.hj-theme-dark .hj-avatar-fallback {
 
 html.hj-theme-dark .hj-article-content pre {
     background: rgba(240, 240, 240, 0.08);
+}
+
+html.hj-theme-dark .hj-article-content pre .hj-code-fold {
+    background: linear-gradient(to bottom, rgba(14, 14, 12, 0), rgba(14, 14, 12, 0.88));
 }
 
 html.hj-theme-dark .page-navigator li a,
