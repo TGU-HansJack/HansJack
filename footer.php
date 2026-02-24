@@ -3084,7 +3084,7 @@
 
                 if (isPrivate) {
                     var value = textarea.value || "";
-                    var trimmed = value.replace(/^\\s+/, "");
+                    var trimmed = value.replace(/^\s+/, "");
                     if (trimmed.indexOf(privateMarker) !== 0) {
                         textarea.value = privateMarker + "\n" + value;
                     }
@@ -3226,7 +3226,7 @@
                     return;
                 }
 
-                var parts = raw.split(/\\s+/);
+                var parts = raw.split(/\s+/);
                 for (var i = 0; i < parts.length; i++) {
                     var cls = parts[i];
                     if (!cls || cls.indexOf("lang-") !== 0) {
@@ -3392,6 +3392,23 @@
                 return span;
             }
 
+            function buildUnder(baseText, annotation) {
+                var wrap = document.createElement("span");
+                wrap.className = "hj-term hj-term-under";
+
+                var base = document.createElement("span");
+                base.className = "hj-term-under-base";
+                base.textContent = baseText;
+
+                var under = document.createElement("span");
+                under.className = "hj-term-under-anno";
+                under.textContent = annotation;
+
+                wrap.appendChild(base);
+                wrap.appendChild(under);
+                return wrap;
+            }
+
             function splitAnnotation(raw) {
                 var inner = String(raw || "").trim();
                 if (!inner) {
@@ -3408,7 +3425,7 @@
                     if (left) {
                         annotation = left;
                     }
-                    if (right === "ruby" || right === "tooltip") {
+                    if (right === "ruby" || right === "tooltip" || right === "under") {
                         mode = right;
                     }
                 }
@@ -3418,6 +3435,37 @@
                 }
 
                 return { annotation: annotation, mode: mode };
+            }
+
+            function findBaseToken(text, pos, caret) {
+                try {
+                    var before = String(text || "").slice(pos, caret);
+                    if (!before) {
+                        return null;
+                    }
+
+                    // Match the last "token-like" run before ^(.
+                    // Prefer Unicode property escapes (modern browsers), fallback to a conservative range set.
+                    var m = null;
+                    try {
+                        m = before.match(/([\p{L}\p{N}_\-+#]+)$/u);
+                    } catch (e) {
+                        m = before.match(/([0-9A-Za-z\u00C0-\u024F\u0400-\u04FF\u3400-\u4DBF\u4E00-\u9FFF_\-+#]+)$/);
+                    }
+                    if (!m || !m[1]) {
+                        return null;
+                    }
+
+                    var baseText = m[1];
+                    var start = caret - baseText.length;
+                    if (start < pos || start >= caret) {
+                        return null;
+                    }
+
+                    return { start: start, baseText: baseText };
+                } catch (e) {
+                    return null;
+                }
             }
 
             function parseTextNode(node) {
@@ -3436,18 +3484,9 @@
                         break;
                     }
 
-                    // BaseText: take the token immediately before ^(, delimited by whitespace.
-                    var start = caret - 1;
-                    while (start >= pos) {
-                        var ch = text.charAt(start);
-                        if (ch === "" || /\\s/.test(ch)) {
-                            break;
-                        }
-                        start--;
-                    }
-                    start++;
-
-                    if (start >= caret) {
+                    // BaseText: take the token-like run immediately before ^(.
+                    var base = findBaseToken(text, pos, caret);
+                    if (!base) {
                         // No base text found, keep scanning.
                         frag.appendChild(document.createTextNode(text.slice(pos, caret + 2)));
                         pos = caret + 2;
@@ -3461,7 +3500,8 @@
                         break;
                     }
 
-                    var baseText = text.slice(start, caret);
+                    var start = base.start;
+                    var baseText = base.baseText;
                     var inner = text.slice(caret + 2, close);
                     var parsed = splitAnnotation(inner);
 
@@ -3475,6 +3515,8 @@
 
                     if (parsed.mode === "tooltip") {
                         frag.appendChild(buildTooltip(baseText, parsed.annotation));
+                    } else if (parsed.mode === "under") {
+                        frag.appendChild(buildUnder(baseText, parsed.annotation));
                     } else {
                         frag.appendChild(buildRuby(baseText, parsed.annotation));
                     }

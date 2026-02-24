@@ -5066,10 +5066,38 @@ html.hj-login-modal-open .hj-login-modal {
 }
 
 .hj-article-content ruby.hj-term-ruby rt {
-    font-size: 0.72em;
+    font-size: 0.66em;
     line-height: 1.05;
     font-weight: 500;
-    color: var(--hj-muted-day);
+    color: var(--hj-day-black);
+    opacity: 0.86;
+}
+
+.hj-article-content .hj-term-under {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.06em;
+    vertical-align: baseline;
+}
+
+.hj-article-content .hj-term-under-base {
+    display: inline-block;
+    text-decoration-line: underline;
+    text-decoration-style: solid;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.14em;
+    text-decoration-skip-ink: auto;
+    text-decoration-color: currentColor;
+}
+
+.hj-article-content .hj-term-under-anno {
+    display: inline-block;
+    font-size: 0.66em;
+    line-height: 1.05;
+    font-weight: 500;
+    color: var(--hj-day-black);
+    opacity: 0.86;
 }
 
 .hj-article-content .hj-term-tooltip {
@@ -5859,7 +5887,11 @@ html.hj-login-modal-open .hj-login-modal {
     }
 
     html:not(.hj-theme-light) .hj-article-content ruby.hj-term-ruby rt {
-        color: var(--hj-muted-night);
+        color: var(--hj-night-white);
+    }
+
+    html:not(.hj-theme-light) .hj-article-content .hj-term-under-anno {
+        color: var(--hj-night-white);
     }
 
     html:not(.hj-theme-light) .hj-article-content blockquote {
@@ -5958,7 +5990,11 @@ html.hj-theme-dark .hj-article-content hr {
 }
 
 html.hj-theme-dark .hj-article-content ruby.hj-term-ruby rt {
-    color: var(--hj-muted-night);
+    color: var(--hj-night-white);
+}
+
+html.hj-theme-dark .hj-article-content .hj-term-under-anno {
+    color: var(--hj-night-white);
 }
 
 html.hj-theme-dark .hj-article-content thead th {
