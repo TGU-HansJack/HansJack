@@ -4374,7 +4374,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     gap: 0.6rem;
     pointer-events: none;
     padding: 0.15rem 0.5rem;
-    border-radius: 0 0 4px 4px;
+    border-radius: 0;
     background: var(--hj-line-day);
     color: inherit;
 }
