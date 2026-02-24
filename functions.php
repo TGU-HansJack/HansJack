@@ -31,6 +31,15 @@ function themeConfig($form)
     );
     $form->addInput($githubUrl);
 
+    $creativeUrl = new \Typecho\Widget\Helper\Form\Element\Text(
+        'hjCreativeUrl',
+        null,
+        '',
+        _t('创意链接'),
+        _t('留空则不显示；示例：https://example.com/creative。')
+    );
+    $form->addInput($creativeUrl);
+
     $icpBeian = new \Typecho\Widget\Helper\Form\Element\Text(
         'hjIcpBeian',
         null,
@@ -224,6 +233,7 @@ function hansJackBuildThemeConfig(Options $options): array
         // Landing social links.
         'cv'     => trim((string) $options->hjCvUrl),
         'github' => trim((string) $options->hjGithubUrl),
+        'creative' => trim((string) $options->hjCreativeUrl),
     ];
 
     return [
