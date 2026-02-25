@@ -3418,7 +3418,9 @@
                         tag === "STYLE" ||
                         tag === "TEXTAREA" ||
                         tag === "RUBY" ||
-                        tag === "RT"
+                        tag === "RT" ||
+                        tag === "INS" ||
+                        tag === "MARK"
                     ) {
                         return true;
                     }
@@ -3445,6 +3447,18 @@
                 span.setAttribute("tabindex", "0");
                 span.textContent = text;
                 return span;
+            }
+
+            function buildIns(text) {
+                var ins = document.createElement("ins");
+                ins.textContent = text;
+                return ins;
+            }
+
+            function buildMark(text) {
+                var mark = document.createElement("mark");
+                mark.textContent = text;
+                return mark;
             }
 
             function parseRubyPayload(raw) {
@@ -3489,6 +3503,24 @@
                 return s.indexOf("!!", first + 2) !== -1;
             }
 
+            function hasInsMarker(text) {
+                var s = String(text || "");
+                var first = s.indexOf("++");
+                if (first === -1) {
+                    return false;
+                }
+                return s.indexOf("++", first + 2) !== -1;
+            }
+
+            function hasMarkMarker(text) {
+                var s = String(text || "");
+                var first = s.indexOf("==");
+                if (first === -1) {
+                    return false;
+                }
+                return s.indexOf("==", first + 2) !== -1;
+            }
+
             function hasRubyMarker(text) {
                 var s = String(text || "");
                 var open = s.indexOf("{");
@@ -3509,7 +3541,7 @@
 
             function parseTextNode(node) {
                 var text = node && node.nodeValue ? String(node.nodeValue) : "";
-                if (!text || (!hasRubyMarker(text) && !hasSpoilerMarker(text))) {
+                if (!text || (!hasRubyMarker(text) && !hasSpoilerMarker(text) && !hasInsMarker(text) && !hasMarkMarker(text))) {
                     return;
                 }
 
@@ -3518,14 +3550,25 @@
 
                 while (pos < text.length) {
                     var spoilerOpen = text.indexOf("!!", pos);
+                    var insOpen = text.indexOf("++", pos);
+                    var markOpen = text.indexOf("==", pos);
                     var rubyOpen = text.indexOf("{", pos);
                     var nextType = "";
                     var nextPos = -1;
 
-                    if (spoilerOpen !== -1 && (rubyOpen === -1 || spoilerOpen < rubyOpen)) {
+                    if (spoilerOpen !== -1) {
                         nextType = "spoiler";
                         nextPos = spoilerOpen;
-                    } else if (rubyOpen !== -1) {
+                    }
+                    if (insOpen !== -1 && (nextPos === -1 || insOpen < nextPos)) {
+                        nextType = "ins";
+                        nextPos = insOpen;
+                    }
+                    if (markOpen !== -1 && (nextPos === -1 || markOpen < nextPos)) {
+                        nextType = "mark";
+                        nextPos = markOpen;
+                    }
+                    if (rubyOpen !== -1 && (nextPos === -1 || rubyOpen < nextPos)) {
                         nextType = "ruby";
                         nextPos = rubyOpen;
                     }
@@ -3561,6 +3604,56 @@
 
                         frag.appendChild(buildSpoiler(spoilerText));
                         pos = spoilerClose + 2;
+                        continue;
+                    }
+
+                    if (nextType === "ins") {
+                        var insClose = text.indexOf("++", nextPos + 2);
+                        if (insClose === -1) {
+                            frag.appendChild(document.createTextNode(text.slice(nextPos)));
+                            break;
+                        }
+
+                        var insText = text.slice(nextPos + 2, insClose);
+                        var insValid =
+                            insText !== "" &&
+                            insText.trim() === insText &&
+                            insText.indexOf("\n") === -1 &&
+                            insText.indexOf("\r") === -1;
+
+                        if (!insValid) {
+                            frag.appendChild(document.createTextNode("++"));
+                            pos = nextPos + 2;
+                            continue;
+                        }
+
+                        frag.appendChild(buildIns(insText));
+                        pos = insClose + 2;
+                        continue;
+                    }
+
+                    if (nextType === "mark") {
+                        var markClose = text.indexOf("==", nextPos + 2);
+                        if (markClose === -1) {
+                            frag.appendChild(document.createTextNode(text.slice(nextPos)));
+                            break;
+                        }
+
+                        var markText = text.slice(nextPos + 2, markClose);
+                        var markValid =
+                            markText !== "" &&
+                            markText.trim() === markText &&
+                            markText.indexOf("\n") === -1 &&
+                            markText.indexOf("\r") === -1;
+
+                        if (!markValid) {
+                            frag.appendChild(document.createTextNode("=="));
+                            pos = nextPos + 2;
+                            continue;
+                        }
+
+                        frag.appendChild(buildMark(markText));
+                        pos = markClose + 2;
                         continue;
                     }
 
@@ -3601,7 +3694,7 @@
                                 return NodeFilter.FILTER_REJECT;
                             }
                             var nodeText = String(node.nodeValue);
-                            if (!hasRubyMarker(nodeText) && !hasSpoilerMarker(nodeText)) {
+                            if (!hasRubyMarker(nodeText) && !hasSpoilerMarker(nodeText) && !hasInsMarker(nodeText) && !hasMarkMarker(nodeText)) {
                                 return NodeFilter.FILTER_REJECT;
                             }
                             if (isBlockedParent(node)) {

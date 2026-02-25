@@ -5208,6 +5208,22 @@ html.hj-login-modal-open .hj-login-modal {
     background: rgba(18, 18, 18, 0.08);
 }
 
+.hj-article-content ins {
+    text-decoration-thickness: 1.4px;
+    text-underline-offset: 0.14em;
+}
+
+.hj-article-content mark {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    text-decoration-line: underline;
+    text-decoration-style: wavy;
+    text-decoration-thickness: 1.25px;
+    text-underline-offset: 0.14em;
+    text-decoration-color: color-mix(in oklab, currentColor 72%, transparent);
+}
+
 .hj-article-content .hj-term {
     position: relative;
 }
