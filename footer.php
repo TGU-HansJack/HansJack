@@ -3317,13 +3317,23 @@
                     return;
                 }
 
-                var caption = String(img.getAttribute("alt") || "").trim();
+                var caption = String(img.getAttribute("title") || "").trim();
                 if (!caption) {
-                    caption = String(img.getAttribute("title") || "").trim();
+                    caption = String(img.getAttribute("alt") || "").trim();
+                }
+
+                img.setAttribute("tabindex", "0");
+                img.setAttribute("loading", "lazy");
+                if (img.hasAttribute("title")) {
+                    img.removeAttribute("title");
+                }
+
+                if (carrier && carrier.tagName === "A") {
+                    carrier.setAttribute("target", "_blank");
+                    carrier.setAttribute("rel", "noopener noreferrer");
                 }
 
                 var figure = document.createElement("figure");
-                figure.className = "hj-figure";
                 figure.appendChild(carrier);
 
                 if (caption) {
@@ -3371,42 +3381,16 @@
                 return false;
             }
 
-            function buildRuby(baseText, annotation) {
+            function buildRuby(baseText, annotations) {
                 var ruby = document.createElement("ruby");
-                ruby.className = "hj-term hj-term-ruby";
                 ruby.appendChild(document.createTextNode(baseText));
-
-                var rt = document.createElement("rt");
-                rt.textContent = annotation;
-                ruby.appendChild(rt);
+                for (var i = 0; i < annotations.length; i++) {
+                    var rt = document.createElement("rt");
+                    rt.textContent = annotations[i];
+                    ruby.appendChild(rt);
+                }
 
                 return ruby;
-            }
-
-            function buildTooltip(baseText, annotation) {
-                var span = document.createElement("span");
-                span.className = "hj-term hj-term-tooltip";
-                span.setAttribute("data-hj-term", annotation);
-                span.setAttribute("tabindex", "0");
-                span.textContent = baseText;
-                return span;
-            }
-
-            function buildUnder(baseText, annotation) {
-                var wrap = document.createElement("span");
-                wrap.className = "hj-term hj-term-under";
-
-                var base = document.createElement("span");
-                base.className = "hj-term-under-base";
-                base.textContent = baseText;
-
-                var under = document.createElement("span");
-                under.className = "hj-term-under-anno";
-                under.textContent = annotation;
-
-                wrap.appendChild(base);
-                wrap.appendChild(under);
-                return wrap;
             }
 
             function buildSpoiler(text) {
@@ -3417,77 +3401,37 @@
                 return span;
             }
 
-            function appendTextWithSpoiler(target, rawText) {
-                var text = String(rawText || "");
-                if (!text) {
-                    return;
-                }
-                if (text.indexOf("!!") === -1) {
-                    target.appendChild(document.createTextNode(text));
-                    return;
-                }
-
-                var pos = 0;
-                while (pos < text.length) {
-                    var open = text.indexOf("!!", pos);
-                    if (open === -1) {
-                        target.appendChild(document.createTextNode(text.slice(pos)));
-                        break;
-                    }
-
-                    var close = text.indexOf("!!", open + 2);
-                    if (close === -1) {
-                        target.appendChild(document.createTextNode(text.slice(pos)));
-                        break;
-                    }
-
-                    var spoilerText = text.slice(open + 2, close);
-                    var isValid =
-                        spoilerText !== "" &&
-                        spoilerText.trim() === spoilerText &&
-                        spoilerText.indexOf("\n") === -1 &&
-                        spoilerText.indexOf("\r") === -1;
-
-                    if (!isValid) {
-                        target.appendChild(document.createTextNode(text.slice(pos, open + 2)));
-                        pos = open + 2;
-                        continue;
-                    }
-
-                    if (open > pos) {
-                        target.appendChild(document.createTextNode(text.slice(pos, open)));
-                    }
-                    target.appendChild(buildSpoiler(spoilerText));
-                    pos = close + 2;
-                }
-            }
-
-            function splitAnnotation(raw) {
+            function parseRubyPayload(raw) {
                 var inner = String(raw || "").trim();
                 if (!inner) {
                     return null;
                 }
 
-                var mode = "ruby";
-                var annotation = inner;
-
-                var pipe = inner.lastIndexOf("|");
-                if (pipe !== -1) {
-                    var left = inner.slice(0, pipe).trim();
-                    var right = inner.slice(pipe + 1).trim().toLowerCase();
-                    if (left) {
-                        annotation = left;
-                    }
-                    if (right === "ruby" || right === "tooltip" || right === "under") {
-                        mode = right;
-                    }
-                }
-
-                if (!annotation) {
+                var splitAt = inner.indexOf(":");
+                if (splitAt <= 0 || splitAt >= inner.length - 1) {
                     return null;
                 }
 
-                return { annotation: annotation, mode: mode };
+                var base = inner.slice(0, splitAt).trim();
+                var right = inner.slice(splitAt + 1).trim();
+                if (!base || !right) {
+                    return null;
+                }
+
+                var annotations = right
+                    .split("|")
+                    .map(function (item) {
+                        return String(item || "").trim();
+                    })
+                    .filter(function (item) {
+                        return item !== "";
+                    });
+
+                if (annotations.length === 0) {
+                    return null;
+                }
+
+                return { base: base, annotations: annotations };
             }
 
             function hasSpoilerMarker(text) {
@@ -3499,40 +3443,27 @@
                 return s.indexOf("!!", first + 2) !== -1;
             }
 
-            function findBaseToken(text, pos, caret) {
-                try {
-                    var before = String(text || "").slice(pos, caret);
-                    if (!before) {
-                        return null;
+            function hasRubyMarker(text) {
+                var s = String(text || "");
+                var open = s.indexOf("{");
+                while (open !== -1) {
+                    var close = s.indexOf("}", open + 1);
+                    if (close === -1) {
+                        open = s.indexOf("{", open + 1);
+                        continue;
                     }
-
-                    // Match the last "token-like" run before ^(.
-                    // Prefer Unicode property escapes (modern browsers), fallback to a conservative range set.
-                    var m = null;
-                    try {
-                        m = before.match(/([\p{L}\p{N}_\-+#]+)$/u);
-                    } catch (e) {
-                        m = before.match(/([0-9A-Za-z\u00C0-\u024F\u0400-\u04FF\u3400-\u4DBF\u4E00-\u9FFF_\-+#]+)$/);
+                    var colon = s.indexOf(":", open + 1);
+                    if (colon !== -1 && colon < close) {
+                        return true;
                     }
-                    if (!m || !m[1]) {
-                        return null;
-                    }
-
-                    var baseText = m[1];
-                    var start = caret - baseText.length;
-                    if (start < pos || start >= caret) {
-                        return null;
-                    }
-
-                    return { start: start, baseText: baseText };
-                } catch (e) {
-                    return null;
+                    open = s.indexOf("{", open + 1);
                 }
+                return false;
             }
 
             function parseTextNode(node) {
                 var text = node && node.nodeValue ? String(node.nodeValue) : "";
-                if (!text || (text.indexOf("^(") === -1 && !hasSpoilerMarker(text))) {
+                if (!text || (!hasRubyMarker(text) && !hasSpoilerMarker(text))) {
                     return;
                 }
 
@@ -3540,50 +3471,69 @@
                 var pos = 0;
 
                 while (pos < text.length) {
-                    var caret = text.indexOf("^(", pos);
-                    if (caret === -1) {
-                        appendTextWithSpoiler(frag, text.slice(pos));
+                    var spoilerOpen = text.indexOf("!!", pos);
+                    var rubyOpen = text.indexOf("{", pos);
+                    var nextType = "";
+                    var nextPos = -1;
+
+                    if (spoilerOpen !== -1 && (rubyOpen === -1 || spoilerOpen < rubyOpen)) {
+                        nextType = "spoiler";
+                        nextPos = spoilerOpen;
+                    } else if (rubyOpen !== -1) {
+                        nextType = "ruby";
+                        nextPos = rubyOpen;
+                    }
+
+                    if (nextPos === -1) {
+                        frag.appendChild(document.createTextNode(text.slice(pos)));
                         break;
                     }
 
-                    // BaseText: take the token-like run immediately before ^(.
-                    var base = findBaseToken(text, pos, caret);
-                    if (!base) {
-                        // No base text found, keep scanning.
-                        appendTextWithSpoiler(frag, text.slice(pos, caret + 2));
-                        pos = caret + 2;
+                    if (nextPos > pos) {
+                        frag.appendChild(document.createTextNode(text.slice(pos, nextPos)));
+                    }
+
+                    if (nextType === "spoiler") {
+                        var spoilerClose = text.indexOf("!!", nextPos + 2);
+                        if (spoilerClose === -1) {
+                            frag.appendChild(document.createTextNode(text.slice(nextPos)));
+                            break;
+                        }
+
+                        var spoilerText = text.slice(nextPos + 2, spoilerClose);
+                        var spoilerValid =
+                            spoilerText !== "" &&
+                            spoilerText.trim() === spoilerText &&
+                            spoilerText.indexOf("\n") === -1 &&
+                            spoilerText.indexOf("\r") === -1;
+
+                        if (!spoilerValid) {
+                            frag.appendChild(document.createTextNode("!!"));
+                            pos = nextPos + 2;
+                            continue;
+                        }
+
+                        frag.appendChild(buildSpoiler(spoilerText));
+                        pos = spoilerClose + 2;
                         continue;
                     }
 
-                    // Find closing ')'
-                    var close = text.indexOf(")", caret + 2);
-                    if (close === -1) {
-                        appendTextWithSpoiler(frag, text.slice(pos));
+                    var rubyClose = text.indexOf("}", nextPos + 1);
+                    if (rubyClose === -1) {
+                        frag.appendChild(document.createTextNode(text.slice(nextPos)));
                         break;
                     }
 
-                    var start = base.start;
-                    var baseText = base.baseText;
-                    var inner = text.slice(caret + 2, close);
-                    var parsed = splitAnnotation(inner);
-
-                    if (!parsed) {
-                        appendTextWithSpoiler(frag, text.slice(pos, close + 1));
-                        pos = close + 1;
+                    var rubyRaw = text.slice(nextPos + 1, rubyClose);
+                    var rubyParsed = parseRubyPayload(rubyRaw);
+                    if (!rubyParsed) {
+                        frag.appendChild(document.createTextNode("{"));
+                        pos = nextPos + 1;
                         continue;
                     }
 
-                    appendTextWithSpoiler(frag, text.slice(pos, start));
-
-                    if (parsed.mode === "tooltip") {
-                        frag.appendChild(buildTooltip(baseText, parsed.annotation));
-                    } else if (parsed.mode === "under") {
-                        frag.appendChild(buildUnder(baseText, parsed.annotation));
-                    } else {
-                        frag.appendChild(buildRuby(baseText, parsed.annotation));
-                    }
-
-                    pos = close + 1;
+                    frag.appendChild(buildRuby(rubyParsed.base, rubyParsed.annotations));
+                    pos = rubyClose + 1;
                 }
 
                 try {
@@ -3605,7 +3555,7 @@
                                 return NodeFilter.FILTER_REJECT;
                             }
                             var nodeText = String(node.nodeValue);
-                            if (nodeText.indexOf("^(") === -1 && !hasSpoilerMarker(nodeText)) {
+                            if (!hasRubyMarker(nodeText) && !hasSpoilerMarker(nodeText)) {
                                 return NodeFilter.FILTER_REJECT;
                             }
                             if (isBlockedParent(node)) {
@@ -3626,6 +3576,25 @@
             }
             for (var i = 0; i < nodes.length; i++) {
                 parseTextNode(nodes[i]);
+            }
+
+            // Link tooltip syntax: [text](url "tooltip text")
+            // Convert anchor title to our custom tooltip payload.
+            var titleLinks = content.querySelectorAll("a[title]");
+            for (var i = 0; i < titleLinks.length; i++) {
+                var a = titleLinks[i];
+                if (!a || !a.getAttribute || !a.classList) {
+                    continue;
+                }
+                var tip = String(a.getAttribute("title") || "").trim();
+                if (!tip) {
+                    continue;
+                }
+                try {
+                    a.classList.add("hj-term-tooltip");
+                    a.setAttribute("data-hj-term", tip);
+                    a.removeAttribute("title");
+                } catch (e) {}
             }
 
             // Tooltip/Spoiler interactions on touch devices: click to toggle, click outside to close.
@@ -3666,18 +3635,47 @@
                         return;
                     }
                     el.addEventListener("click", function (e) {
-                        if (e && e.preventDefault) {
-                            e.preventDefault();
-                        }
-                        if (e && e.stopPropagation) {
-                            e.stopPropagation();
-                        }
                         var isOpen = false;
                         try {
                             isOpen = el.classList.contains("is-open");
                         } catch (err) {
                             isOpen = false;
                         }
+
+                        var isLinkToggle = false;
+                        try {
+                            isLinkToggle =
+                                (String(el.tagName || "").toUpperCase() === "A") &&
+                                !!String(el.getAttribute("href") || "").trim();
+                        } catch (err) {
+                            isLinkToggle = false;
+                        }
+
+                        if (isLinkToggle) {
+                            if (isOpen) {
+                                closeAll();
+                                return;
+                            }
+                            if (e && e.preventDefault) {
+                                e.preventDefault();
+                            }
+                            if (e && e.stopPropagation) {
+                                e.stopPropagation();
+                            }
+                            closeAll();
+                            try {
+                                el.classList.add("is-open");
+                            } catch (err) {}
+                            return;
+                        }
+
+                        if (e && e.preventDefault) {
+                            e.preventDefault();
+                        }
+                        if (e && e.stopPropagation) {
+                            e.stopPropagation();
+                        }
+
                         closeAll();
                         if (!isOpen) {
                             try {

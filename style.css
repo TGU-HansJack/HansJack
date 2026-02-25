@@ -5031,10 +5031,6 @@ html.hj-login-modal-open .hj-login-modal {
 }
 
 .hj-article-content figure {
-    margin: 1rem 0;
-}
-
-.hj-article-content figure.hj-figure {
     display: block;
     width: fit-content;
     max-width: 100%;
@@ -5042,27 +5038,27 @@ html.hj-login-modal-open .hj-login-modal {
     text-align: left;
 }
 
-.hj-article-content figure.hj-figure > a {
+.hj-article-content figure > a {
     display: inline-block;
     max-width: 100%;
 }
 
-.hj-article-content figure.hj-figure > img {
+.hj-article-content figure > img {
     display: block;
     max-width: 100%;
     margin-left: 0;
     margin-right: 0;
 }
 
-.hj-article-content figure.hj-figure > a::after,
-.hj-article-content figure.hj-figure > a:hover::after,
-.hj-article-content figure.hj-figure > a:focus-visible::after {
+.hj-article-content figure > a::after,
+.hj-article-content figure > a:hover::after,
+.hj-article-content figure > a:focus-visible::after {
     content: none;
     background-image: none;
 }
 
-.hj-article-content figure.hj-figure > a:hover,
-.hj-article-content figure.hj-figure > a:focus-visible {
+.hj-article-content figure > a:hover,
+.hj-article-content figure > a:focus-visible {
     text-decoration: none;
 }
 
@@ -5084,7 +5080,7 @@ html.hj-login-modal-open .hj-login-modal {
     overflow-wrap: anywhere;
 }
 
-.hj-article-content figure.hj-figure figcaption {
+.hj-article-content figure figcaption {
     width: 100%;
 }
 
@@ -5144,38 +5140,11 @@ html.hj-login-modal-open .hj-login-modal {
     position: relative;
 }
 
-.hj-article-content ruby.hj-term-ruby {
+.hj-article-content ruby {
     ruby-position: over;
 }
 
-.hj-article-content ruby.hj-term-ruby rt {
-    font-size: 0.66em;
-    line-height: 1.05;
-    font-weight: 500;
-    color: var(--hj-day-black);
-    opacity: 0.86;
-}
-
-.hj-article-content .hj-term-under {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.06em;
-    vertical-align: baseline;
-}
-
-.hj-article-content .hj-term-under-base {
-    display: inline-block;
-    text-decoration-line: underline;
-    text-decoration-style: solid;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.14em;
-    text-decoration-skip-ink: auto;
-    text-decoration-color: currentColor;
-}
-
-.hj-article-content .hj-term-under-anno {
-    display: inline-block;
+.hj-article-content ruby rt {
     font-size: 0.66em;
     line-height: 1.05;
     font-weight: 500;
@@ -5198,12 +5167,12 @@ html.hj-login-modal-open .hj-login-modal {
     outline-offset: 2px;
 }
 
-.hj-article-content .hj-term-tooltip::after {
+.hj-article-content .hj-term-tooltip::before {
     content: attr(data-hj-term);
     position: absolute;
     left: 50%;
-    bottom: 100%;
-    transform: translate(-50%, 0);
+    bottom: calc(100% - 0.02rem);
+    transform: translate(-50%, 0.04rem);
     display: inline-block;
     box-sizing: border-box;
     width: max-content;
@@ -5226,12 +5195,12 @@ html.hj-login-modal-open .hj-login-modal {
     transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
 }
 
-.hj-article-content .hj-term-tooltip:hover::after,
-.hj-article-content .hj-term-tooltip:focus-visible::after,
-.hj-article-content .hj-term-tooltip.is-open::after {
+.hj-article-content .hj-term-tooltip:hover::before,
+.hj-article-content .hj-term-tooltip:focus-visible::before,
+.hj-article-content .hj-term-tooltip.is-open::before {
     opacity: 1;
     visibility: visible;
-    transform: translate(-50%, -0.08rem);
+    transform: translate(-50%, 0);
 }
 
 .hj-article-content .hj-term-spoiler,
@@ -5991,11 +5960,7 @@ html.hj-login-modal-open .hj-login-modal {
         background: rgba(240, 240, 240, 0.08);
     }
 
-    html:not(.hj-theme-light) .hj-article-content ruby.hj-term-ruby rt {
-        color: var(--hj-night-white);
-    }
-
-    html:not(.hj-theme-light) .hj-article-content .hj-term-under-anno {
+    html:not(.hj-theme-light) .hj-article-content ruby rt {
         color: var(--hj-night-white);
     }
 
@@ -6128,11 +6093,7 @@ html.hj-theme-dark .hj-article-content hr {
     border-top-color: rgba(221, 221, 219, 0.55);
 }
 
-html.hj-theme-dark .hj-article-content ruby.hj-term-ruby rt {
-    color: var(--hj-night-white);
-}
-
-html.hj-theme-dark .hj-article-content .hj-term-under-anno {
+html.hj-theme-dark .hj-article-content ruby rt {
     color: var(--hj-night-white);
 }
 
