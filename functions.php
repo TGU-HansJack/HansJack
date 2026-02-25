@@ -5,6 +5,8 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
 }
 
 use Typecho\Common;
+use Typecho\Cookie;
+use Typecho\Db;
 use Widget\Archive;
 use Widget\Options;
 
@@ -13,6 +15,8 @@ use Widget\Options;
  */
 function themeConfig($form)
 {
+    $options = Options::alloc();
+
     $cvUrl = new \Typecho\Widget\Helper\Form\Element\Text(
         'hjCvUrl',
         null,
@@ -39,6 +43,81 @@ function themeConfig($form)
         _t('留空则不显示；示例：https://example.com/creative。')
     );
     $form->addInput($creativeUrl);
+
+    $githubOauthEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'hjGithubOauthEnabled',
+        [
+            '0' => _t('关闭'),
+            '1' => _t('开启'),
+        ],
+        '0',
+        _t('GitHub OAuth2 登录'),
+        _t('开启后，可在评论登录弹窗中使用 GitHub 登录。')
+    );
+    $form->addInput($githubOauthEnabled);
+
+    $githubOauthClientId = new \Typecho\Widget\Helper\Form\Element\Text(
+        'hjGithubOauthClientId',
+        null,
+        '',
+        _t('GitHub Client ID'),
+        _t('GitHub OAuth App 的 Client ID。')
+    );
+    $form->addInput($githubOauthClientId);
+
+    $githubOauthClientSecret = new \Typecho\Widget\Helper\Form\Element\Password(
+        'hjGithubOauthClientSecret',
+        null,
+        '',
+        _t('GitHub Client Secret'),
+        _t('GitHub OAuth App 的 Client Secret。')
+    );
+    $form->addInput($githubOauthClientSecret);
+
+    $githubOauthScope = new \Typecho\Widget\Helper\Form\Element\Text(
+        'hjGithubOauthScope',
+        null,
+        'read:user user:email',
+        _t('GitHub OAuth Scope'),
+        _t('默认：read:user user:email。')
+    );
+    $form->addInput($githubOauthScope);
+
+    $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
+        'hjGithubBindUid',
+        null,
+        trim((string) ($options->hjGithubBindUid ?? ''))
+    ));
+    $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
+        'hjGithubBindId',
+        null,
+        trim((string) ($options->hjGithubBindId ?? ''))
+    ));
+    $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
+        'hjGithubBindLogin',
+        null,
+        trim((string) ($options->hjGithubBindLogin ?? ''))
+    ));
+    $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
+        'hjGithubBindAvatar',
+        null,
+        trim((string) ($options->hjGithubBindAvatar ?? ''))
+    ));
+    $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
+        'hjGithubBindEmail',
+        null,
+        trim((string) ($options->hjGithubBindEmail ?? ''))
+    ));
+    $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
+        'hjGithubBindAt',
+        null,
+        trim((string) ($options->hjGithubBindAt ?? ''))
+    ));
+
+    $bindPanel = new \Typecho\Widget\Helper\Form\Element\Fake('hjGithubBindPanel', '');
+    $bindPanel->label(_t('GitHub账号绑定'));
+    $bindPanel->description(hansJackGithubBindingPanelHtml($options));
+    $form->addInput($bindPanel);
 
     $icpBeian = new \Typecho\Widget\Helper\Form\Element\Text(
         'hjIcpBeian',
@@ -74,9 +153,726 @@ function themeConfig($form)
  */
 function themeInit(Archive $archive)
 {
+    hansJackHandleGithubOauthRequest($archive);
+
     if ($archive->is('category', 'posts') || $archive->is('category', 'notes')) {
         $archive->parameter->pageSize = 15;
     }
+}
+
+function hansJackGithubBindingPanelHtml(Options $options): string
+{
+    $enabled = hansJackGithubOauthEnabled($options);
+    $clientId = trim((string) ($options->hjGithubOauthClientId ?? ''));
+    $clientSecret = trim((string) ($options->hjGithubOauthClientSecret ?? ''));
+
+    $bindLogin = trim((string) ($options->hjGithubBindLogin ?? ''));
+    $bindId = trim((string) ($options->hjGithubBindId ?? ''));
+    $bindAt = trim((string) ($options->hjGithubBindAt ?? ''));
+
+    $bindStatus = _t('未绑定');
+    if ($bindLogin !== '') {
+        $bindStatus = _t('已绑定：%s', hansJackEscape($bindLogin));
+        if ($bindId !== '') {
+            $bindStatus .= ' · ID ' . hansJackEscape($bindId);
+        }
+        if ($bindAt !== '') {
+            $bindStatus .= ' · ' . hansJackEscape($bindAt);
+        }
+    }
+
+    $adminUid = 0;
+    $isAdmin = hansJackGithubCurrentAdminUid($adminUid);
+    $adminReturn = Common::url('options-theme.php', (string) $options->adminUrl);
+    $bindUrl = hansJackGithubOauthActionUrl('bind', ['return' => $adminReturn]);
+    $unbindUrl = hansJackGithubOauthActionUrl('unbind', ['return' => $adminReturn]);
+
+    $notes = [];
+    if (!$enabled) {
+        $notes[] = _t('请先开启 GitHub OAuth2 登录。');
+    }
+    if ($clientId === '' || $clientSecret === '') {
+        $notes[] = _t('请先填写 Client ID / Client Secret。');
+    }
+    if (!$isAdmin) {
+        $notes[] = _t('请先用管理员账号登录后台后再绑定。');
+    }
+
+    $html = '<div class="hj-github-bind-panel">';
+    $html .= '<div>' . _t('绑定状态：') . $bindStatus . '</div>';
+
+    if (!empty($notes)) {
+        $html .= '<div style="margin-top:6px;color:#b46a00;">' . implode('<br>', array_map('hansJackEscape', $notes)) . '</div>';
+    }
+
+    if ($isAdmin) {
+        $html .= '<div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">';
+        $html .= '<a href="' . hansJackEscape($bindUrl) . '">' . _t('GitHub账号绑定') . '</a>';
+        if ($bindLogin !== '' || $bindId !== '') {
+            $html .= '<a href="' . hansJackEscape($unbindUrl) . '">' . _t('解除绑定') . '</a>';
+        }
+        $html .= '</div>';
+    }
+
+    $html .= '</div>';
+    return $html;
+}
+
+function hansJackGithubOauthEnabled(Options $options): bool
+{
+    $raw = strtolower(trim((string) ($options->hjGithubOauthEnabled ?? '0')));
+    return in_array($raw, ['1', 'on', 'true', 'yes'], true);
+}
+
+function hansJackGithubCurrentAdminUid(&$uid = 0): bool
+{
+    $uid = 0;
+
+    try {
+        $user = \Typecho\Widget::widget('Widget_User');
+    } catch (\Throwable $e) {
+        return false;
+    }
+
+    if (!$user) {
+        return false;
+    }
+
+    try {
+        if (!$user->hasLogin()) {
+            return false;
+        }
+    } catch (\Throwable $e) {
+        return false;
+    }
+
+    try {
+        if (!$user->pass('administrator', true)) {
+            return false;
+        }
+    } catch (\Throwable $e) {
+        return false;
+    }
+
+    try {
+        $uid = (int) ($user->uid ?? 0);
+    } catch (\Throwable $e) {
+        $uid = 0;
+    }
+
+    return $uid > 0;
+}
+
+function hansJackGithubOauthActionUrl(string $action, array $params = []): string
+{
+    $options = Options::alloc();
+    $base = (string) $options->index;
+
+    $query = ['hj_github_oauth' => trim($action)];
+    foreach ($params as $key => $value) {
+        if ($key === '') {
+            continue;
+        }
+        if ($value === null) {
+            continue;
+        }
+
+        $text = trim((string) $value);
+        if ($text === '') {
+            continue;
+        }
+        $query[$key] = $text;
+    }
+
+    $qs = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+    if ($qs === '') {
+        return $base;
+    }
+
+    $sep = (strpos($base, '?') === false) ? '?' : '&';
+    return $base . $sep . $qs;
+}
+
+function hansJackGithubNormalizeReturnUrl(string $returnUrl, Options $options): string
+{
+    $fallback = (string) $options->siteUrl;
+    $returnUrl = trim($returnUrl);
+
+    if ($returnUrl === '' || preg_match('/[\r\n]/', $returnUrl)) {
+        return $fallback;
+    }
+
+    if (hansJackStartsWith($returnUrl, '/')) {
+        return Common::url(ltrim($returnUrl, '/'), (string) $options->siteUrl);
+    }
+
+    if (!preg_match('/^https?:\\/\\//i', $returnUrl)) {
+        return Common::url(ltrim($returnUrl, '/'), (string) $options->siteUrl);
+    }
+
+    $targetHost = strtolower((string) (parse_url($returnUrl, PHP_URL_HOST) ?? ''));
+    $siteHost = strtolower((string) (parse_url((string) $options->siteUrl, PHP_URL_HOST) ?? ''));
+    if ($targetHost === '' || $siteHost === '' || $targetHost !== $siteHost) {
+        return $fallback;
+    }
+
+    return $returnUrl;
+}
+
+function hansJackGithubDb()
+{
+    try {
+        if (class_exists('\\Typecho\\Db')) {
+            return Db::get();
+        }
+
+        if (class_exists('Typecho_Db')) {
+            return \Typecho_Db::get();
+        }
+    } catch (\Throwable $e) {
+        return null;
+    }
+
+    return null;
+}
+
+function hansJackThemeOptionStorageName(Options $options): string
+{
+    $theme = trim((string) ($options->theme ?? ''));
+    if ($theme === '') {
+        $theme = 'HansJack';
+    }
+
+    return 'theme:' . $theme;
+}
+
+function hansJackThemeOptionLoad(Options $options): array
+{
+    $db = hansJackGithubDb();
+    if (!is_object($db)) {
+        return [];
+    }
+
+    $name = hansJackThemeOptionStorageName($options);
+    if ($name === '') {
+        return [];
+    }
+
+    try {
+        $row = $db->fetchRow(
+            $db->select('value')
+                ->from('table.options')
+                ->where('name = ? AND user = ?', $name, 0)
+                ->limit(1)
+        );
+    } catch (\Throwable $e) {
+        return [];
+    }
+
+    $raw = '';
+    if (is_array($row)) {
+        $raw = (string) ($row['value'] ?? '');
+    } elseif (is_object($row)) {
+        $raw = (string) ($row->value ?? '');
+    }
+
+    if ($raw === '') {
+        return [];
+    }
+
+    $json = json_decode($raw, true);
+    if (is_array($json)) {
+        return $json;
+    }
+
+    $legacy = @unserialize($raw);
+    return is_array($legacy) ? $legacy : [];
+}
+
+function hansJackThemeOptionSave(Options $options, array $payload): bool
+{
+    $db = hansJackGithubDb();
+    if (!is_object($db)) {
+        return false;
+    }
+
+    $name = hansJackThemeOptionStorageName($options);
+    if ($name === '') {
+        return false;
+    }
+
+    $value = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($value)) {
+        return false;
+    }
+
+    try {
+        $exists = $db->fetchObject(
+            $db->select('name')
+                ->from('table.options')
+                ->where('name = ? AND user = ?', $name, 0)
+                ->limit(1)
+        );
+
+        if (is_object($exists)) {
+            $db->query(
+                $db->update('table.options')
+                    ->rows(['value' => $value])
+                    ->where('name = ? AND user = ?', $name, 0)
+            );
+            return true;
+        }
+
+        $db->query(
+            $db->insert('table.options')
+                ->rows([
+                    'name' => $name,
+                    'value' => $value,
+                    'user' => 0,
+                ])
+        );
+        return true;
+    } catch (\Throwable $e) {
+        return false;
+    }
+}
+
+function hansJackSaveGithubBinding(Options $options, array $binding): bool
+{
+    $settings = hansJackThemeOptionLoad($options);
+
+    foreach ($binding as $key => $value) {
+        $settings[(string) $key] = trim((string) $value);
+    }
+
+    return hansJackThemeOptionSave($options, $settings);
+}
+
+function hansJackGithubOauthStateSet(string $state, string $mode, string $returnUrl): void
+{
+    $expire = 600;
+    Cookie::set('__hj_github_oauth_state', $state, $expire);
+    Cookie::set('__hj_github_oauth_mode', $mode, $expire);
+    Cookie::set('__hj_github_oauth_return', $returnUrl, $expire);
+}
+
+function hansJackGithubOauthStateRead(): array
+{
+    return [
+        'state' => trim((string) Cookie::get('__hj_github_oauth_state', '')),
+        'mode' => trim((string) Cookie::get('__hj_github_oauth_mode', '')),
+        'return' => trim((string) Cookie::get('__hj_github_oauth_return', '')),
+    ];
+}
+
+function hansJackGithubOauthStateClear(): void
+{
+    Cookie::delete('__hj_github_oauth_state');
+    Cookie::delete('__hj_github_oauth_mode');
+    Cookie::delete('__hj_github_oauth_return');
+}
+
+function hansJackGithubOauthRandomState(): string
+{
+    try {
+        return bin2hex(random_bytes(16));
+    } catch (\Throwable $e) {
+        return md5(uniqid((string) mt_rand(), true));
+    }
+}
+
+function hansJackGithubHttpRequest(string $method, string $url, array $headers = [], string $body = ''): array
+{
+    $method = strtoupper(trim($method));
+    if ($method === '') {
+        $method = 'GET';
+    }
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        if ($ch !== false) {
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+
+            if (!empty($headers)) {
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            }
+
+            if ($method !== 'GET' && $body !== '') {
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+            }
+
+            $resp = curl_exec($ch);
+            $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+            curl_close($ch);
+
+            return [
+                'status' => $status,
+                'body' => is_string($resp) ? $resp : '',
+            ];
+        }
+    }
+
+    $headerLines = '';
+    if (!empty($headers)) {
+        $headerLines = implode("\r\n", $headers) . "\r\n";
+    }
+
+    $ctx = stream_context_create([
+        'http' => [
+            'method' => $method,
+            'header' => $headerLines,
+            'content' => ($method === 'GET') ? '' : $body,
+            'timeout' => 12,
+            'ignore_errors' => true,
+        ],
+    ]);
+
+    $resp = @file_get_contents($url, false, $ctx);
+    $status = 0;
+    if (!empty($http_response_header[0]) && preg_match('/\\s(\\d{3})\\s/', (string) $http_response_header[0], $m)) {
+        $status = (int) $m[1];
+    }
+
+    return [
+        'status' => $status,
+        'body' => is_string($resp) ? $resp : '',
+    ];
+}
+
+function hansJackGithubExchangeToken(Options $options, string $code, string $state): string
+{
+    $clientId = trim((string) ($options->hjGithubOauthClientId ?? ''));
+    $clientSecret = trim((string) ($options->hjGithubOauthClientSecret ?? ''));
+    if ($clientId === '' || $clientSecret === '' || $code === '') {
+        return '';
+    }
+
+    $payload = http_build_query([
+        'client_id' => $clientId,
+        'client_secret' => $clientSecret,
+        'code' => $code,
+        'state' => $state,
+        'redirect_uri' => hansJackGithubOauthActionUrl('callback'),
+    ], '', '&', PHP_QUERY_RFC3986);
+
+    $resp = hansJackGithubHttpRequest(
+        'POST',
+        'https://github.com/login/oauth/access_token',
+        [
+            'Accept: application/json',
+            'Content-Type: application/x-www-form-urlencoded',
+            'User-Agent: HansJack-Typecho-OAuth',
+        ],
+        $payload
+    );
+
+    if ((int) ($resp['status'] ?? 0) < 200 || (int) ($resp['status'] ?? 0) >= 300) {
+        return '';
+    }
+
+    $data = json_decode((string) ($resp['body'] ?? ''), true);
+    if (!is_array($data)) {
+        return '';
+    }
+
+    return trim((string) ($data['access_token'] ?? ''));
+}
+
+function hansJackGithubFetchUser(string $accessToken): array
+{
+    if ($accessToken === '') {
+        return [];
+    }
+
+    $resp = hansJackGithubHttpRequest(
+        'GET',
+        'https://api.github.com/user',
+        [
+            'Accept: application/vnd.github+json',
+            'Authorization: Bearer ' . $accessToken,
+            'User-Agent: HansJack-Typecho-OAuth',
+            'X-GitHub-Api-Version: 2022-11-28',
+        ]
+    );
+
+    if ((int) ($resp['status'] ?? 0) < 200 || (int) ($resp['status'] ?? 0) >= 300) {
+        return [];
+    }
+
+    $data = json_decode((string) ($resp['body'] ?? ''), true);
+    return is_array($data) ? $data : [];
+}
+
+function hansJackGithubFetchEmails(string $accessToken): array
+{
+    if ($accessToken === '') {
+        return [];
+    }
+
+    $resp = hansJackGithubHttpRequest(
+        'GET',
+        'https://api.github.com/user/emails',
+        [
+            'Accept: application/vnd.github+json',
+            'Authorization: Bearer ' . $accessToken,
+            'User-Agent: HansJack-Typecho-OAuth',
+            'X-GitHub-Api-Version: 2022-11-28',
+        ]
+    );
+
+    if ((int) ($resp['status'] ?? 0) < 200 || (int) ($resp['status'] ?? 0) >= 300) {
+        return [];
+    }
+
+    $data = json_decode((string) ($resp['body'] ?? ''), true);
+    return is_array($data) ? $data : [];
+}
+
+function hansJackGithubResolveEmail(array $user, array $emails): string
+{
+    $userEmail = trim((string) ($user['email'] ?? ''));
+    if ($userEmail !== '') {
+        return $userEmail;
+    }
+
+    foreach ($emails as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $mail = trim((string) ($row['email'] ?? ''));
+        $verified = !empty($row['verified']);
+        $primary = !empty($row['primary']);
+        if ($mail !== '' && $verified && $primary) {
+            return $mail;
+        }
+    }
+
+    foreach ($emails as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $mail = trim((string) ($row['email'] ?? ''));
+        $verified = !empty($row['verified']);
+        if ($mail !== '' && $verified) {
+            return $mail;
+        }
+    }
+
+    foreach ($emails as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $mail = trim((string) ($row['email'] ?? ''));
+        if ($mail !== '') {
+            return $mail;
+        }
+    }
+
+    $login = trim((string) ($user['login'] ?? ''));
+    if ($login !== '') {
+        return $login . '@users.noreply.github.com';
+    }
+
+    return '';
+}
+
+function hansJackHandleGithubOauthRequest(Archive $archive): void
+{
+    $action = '';
+    try {
+        $action = strtolower(trim((string) $archive->request->get('hj_github_oauth', '')));
+    } catch (\Throwable $e) {
+        $action = '';
+    }
+
+    if ($action === '') {
+        return;
+    }
+
+    if (!in_array($action, ['login', 'bind', 'callback', 'unbind'], true)) {
+        return;
+    }
+
+    $options = Options::alloc();
+
+    $returnRaw = '';
+    try {
+        $returnRaw = trim((string) $archive->request->get('return', ''));
+    } catch (\Throwable $e) {
+        $returnRaw = '';
+    }
+    $returnUrl = hansJackGithubNormalizeReturnUrl($returnRaw, $options);
+
+    if ($action === 'login' || $action === 'bind') {
+        if (!hansJackGithubOauthEnabled($options)) {
+            $archive->response->redirect($returnUrl);
+            return;
+        }
+
+        if ($action === 'bind') {
+            $adminUid = 0;
+            if (!hansJackGithubCurrentAdminUid($adminUid)) {
+                $archive->response->redirect($returnUrl);
+                return;
+            }
+        }
+
+        $clientId = trim((string) ($options->hjGithubOauthClientId ?? ''));
+        if ($clientId === '') {
+            $archive->response->redirect($returnUrl);
+            return;
+        }
+
+        $scope = trim((string) ($options->hjGithubOauthScope ?? ''));
+        if ($scope === '') {
+            $scope = 'read:user user:email';
+        }
+
+        $state = hansJackGithubOauthRandomState();
+        hansJackGithubOauthStateSet($state, $action, $returnUrl);
+
+        $authUrl = 'https://github.com/login/oauth/authorize?' . http_build_query([
+            'client_id' => $clientId,
+            'redirect_uri' => hansJackGithubOauthActionUrl('callback'),
+            'scope' => $scope,
+            'state' => $state,
+        ], '', '&', PHP_QUERY_RFC3986);
+
+        $archive->response->redirect($authUrl);
+        return;
+    }
+
+    if ($action === 'unbind') {
+        $adminUid = 0;
+        if (!hansJackGithubCurrentAdminUid($adminUid)) {
+            $archive->response->redirect($returnUrl);
+            return;
+        }
+
+        hansJackSaveGithubBinding($options, [
+            'hjGithubBindUid' => '',
+            'hjGithubBindId' => '',
+            'hjGithubBindLogin' => '',
+            'hjGithubBindAvatar' => '',
+            'hjGithubBindEmail' => '',
+            'hjGithubBindAt' => '',
+        ]);
+        $archive->response->redirect($returnUrl);
+        return;
+    }
+
+    $stateData = hansJackGithubOauthStateRead();
+    hansJackGithubOauthStateClear();
+
+    $expectedState = trim((string) ($stateData['state'] ?? ''));
+    $mode = strtolower(trim((string) ($stateData['mode'] ?? '')));
+    $stateReturn = hansJackGithubNormalizeReturnUrl((string) ($stateData['return'] ?? ''), $options);
+    if ($stateReturn === '') {
+        $stateReturn = $returnUrl;
+    }
+
+    $recvState = '';
+    $code = '';
+    try {
+        $recvState = trim((string) $archive->request->get('state', ''));
+        $code = trim((string) $archive->request->get('code', ''));
+    } catch (\Throwable $e) {
+        $recvState = '';
+        $code = '';
+    }
+
+    if ($expectedState === '' || $recvState === '' || !hash_equals($expectedState, $recvState) || $code === '') {
+        $archive->response->redirect($stateReturn);
+        return;
+    }
+
+    $accessToken = hansJackGithubExchangeToken($options, $code, $recvState);
+    if ($accessToken === '') {
+        $archive->response->redirect($stateReturn);
+        return;
+    }
+
+    $githubUser = hansJackGithubFetchUser($accessToken);
+    if (empty($githubUser)) {
+        $archive->response->redirect($stateReturn);
+        return;
+    }
+
+    $githubEmails = hansJackGithubFetchEmails($accessToken);
+    $login = trim((string) ($githubUser['login'] ?? ''));
+    $githubId = trim((string) ($githubUser['id'] ?? ''));
+    $avatar = trim((string) ($githubUser['avatar_url'] ?? ''));
+    $email = hansJackGithubResolveEmail($githubUser, $githubEmails);
+
+    if ($mode === 'bind') {
+        $adminUid = 0;
+        if (!hansJackGithubCurrentAdminUid($adminUid)) {
+            $archive->response->redirect($stateReturn);
+            return;
+        }
+
+        hansJackSaveGithubBinding($options, [
+            'hjGithubBindUid' => (string) $adminUid,
+            'hjGithubBindId' => $githubId,
+            'hjGithubBindLogin' => $login,
+            'hjGithubBindAvatar' => $avatar,
+            'hjGithubBindEmail' => $email,
+            'hjGithubBindAt' => date('Y-m-d H:i:s'),
+        ]);
+
+        $archive->response->redirect($stateReturn);
+        return;
+    }
+
+    if ($mode !== 'login') {
+        $archive->response->redirect($stateReturn);
+        return;
+    }
+
+    // If this GitHub account is bound to a local admin account,
+    // perform a real Typecho login instead of guest identity fill.
+    $boundUid = (int) trim((string) ($options->hjGithubBindUid ?? '0'));
+    $boundGithubId = trim((string) ($options->hjGithubBindId ?? ''));
+    $boundGithubLogin = strtolower(trim((string) ($options->hjGithubBindLogin ?? '')));
+
+    $isBoundMatch = false;
+    if ($boundUid > 0) {
+        if ($boundGithubId !== '' && $githubId !== '' && hash_equals($boundGithubId, $githubId)) {
+            $isBoundMatch = true;
+        } elseif (
+            $boundGithubId === '' &&
+            $boundGithubLogin !== '' &&
+            $login !== '' &&
+            hash_equals($boundGithubLogin, strtolower($login))
+        ) {
+            $isBoundMatch = true;
+        }
+    }
+
+    if ($isBoundMatch) {
+        try {
+            $userWidget = \Typecho\Widget::widget('Widget_User');
+            if ($userWidget && method_exists($userWidget, 'simpleLogin') && $userWidget->simpleLogin($boundUid, false)) {
+                $archive->response->redirect($stateReturn);
+                return;
+            }
+        } catch (\Throwable $e) {
+            // Fallback to guest identity cookies below.
+        }
+    }
+
+    $author = ($login !== '') ? $login : _t('GitHub用户');
+    $profileUrl = ($login !== '') ? ('https://github.com/' . $login) : 'https://github.com/';
+    $expire = 30 * 24 * 3600;
+
+    Cookie::set('__typecho_remember_author', $author, $expire);
+    Cookie::set('__typecho_remember_mail', $email, $expire);
+    Cookie::set('__typecho_remember_url', $profileUrl, $expire);
+
+    $archive->response->redirect($stateReturn);
 }
 
 function hansJackRenderPager(
@@ -525,6 +1321,39 @@ function hansJackAvatarRating(Options $options): string
     return in_array($rating, ['G', 'PG', 'R', 'X'], true) ? $rating : 'G';
 }
 
+function hansJackGithubLoginFromUrl(string $url): string
+{
+    $url = trim($url);
+    if ($url === '') {
+        return '';
+    }
+
+    $host = strtolower((string) (parse_url($url, PHP_URL_HOST) ?? ''));
+    if ($host === 'www.github.com') {
+        $host = 'github.com';
+    }
+    if ($host !== 'github.com') {
+        return '';
+    }
+
+    $path = trim((string) (parse_url($url, PHP_URL_PATH) ?? ''), '/');
+    if ($path === '') {
+        return '';
+    }
+
+    $parts = explode('/', $path);
+    $login = trim((string) ($parts[0] ?? ''));
+    if ($login === '') {
+        return '';
+    }
+
+    if (!preg_match('/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/', $login)) {
+        return '';
+    }
+
+    return $login;
+}
+
 function hansJackPrivateCommentMarker(): string
 {
     // Stored in comment text so the theme can render "private" comments without extra DB fields.
@@ -816,15 +1645,32 @@ function threadedComments($comments, $singleCommentOptions): void
         $hjAvatarEmail = '';
     }
 
-    // Use Sep CDN as the avatar endpoint with Gravatar-compatible parameters.
-    $hjAvatarHash = md5($hjAvatarEmail);
-    $hjAvatarBase = 'https://cdn.sep.cc/avatar/' . $hjAvatarHash;
-    $hjAvatarQuery = '&d=' . rawurlencode($hjAvatarDefault) . '&r=g';
-    $hjAvatarUrl = $hjAvatarBase . '?s=' . $hjAvatarSize . $hjAvatarQuery;
+    $hjCommentUrl = '';
+    try {
+        $hjCommentUrl = trim((string) ($comments->url ?? ''));
+    } catch (\Throwable $e) {
+        $hjCommentUrl = '';
+    }
+
     $hjAvatarSrcset = '';
-    if (!empty($singleCommentOptions->avatarHighRes)) {
-        $hjAvatarSrcset = $hjAvatarBase . '?s=' . ($hjAvatarSize * 2) . $hjAvatarQuery . ' 2x, '
-            . $hjAvatarBase . '?s=' . ($hjAvatarSize * 3) . $hjAvatarQuery . ' 3x';
+    $hjGithubLogin = hansJackGithubLoginFromUrl($hjCommentUrl);
+    if ($hjGithubLogin !== '') {
+        $hjAvatarBase = 'https://github.com/' . rawurlencode($hjGithubLogin) . '.png';
+        $hjAvatarUrl = $hjAvatarBase . '?size=' . $hjAvatarSize;
+        if (!empty($singleCommentOptions->avatarHighRes)) {
+            $hjAvatarSrcset = $hjAvatarBase . '?size=' . ($hjAvatarSize * 2) . ' 2x, '
+                . $hjAvatarBase . '?size=' . ($hjAvatarSize * 3) . ' 3x';
+        }
+    } else {
+        // Use Sep CDN as the default avatar endpoint with Gravatar-compatible parameters.
+        $hjAvatarHash = md5($hjAvatarEmail);
+        $hjAvatarBase = 'https://cdn.sep.cc/avatar/' . $hjAvatarHash;
+        $hjAvatarQuery = '&d=' . rawurlencode($hjAvatarDefault) . '&r=g';
+        $hjAvatarUrl = $hjAvatarBase . '?s=' . $hjAvatarSize . $hjAvatarQuery;
+        if (!empty($singleCommentOptions->avatarHighRes)) {
+            $hjAvatarSrcset = $hjAvatarBase . '?s=' . ($hjAvatarSize * 2) . $hjAvatarQuery . ' 2x, '
+                . $hjAvatarBase . '?s=' . ($hjAvatarSize * 3) . $hjAvatarQuery . ' 3x';
+        }
     }
     ?>
     <li itemscope itemtype="http://schema.org/UserComments" id="<?php $comments->theId(); ?>" class="comment-body<?php 

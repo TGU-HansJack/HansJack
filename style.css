@@ -4718,6 +4718,58 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     outline-offset: 2px;
 }
 
+.hj-login-modal-oauth {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--hj-line-day);
+    display: flex;
+    justify-content: flex-start;
+}
+
+.hj-login-modal-github {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 38px;
+    padding: 0.1rem 1rem;
+    border-radius: 4px;
+    border: 2px solid var(--hj-day-black);
+    background: transparent;
+    color: inherit;
+    font-family: var(--hj-font-ui);
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+
+.hj-login-modal-github svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+    flex: 0 0 auto;
+}
+
+.hj-login-modal-github span {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+}
+
+.hj-login-modal-github:hover,
+.hj-login-modal-github:focus-visible {
+    background: var(--hj-day-black);
+    color: var(--hj-day-white);
+    text-decoration: none;
+}
+
+.hj-login-modal-github:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
 html.hj-login-modal-open,
 html.hj-login-modal-open body {
     overflow: hidden;
@@ -5746,6 +5798,14 @@ html.hj-login-modal-open .hj-login-modal {
         border-color: rgba(221, 221, 219, 0.35);
     }
 
+    html:not(.hj-theme-light) .hj-login-modal-oauth {
+        border-top-color: var(--hj-line-night);
+    }
+
+    html:not(.hj-theme-light) .hj-login-modal-github {
+        border-color: rgba(221, 221, 219, 0.35);
+    }
+
     html:not(.hj-theme-light) .hj-nav {
         background: transparent;
         box-shadow: none;
@@ -6231,6 +6291,14 @@ html.hj-theme-dark .hj-login-modal-panel .hj-comment-form input.text {
 }
 
 html.hj-theme-dark .hj-login-modal-submit {
+    border-color: rgba(221, 221, 219, 0.35);
+}
+
+html.hj-theme-dark .hj-login-modal-oauth {
+    border-top-color: var(--hj-line-night);
+}
+
+html.hj-theme-dark .hj-login-modal-github {
     border-color: rgba(221, 221, 219, 0.35);
 }
 
