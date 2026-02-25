@@ -3294,11 +3294,58 @@
                 return true;
             }
 
+            function bindLazyBlurUp(img) {
+                if (!img || !img.classList) {
+                    return;
+                }
+
+                if (!img.hasAttribute("loading")) {
+                    img.setAttribute("loading", "lazy");
+                }
+
+                if (img.dataset && img.dataset.hjBlurupBound === "1") {
+                    if (img.complete && img.naturalWidth > 0) {
+                        img.classList.add("is-loaded");
+                    }
+                    return;
+                }
+
+                if (img.dataset) {
+                    img.dataset.hjBlurupBound = "1";
+                }
+
+                img.classList.add("hj-lazy-blurup");
+
+                function markLoaded() {
+                    img.classList.add("is-loaded");
+                }
+
+                function markError() {
+                    img.classList.remove("hj-lazy-blurup");
+                    img.classList.remove("is-loaded");
+                }
+
+                if (img.complete) {
+                    if (img.naturalWidth > 0) {
+                        markLoaded();
+                    } else {
+                        markError();
+                    }
+                    return;
+                }
+
+                img.addEventListener("load", markLoaded, { once: true });
+                img.addEventListener("error", markError, { once: true });
+            }
+
             var imgs = Array.prototype.slice.call(content.querySelectorAll("img"));
             imgs.forEach(function (img) {
                 if (!img || !img.parentNode) {
                     return;
                 }
+
+                bindLazyBlurUp(img);
+
                 if (img.closest && img.closest("figure")) {
                     return;
                 }
@@ -3323,7 +3370,6 @@
                 }
 
                 img.setAttribute("tabindex", "0");
-                img.setAttribute("loading", "lazy");
                 if (img.hasAttribute("title")) {
                     img.removeAttribute("title");
                 }

@@ -5121,6 +5121,26 @@ html.hj-login-modal-open .hj-login-modal {
     margin: 0;
 }
 
+.hj-article-content img.hj-lazy-blurup {
+    filter: blur(14px);
+    transform: scale(1.02);
+    opacity: 0.78;
+    transition: filter 0.42s ease, transform 0.42s ease, opacity 0.32s ease;
+    will-change: filter, transform, opacity;
+}
+
+.hj-article-content img.hj-lazy-blurup.is-loaded {
+    filter: blur(0);
+    transform: none;
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hj-article-content img.hj-lazy-blurup {
+        transition: none;
+    }
+}
+
 .hj-article-content figcaption {
     margin-top: 0.45rem;
     font-family: var(--hj-font-ui);
