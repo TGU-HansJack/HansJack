@@ -3948,76 +3948,6 @@
             return;
         }
 
-        var cache = Object.create(null);
-
-        function loadFavicon(host, callback) {
-            var entry = cache[host];
-            if (entry) {
-                if (entry.state === "ok") {
-                    callback(entry.url);
-                    return;
-                }
-                if (entry.state === "bad") {
-                    callback("");
-                    return;
-                }
-                entry.cbs.push(callback);
-                return;
-            }
-
-            var url = "//" + host + "/favicon.ico";
-            cache[host] = { state: "pending", url: url, cbs: [callback] };
-
-            var img = new Image();
-            img.onload = function () {
-                var e = cache[host];
-                if (!e) {
-                    return;
-                }
-                e.state = "ok";
-                var cbs = e.cbs.slice();
-                e.cbs.length = 0;
-                for (var i = 0; i < cbs.length; i++) {
-                    try {
-                        cbs[i](e.url);
-                    } catch (err) {}
-                }
-            };
-            img.onerror = function () {
-                var e = cache[host];
-                if (!e) {
-                    return;
-                }
-                e.state = "bad";
-                var cbs = e.cbs.slice();
-                e.cbs.length = 0;
-                for (var i = 0; i < cbs.length; i++) {
-                    try {
-                        cbs[i]("");
-                    } catch (err) {}
-                }
-            };
-            img.src = url;
-        }
-
-        function shouldSkipHref(href) {
-            if (!href) {
-                return true;
-            }
-
-            var lower = href.toLowerCase();
-            if (lower.indexOf("mailto:") === 0 || lower.indexOf("tel:") === 0 || lower.indexOf("javascript:") === 0) {
-                return true;
-            }
-            if (href.charAt(0) === "#") {
-                return true;
-            }
-            if (!(lower.indexOf("http://") === 0 || lower.indexOf("https://") === 0)) {
-                return true;
-            }
-            return false;
-        }
-
         function markLinkKind(a, href) {
             if (!a || !a.classList) {
                 return;
@@ -4056,7 +3986,7 @@
         }
 
         links.forEach(function (a) {
-            if (!a || (a.classList && a.classList.contains("hj-link-has-favicon"))) {
+            if (!a) {
                 return;
             }
 
@@ -4066,32 +3996,7 @@
             }
 
             var href = a.getAttribute("href") || "";
-
-            // Mark internal/external link kinds for icon rendering (CSS).
             markLinkKind(a, href);
-
-            if (shouldSkipHref(href)) {
-                return;
-            }
-
-            var url;
-            try {
-                url = new URL(href);
-            } catch (e) {
-                return;
-            }
-            if (!url || !url.host) {
-                return;
-            }
-
-            loadFavicon(url.host, function (faviconUrl) {
-                if (!faviconUrl) {
-                    return;
-                }
-
-                a.style.setProperty("--hj-link-favicon", "url(\"" + faviconUrl.replace(/\"/g, "\\\"") + "\")");
-                a.classList.add("hj-link-has-favicon");
-            });
         });
     })();
 </script>

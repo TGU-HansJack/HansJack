@@ -4755,10 +4755,6 @@ html.hj-login-modal-open .hj-login-modal {
     content: none;
 }
 
-.hj-article-content a.hj-link-has-favicon::before {
-    content: none;
-}
-
 .hj-article-content a:hover,
 .hj-article-content a:focus-visible {
     text-decoration: underline;
