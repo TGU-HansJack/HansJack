@@ -13,299 +13,487 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
 
 $this->need('header.php');
 
-// Collect categories/tags.
-$categories = [];
-$postsRootMid = 0;
-$notesRootMid = 0;
-$postsChildren = [];
-$tagsData = [];
-
+$hjUserLoggedIn = false;
+$hjUserIsAdmin = false;
 try {
-    $this->widget('Widget_Metas_Category_List')->to($hjCategoryList);
-    if ($hjCategoryList && $hjCategoryList->have()) {
-        while ($hjCategoryList->next()) {
-            $categories[] = [
-                'mid' => (int) ($hjCategoryList->mid ?? 0),
-                'parent' => (int) ($hjCategoryList->parent ?? 0),
-                'slug' => (string) ($hjCategoryList->slug ?? ''),
-                'name' => (string) ($hjCategoryList->name ?? ''),
-                'count' => (int) ($hjCategoryList->count ?? 0),
-                'url' => (string) ($hjCategoryList->permalink ?? ''),
+    $hjUserLoggedIn = (bool) ($this->user && $this->user->hasLogin());
+    $hjUserIsAdmin = $hjUserLoggedIn && (bool) $this->user->pass('administrator', true);
+} catch (\Throwable $e) {
+    $hjUserLoggedIn = false;
+    $hjUserIsAdmin = false;
+}
+
+$hjAllowComment = false;
+try {
+    $hjAllowComment = (bool) $this->allow('comment');
+} catch (\Throwable $e) {
+    $hjAllowComment = false;
+}
+$hjCanPostMemo = $hjAllowComment && $hjUserIsAdmin;
+
+$hjCommentToken = '';
+if ($hjCanPostMemo) {
+    $hjCommentReferer = '';
+    try {
+        $hjCommentReferer = (string) $this->request->getRequestUrl();
+    } catch (\Throwable $e) {
+        $hjCommentReferer = '';
+    }
+    try {
+        $hjTokenTarget = ($hjCommentReferer !== '') ? $hjCommentReferer : (string) ($this->permalink ?? '');
+        $hjCommentToken = ($hjTokenTarget !== '') ? (string) $this->security->getToken($hjTokenTarget) : '';
+    } catch (\Throwable $e) {
+        $hjCommentToken = '';
+    }
+}
+
+$hjTagPattern = '/#([\p{L}\p{N}_\-]{1,40})/u';
+$hjCommentsData = [];
+$hjMonthCounts = [];
+$hjTagCounts = [];
+$hjLatestCreated = 0;
+
+$hjNormalizeTag = static function ($value): string {
+    $value = trim((string) $value);
+    if ($value === '') {
+        return '';
+    }
+    if (function_exists('mb_strtolower')) {
+        return (string) mb_strtolower($value, 'UTF-8');
+    }
+    return strtolower($value);
+};
+
+$this->comments()->to($hjComments);
+if ($hjComments && $hjComments->have()) {
+    while ($hjComments->next()) {
+        $created = 0;
+        try {
+            $created = (int) ($hjComments->created ?? 0);
+        } catch (\Throwable $e) {
+            $created = 0;
+        }
+        if ($created > $hjLatestCreated) {
+            $hjLatestCreated = $created;
+        }
+
+        $month = ($created > 0) ? date('Y-m', $created) : '';
+        if ($month !== '') {
+            $hjMonthCounts[$month] = (int) ($hjMonthCounts[$month] ?? 0) + 1;
+        }
+
+        $author = '';
+        try {
+            $author = trim((string) ($hjComments->author ?? ''));
+        } catch (\Throwable $e) {
+            $author = '';
+        }
+        if ($author === '') {
+            $author = _t('匿名');
+        }
+
+        $mail = '';
+        try {
+            $mail = strtolower(trim((string) ($hjComments->mail ?? '')));
+        } catch (\Throwable $e) {
+            $mail = '';
+        }
+        $avatar = 'https://cdn.sep.cc/avatar/' . md5($mail) . '?s=64&d=mp&r=g';
+
+        $rawText = '';
+        try {
+            $rawText = (string) ($hjComments->text ?? '');
+        } catch (\Throwable $e) {
+            $rawText = '';
+        }
+        if (function_exists('hansJackStripPrivateCommentMarker')) {
+            $rawText = hansJackStripPrivateCommentMarker($rawText);
+        }
+        $rawText = trim($rawText);
+        if ($rawText === '') {
+            $rawText = _t('（无内容）');
+        }
+
+        $commentTagsMap = [];
+        if (preg_match_all($hjTagPattern, $rawText, $matches) && !empty($matches[1])) {
+            foreach ($matches[1] as $tagRaw) {
+                $tagName = trim((string) $tagRaw);
+                if ($tagName === '') {
+                    continue;
+                }
+
+                $tagKey = $hjNormalizeTag($tagName);
+                if ($tagKey === '') {
+                    continue;
+                }
+                if (isset($commentTagsMap[$tagKey])) {
+                    continue;
+                }
+
+                $commentTagsMap[$tagKey] = $tagName;
+                if (!isset($hjTagCounts[$tagKey])) {
+                    $hjTagCounts[$tagKey] = [
+                        'key' => $tagKey,
+                        'name' => $tagName,
+                        'count' => 0,
+                    ];
+                }
+                $hjTagCounts[$tagKey]['count'] = (int) ($hjTagCounts[$tagKey]['count'] ?? 0) + 1;
+            }
+        }
+
+        $commentTags = [];
+        foreach ($commentTagsMap as $tagKey => $tagName) {
+            $commentTags[] = [
+                'key' => $tagKey,
+                'name' => $tagName,
             ];
         }
-    }
-} catch (\Throwable $e) {
-    $categories = [];
-}
 
-foreach ($categories as $cat) {
-    if ($cat['slug'] === 'posts') {
-        $postsRootMid = (int) $cat['mid'];
-    }
-    if ($cat['slug'] === 'notes') {
-        $notesRootMid = (int) $cat['mid'];
-    }
-}
+        $coid = 0;
+        try {
+            $coid = (int) ($hjComments->coid ?? 0);
+        } catch (\Throwable $e) {
+            $coid = 0;
+        }
+        if ($coid <= 0) {
+            $coid = count($hjCommentsData) + 1;
+        }
 
-if ($postsRootMid > 0) {
-    foreach ($categories as $cat) {
-        if ((int) $cat['parent'] !== $postsRootMid) {
-            continue;
+        $status = '';
+        try {
+            $status = (string) ($hjComments->status ?? '');
+        } catch (\Throwable $e) {
+            $status = '';
         }
-        $name = (string) ($cat['name'] ?? '');
-        if ($name === '') {
-            continue;
-        }
-        $postsChildren[] = [
-            'name' => $name,
-            'value' => max(0, (int) ($cat['count'] ?? 0)),
+
+        $hjCommentsData[] = [
+            'id' => $coid,
+            'author' => $author,
+            'avatar' => $avatar,
+            'created' => $created,
+            'date' => ($created > 0) ? date('Y/m/d H:i:s', $created) : '',
+            'dateIso' => ($created > 0) ? date('c', $created) : '',
+            'month' => $month,
+            'text' => $rawText,
+            'tags' => $commentTags,
+            'tagKeys' => array_keys($commentTagsMap),
+            'status' => $status,
         ];
     }
 }
 
-try {
-    $this->widget('Widget_Metas_Tag_Cloud', 'ignoreZeroCount=1&limit=9999')->to($hjTags);
-    if ($hjTags && $hjTags->have()) {
-        while ($hjTags->next()) {
-            $name = (string) ($hjTags->name ?? '');
-            $count = (int) ($hjTags->count ?? 0);
-            if ($name === '' || $count <= 0) {
-                continue;
-            }
-            $tagsData[] = ['name' => $name, 'value' => $count];
-        }
-    }
-} catch (\Throwable $e) {
-    $tagsData = [];
+if (!empty($hjCommentsData)) {
+    usort($hjCommentsData, static function (array $a, array $b): int {
+        return (int) ($b['created'] ?? 0) <=> (int) ($a['created'] ?? 0);
+    });
 }
 
-$hjMemoryPayload = [
-    'categories' => [
-        'postsChildren' => $postsChildren,
-    ],
-    'tags' => [
-        'items' => $tagsData,
-    ],
-];
+if (!empty($hjMonthCounts)) {
+    krsort($hjMonthCounts, SORT_STRING);
+}
+
+$hjMonthRows = [];
+foreach ($hjMonthCounts as $month => $count) {
+    $label = $month;
+    if (preg_match('/^(\d{4})-(\d{2})$/', (string) $month, $m)) {
+        $label = $m[1] . '年' . $m[2] . '月';
+    }
+    $hjMonthRows[] = [
+        'value' => (string) $month,
+        'label' => $label,
+        'count' => (int) $count,
+    ];
+}
+
+$hjTagRows = array_values($hjTagCounts);
+if (!empty($hjTagRows)) {
+    usort($hjTagRows, static function (array $a, array $b): int {
+        $aCount = (int) ($a['count'] ?? 0);
+        $bCount = (int) ($b['count'] ?? 0);
+        if ($aCount !== $bCount) {
+            return $bCount <=> $aCount;
+        }
+        return strcmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+    });
+}
+
+$hjTotalComments = count($hjCommentsData);
+$hjLatestText = ($hjLatestCreated > 0) ? date('Y/m/d H:i:s', $hjLatestCreated) : _t('暂无');
 ?>
 
-<main class="hj-main" role="main">
+<main class="hj-main" role="main" data-hj-memory-root>
     <section class="hj-memory" aria-label="<?php _e('回忆'); ?>">
-        <div class="hj-memory-grid" aria-label="<?php _e('数据图表'); ?>">
-            <section class="hj-memory-block" aria-label="<?php _e('博文子分类占比'); ?>">
-                <h2 class="hj-memory-block-title"><?php _e('博文子分类占比'); ?></h2>
-                <div class="hj-memory-chart" id="hj-memory-chart-categories"></div>
-            </section>
+        <div class="hj-posts-layout hj-memory-layout">
+            <div class="hj-memory-main">
+                <section id="comments" class="hj-comments hj-memory-comments-shell" aria-label="<?php _e('评论'); ?>">
+                    <?php if ($hjCanPostMemo): ?>
+                        <form method="post" action="<?php $this->commentUrl(); ?>" class="hj-comment-form hj-comment-composer-form hj-memory-form" id="hj-memory-form"
+                              data-hj-comment-form data-hj-comment-role="top" data-hj-user-logged="<?php echo $hjUserLoggedIn ? '1' : '0'; ?>">
+                            <div class="hj-comment-box" data-hj-comment-box>
+                                <textarea
+                                    rows="6"
+                                    cols="50"
+                                    name="text"
+                                    id="hj-memory-text"
+                                    class="hj-comment-textarea hj-memory-textarea"
+                                    required></textarea>
+                                <input type="hidden" name="author" value="<?php $this->remember('author'); ?>">
+                                <input type="hidden" name="url" value="<?php $this->remember('url'); ?>">
+                                <input type="hidden" name="mail" value="<?php $this->remember('mail'); ?>">
+                                <?php if ($hjCommentToken !== ''): ?>
+                                    <input type="hidden" name="_" value="<?php echo hansJackEscape($hjCommentToken); ?>">
+                                <?php endif; ?>
+                                <div class="hj-comment-composer-actions" aria-label="<?php _e('评论操作'); ?>">
+                                    <div class="hj-comment-actions-left" aria-label="<?php _e('工具'); ?>">
+                                        <button class="hj-comment-icon-btn hj-comment-emoji" type="button" aria-label="<?php _e('表情'); ?>">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-smile-icon lucide-smile" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
+                                        </button>
+                                        <button class="hj-comment-icon-btn hj-comment-attach" type="button" aria-label="<?php _e('附件'); ?>">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip" aria-hidden="true"><path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"/></svg>
+                                        </button>
+                                        <button class="hj-comment-icon-btn hj-comment-private" type="button" aria-label="<?php _e('私信'); ?>" aria-pressed="false" data-hj-comment-private-toggle>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-line-dot-right-horizontal-icon lucide-line-dot-right-horizontal" aria-hidden="true"><path class="hj-private-line" d="M 3 12 L 15 12"/><circle class="hj-private-dot" cx="18" cy="12" r="3"/></svg>
+                                        </button>
+                                        <button class="hj-comment-icon-btn hj-comment-fullscreen-toggle" type="button" aria-label="<?php _e('展开全屏'); ?>" aria-pressed="false" data-hj-comment-fullscreen-toggle>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize-icon lucide-maximize hj-comment-fullscreen-icon hj-comment-fullscreen-icon-max" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-minimize-icon lucide-minimize hj-comment-fullscreen-icon hj-comment-fullscreen-icon-min" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+                                        </button>
+                                    </div>
+                                    <div class="hj-comment-actions-right" aria-label="<?php _e('提交'); ?>">
+                                        <button class="hj-comment-icon-btn hj-comment-send" type="submit" aria-label="<?php _e('提交评论'); ?>">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send-icon lucide-send" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    <?php elseif (!$hjAllowComment): ?>
+                        <h2 class="hj-comments-closed"><?php _e('当前页面评论已关闭'); ?></h2>
+                    <?php elseif ($hjUserLoggedIn): ?>
+                        <h2 class="hj-comments-closed"><?php _e('仅管理员可以在此页面发布评论'); ?></h2>
+                    <?php endif; ?>
 
-            <section class="hj-memory-block" aria-label="<?php _e('标签占比'); ?>">
-                <h2 class="hj-memory-block-title"><?php _e('标签占比'); ?></h2>
-                <div class="hj-memory-chart" id="hj-memory-chart-tags"></div>
-            </section>
+                    <div class="hj-comments-head" aria-label="<?php _e('评论'); ?>">
+                        <div class="hj-comments-head-title"><?php _e('评论'); ?></div>
+                        <div class="hj-comments-head-actions" aria-label="<?php _e('操作'); ?>">
+                            <button class="hj-comments-head-btn hj-comments-refresh-btn" type="button" aria-label="<?php _e('刷新评论'); ?>" title="<?php _e('刷新评论'); ?>" data-hj-comments-refresh>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw-icon lucide-refresh-cw" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                            </button>
+                            <button class="hj-comments-head-btn hj-comments-sort-btn" type="button" aria-label="<?php _e('切换为时间降序'); ?>" title="<?php _e('切换为时间降序'); ?>" data-hj-comments-sort-toggle>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-arrow-down-icon lucide-clock-arrow-down" aria-hidden="true"><path d="M12 6v6l2 1"/><path d="M12.337 21.994a10 10 0 1 1 9.588-8.767"/><path d="m14 18 4 4 4-4"/><path d="M18 14v8"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <?php if (!empty($hjCommentsData)): ?>
+                        <ol class="comment-list" data-hj-memory-comments>
+                            <?php foreach ($hjCommentsData as $item): ?>
+                                <?php
+                                $tagKeys = isset($item['tagKeys']) && is_array($item['tagKeys']) ? $item['tagKeys'] : [];
+                                $tagKeysAttr = implode(',', array_map('strval', $tagKeys));
+                                $status = (string) ($item['status'] ?? '');
+                                ?>
+                                <li
+                                    id="comment-<?php echo (int) ($item['id'] ?? 0); ?>"
+                                    class="comment-body comment-parent"
+                                    data-hj-memory-item
+                                    data-hj-month="<?php echo hansJackEscape((string) ($item['month'] ?? '')); ?>"
+                                    data-hj-tags="<?php echo hansJackEscape($tagKeysAttr); ?>">
+                                    <div class="comment-author" itemprop="creator" itemscope itemtype="http://schema.org/Person">
+                                        <span itemprop="image">
+                                            <img class="avatar" src="<?php echo hansJackEscape((string) ($item['avatar'] ?? '')); ?>" alt="" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+                                        </span>
+                                        <div class="hj-comment-author-meta">
+                                            <cite class="fn" itemprop="name"><?php echo hansJackEscape((string) ($item['author'] ?? '')); ?></cite>
+                                            <div class="comment-meta">
+                                                <time itemprop="commentTime" datetime="<?php echo hansJackEscape((string) ($item['dateIso'] ?? '')); ?>">
+                                                    <?php echo hansJackEscape((string) ($item['date'] ?? '')); ?>
+                                                </time>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="comment-content" itemprop="commentText">
+                                        <p><?php echo nl2br(hansJackEscape((string) ($item['text'] ?? ''))); ?></p>
+                                        <?php if ($status !== '' && $status !== 'approved'): ?>
+                                            <p class="comment-awaiting-moderation"><?php _e('审核中'); ?></p>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if (!empty($item['tags']) && is_array($item['tags'])): ?>
+                                        <div class="hj-memory-comment-tags">
+                                            <?php foreach ($item['tags'] as $tag): ?>
+                                                <button
+                                                    type="button"
+                                                    class="hj-memory-tag-chip"
+                                                    data-hj-memory-tag-key="<?php echo hansJackEscape((string) ($tag['key'] ?? '')); ?>">
+                                                    #<?php echo hansJackEscape((string) ($tag['name'] ?? '')); ?>
+                                                </button>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </li>
+                            <?php endforeach; ?>
+                        </ol>
+                        <p class="hj-memory-empty" data-hj-memory-empty hidden><?php _e('当前筛选条件下暂无评论'); ?></p>
+                    <?php else: ?>
+                        <p class="hj-memory-empty"><?php _e('暂无评论'); ?></p>
+                    <?php endif; ?>
+                </section>
+            </div>
+
+            <aside class="hj-posts-aside hj-memory-aside" aria-label="<?php _e('筛选与统计'); ?>">
+                <div class="hj-posts-block" aria-label="<?php _e('时间表'); ?>">
+                    <h2 class="hj-posts-block-title"><?php _e('时间表'); ?></h2>
+                    <div class="hj-posts-links" data-hj-memory-month-panel>
+                        <a class="hj-posts-link hj-memory-aside-link is-active" href="#comments" data-hj-memory-month="">
+                            <?php _e('全部'); ?>
+                            <span class="hj-memory-filter-count"><?php echo (int) $hjTotalComments; ?></span>
+                        </a>
+                        <?php foreach ($hjMonthRows as $row): ?>
+                            <a class="hj-posts-link hj-memory-aside-link" href="#comments" data-hj-memory-month="<?php echo hansJackEscape((string) ($row['value'] ?? '')); ?>">
+                                <?php echo hansJackEscape((string) ($row['label'] ?? '')); ?>
+                                <span class="hj-memory-filter-count"><?php echo (int) ($row['count'] ?? 0); ?></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <div class="hj-posts-block" aria-label="<?php _e('标签表'); ?>">
+                    <h2 class="hj-posts-block-title"><?php _e('标签表'); ?></h2>
+                    <div class="hj-posts-tags" data-hj-memory-tag-panel>
+                        <a class="hj-posts-tag-pill hj-memory-aside-tag is-active" href="#comments" data-hj-memory-tag-filter="">
+                            <?php _e('全部'); ?>
+                            <span class="hj-memory-filter-count"><?php echo (int) $hjTotalComments; ?></span>
+                        </a>
+                        <?php foreach ($hjTagRows as $tag): ?>
+                            <a class="hj-posts-tag-pill hj-memory-aside-tag" href="#comments" data-hj-memory-tag-filter="<?php echo hansJackEscape((string) ($tag['key'] ?? '')); ?>">
+                                #<?php echo hansJackEscape((string) ($tag['name'] ?? '')); ?>
+                                <span class="hj-memory-filter-count"><?php echo (int) ($tag['count'] ?? 0); ?></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <div class="hj-posts-block" aria-label="<?php _e('统计'); ?>">
+                    <h2 class="hj-posts-block-title"><?php _e('统计'); ?></h2>
+                    <dl class="hj-memory-stats">
+                        <div class="hj-memory-stats-row">
+                            <dt><?php _e('评论'); ?></dt>
+                            <dd><?php echo (int) $hjTotalComments; ?></dd>
+                        </div>
+                        <div class="hj-memory-stats-row">
+                            <dt><?php _e('月份'); ?></dt>
+                            <dd><?php echo (int) count($hjMonthRows); ?></dd>
+                        </div>
+                        <div class="hj-memory-stats-row">
+                            <dt><?php _e('标签'); ?></dt>
+                            <dd><?php echo (int) count($hjTagRows); ?></dd>
+                        </div>
+                        <div class="hj-memory-stats-row">
+                            <dt><?php _e('最新'); ?></dt>
+                            <dd><?php echo hansJackEscape($hjLatestText); ?></dd>
+                        </div>
+                    </dl>
+                </div>
+            </aside>
         </div>
     </section>
 </main>
 
-<script src="<?php $this->options->themeUrl('assets/vendor/echarts/echarts.min.js'); ?>"></script>
 <script>
     (function () {
-        var payload = <?php echo json_encode($hjMemoryPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
-
-        function cssVar(name) {
-            try {
-                return window.getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-            } catch (e) {
-                return "";
-            }
+        var root = document.querySelector("[data-hj-memory-root]");
+        if (!root) {
+            return;
         }
 
-        function isDark() {
-            return document.documentElement.classList.contains("hj-theme-dark");
-        }
+        var items = Array.prototype.slice.call(root.querySelectorAll("[data-hj-memory-item]"));
+        var monthPanel = root.querySelector("[data-hj-memory-month-panel]");
+        var tagPanel = root.querySelector("[data-hj-memory-tag-panel]");
+        var monthButtons = monthPanel ? Array.prototype.slice.call(monthPanel.querySelectorAll("[data-hj-memory-month]")) : [];
+        var tagButtons = tagPanel ? Array.prototype.slice.call(tagPanel.querySelectorAll("[data-hj-memory-tag-filter]")) : [];
+        var inlineTagButtons = Array.prototype.slice.call(root.querySelectorAll("[data-hj-memory-tag-key]"));
+        var countNode = root.querySelector("[data-hj-memory-visible-count]");
+        var emptyNode = root.querySelector("[data-hj-memory-empty]");
 
-        function getThemeColors() {
-            var dark = isDark();
-            var text = dark ? cssVar("--hj-night-text") : cssVar("--hj-day-text");
-            var muted = dark ? cssVar("--hj-muted-night") : cssVar("--hj-muted-day");
-            var line = dark ? cssVar("--hj-line-night") : cssVar("--hj-line-day");
-            var primary = cssVar("--hj-nav-block-bg") || (dark ? "#dddddb" : "#2a2a28");
-            var secondary = dark ? cssVar("--hj-night-gray") : cssVar("--hj-day-gray");
+        var state = {
+            month: "",
+            tag: ""
+        };
 
-            return {
-                text: text || (dark ? "#dddddb" : "#2a2a28"),
-                muted: muted || (dark ? "#a5a5a5" : "#757575"),
-                line: line || "rgba(0,0,0,0.2)",
-                primary: primary,
-                secondary: secondary || (dark ? "#a5a5a5" : "#757575"),
-            };
-        }
+        function updateButtonStates() {
+            monthButtons.forEach(function (btn) {
+                var value = (btn.getAttribute("data-hj-memory-month") || "").trim();
+                btn.classList.toggle("is-active", value === state.month);
+            });
 
-        function initChart(el, buildOption) {
-            if (!el) {
-                return null;
-            }
-            if (!window.echarts) {
-                el.textContent = "ECharts 未加载";
-                return null;
-            }
-
-            var chart = window.echarts.init(el);
-            function render() {
-                var colors = getThemeColors();
-                var option = buildOption(colors);
-                chart.setOption(option, true);
-            }
-
-            render();
-            return { chart: chart, render: render };
-        }
-
-        function emptyOption(text, colors) {
-            return {
-                backgroundColor: "transparent",
-                textStyle: { color: colors.text, fontFamily: cssVar("--hj-font-ui") || "serif" },
-                graphic: [{
-                    type: "text",
-                    left: "center",
-                    top: "middle",
-                    style: {
-                        text: text,
-                        fill: colors.muted,
-                        fontSize: 12
-                    }
-                }]
-            };
-        }
-
-        var instances = [];
-
-        instances.push(initChart(document.getElementById("hj-memory-chart-categories"), function (colors) {
-            var items = payload.categories && payload.categories.postsChildren ? payload.categories.postsChildren : [];
-            var has = items && items.some(function (it) { return (it && it.value) > 0; });
-            if (!items.length || !has) {
-                return emptyOption("暂无分类数据", colors);
-            }
-
-            return {
-                backgroundColor: "transparent",
-                color: [colors.primary, colors.secondary, "#888", "#aaa", "#666"],
-                textStyle: { color: colors.text, fontFamily: cssVar("--hj-font-ui") || "serif" },
-                tooltip: { trigger: "item" },
-                legend: { show: false },
-                series: [{
-                    type: "pie",
-                    radius: ["35%", "72%"],
-                    center: ["50%", "56%"],
-                    avoidLabelOverlap: true,
-                    itemStyle: { borderColor: "transparent", borderWidth: 0 },
-                    label: { color: colors.text, formatter: "{b}\n{d}%" },
-                    labelLine: { lineStyle: { color: colors.line } },
-                    data: items
-                }]
-            };
-        }));
-
-        instances.push(initChart(document.getElementById("hj-memory-chart-tags"), function (colors) {
-            var items = payload.tags && payload.tags.items ? payload.tags.items : [];
-            if (!items.length) {
-                return emptyOption("暂无标签数据", colors);
-            }
-
-            var min = Infinity;
-            var max = 0;
-            for (var i = 0; i < items.length; i++) {
-                var v = items[i] && items[i].value ? Number(items[i].value) : 0;
-                if (!isFinite(v)) {
-                    continue;
-                }
-                if (v < min) {
-                    min = v;
-                }
-                if (v > max) {
-                    max = v;
-                }
-            }
-            if (!isFinite(min)) {
-                min = 0;
-            }
-            if (!isFinite(max) || max <= min) {
-                max = min + 1;
-            }
-
-            var dark = isDark();
-            var low = dark ? "rgba(221,221,219,0.06)" : "rgba(42,42,40,0.07)";
-            var high = dark ? "rgba(221,221,219,0.24)" : "rgba(42,42,40,0.20)";
-
-            return {
-                backgroundColor: "transparent",
-                textStyle: { color: colors.text, fontFamily: cssVar("--hj-font-ui") || "serif" },
-                visualMap: {
-                    show: false,
-                    min: min,
-                    max: max,
-                    inRange: { color: [low, high] }
-                },
-                tooltip: {
-                    formatter: function (info) {
-                        var name = (info && info.name) ? info.name : "";
-                        var value = (info && info.value) ? info.value : 0;
-                        return name + " : " + value;
-                    }
-                },
-                series: [{
-                    type: "treemap",
-                    roam: false,
-                    nodeClick: false,
-                    breadcrumb: { show: false },
-                    label: { show: true, color: colors.text, fontSize: 12 },
-                    upperLabel: { show: false },
-                    itemStyle: {
-                        borderColor: colors.line,
-                        borderWidth: 1,
-                        gapWidth: 1
-                    },
-                    levels: [{
-                        itemStyle: { borderColor: colors.line, borderWidth: 1, gapWidth: 1 },
-                    }],
-                    data: items
-                }]
-            };
-        }));
-
-        function safeResize() {
-            instances.forEach(function (inst) {
-                if (inst && inst.chart) {
-                    inst.chart.resize();
-                }
+            tagButtons.forEach(function (btn) {
+                var value = (btn.getAttribute("data-hj-memory-tag-filter") || "").trim();
+                btn.classList.toggle("is-active", value === state.tag);
             });
         }
 
-        function rerender() {
-            instances.forEach(function (inst) {
-                if (inst && inst.render) {
-                    inst.render();
+        function applyFilters() {
+            var visible = 0;
+            var total = items.length;
+
+            items.forEach(function (item) {
+                var month = (item.getAttribute("data-hj-month") || "").trim();
+                var tagsRaw = (item.getAttribute("data-hj-tags") || "").trim();
+                var tags = tagsRaw === "" ? [] : tagsRaw.split(",");
+                var matchMonth = !state.month || month === state.month;
+                var matchTag = !state.tag || tags.indexOf(state.tag) !== -1;
+                var show = matchMonth && matchTag;
+                item.hidden = !show;
+                if (show) {
+                    visible += 1;
                 }
+            });
+
+            if (countNode) {
+                countNode.textContent = "显示 " + visible + " / " + total + " 条";
+            }
+            if (emptyNode) {
+                emptyNode.hidden = visible > 0;
+            }
+            updateButtonStates();
+        }
+
+        if (monthPanel) {
+            monthPanel.addEventListener("click", function (event) {
+                var target = event.target && event.target.closest ? event.target.closest("[data-hj-memory-month]") : null;
+                if (!target) {
+                    return;
+                }
+                if (event && typeof event.preventDefault === "function") {
+                    event.preventDefault();
+                }
+                state.month = (target.getAttribute("data-hj-memory-month") || "").trim();
+                applyFilters();
             });
         }
 
-        window.addEventListener("resize", function () {
-            safeResize();
+        if (tagPanel) {
+            tagPanel.addEventListener("click", function (event) {
+                var target = event.target && event.target.closest ? event.target.closest("[data-hj-memory-tag-filter]") : null;
+                if (!target) {
+                    return;
+                }
+                if (event && typeof event.preventDefault === "function") {
+                    event.preventDefault();
+                }
+                state.tag = (target.getAttribute("data-hj-memory-tag-filter") || "").trim();
+                applyFilters();
+            });
+        }
+
+        inlineTagButtons.forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                state.tag = (btn.getAttribute("data-hj-memory-tag-key") || "").trim();
+                applyFilters();
+            });
         });
 
-        // Re-render charts when theme class changes.
-        try {
-            var obs = new MutationObserver(function (muts) {
-                for (var i = 0; i < muts.length; i++) {
-                    if (muts[i].attributeName === "class") {
-                        rerender();
-                        safeResize();
-                        break;
-                    }
-                }
-            });
-            obs.observe(document.documentElement, { attributes: true });
-        } catch (e) {
-            // Ignore.
-        }
+        applyFilters();
     })();
 </script>
 
