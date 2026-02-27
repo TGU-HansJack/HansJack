@@ -67,6 +67,21 @@ $hjNormalizeTag = static function ($value): string {
     return strtolower($value);
 };
 
+$hjFormatDate = static function ($timestamp, $format): string {
+    $time = (int) $timestamp;
+    $fmt = trim((string) $format);
+    if ($time <= 0 || $fmt === '') {
+        return '';
+    }
+
+    try {
+        $date = new \Typecho\Date($time);
+        return (string) $date->format($fmt);
+    } catch (\Throwable $e) {
+        return date($fmt, $time);
+    }
+};
+
 $this->comments()->to($hjComments);
 if ($hjComments && $hjComments->have()) {
     while ($hjComments->next()) {
@@ -80,7 +95,7 @@ if ($hjComments && $hjComments->have()) {
             $hjLatestCreated = $created;
         }
 
-        $month = ($created > 0) ? date('Y-m', $created) : '';
+        $month = $hjFormatDate($created, 'Y-m');
         if ($month !== '') {
             $hjMonthCounts[$month] = (int) ($hjMonthCounts[$month] ?? 0) + 1;
         }
@@ -189,8 +204,8 @@ if ($hjComments && $hjComments->have()) {
             'author' => $author,
             'avatar' => $avatar,
             'created' => $created,
-            'date' => ($created > 0) ? date('Y/m/d H:i:s', $created) : '',
-            'dateIso' => ($created > 0) ? date('c', $created) : '',
+            'date' => $hjFormatDate($created, 'Y/m/d H:i:s'),
+            'dateIso' => $hjFormatDate($created, 'c'),
             'month' => $month,
             'text' => $rawText,
             'content' => $renderedContent,
@@ -237,7 +252,10 @@ if (!empty($hjTagRows)) {
 }
 
 $hjTotalComments = count($hjCommentsData);
-$hjLatestText = ($hjLatestCreated > 0) ? date('Y/m/d H:i:s', $hjLatestCreated) : _t('暂无');
+$hjLatestText = $hjFormatDate($hjLatestCreated, 'Y/m/d H:i:s');
+if ($hjLatestText === '') {
+    $hjLatestText = _t('暂无');
+}
 $hjPagePermalink = '';
 try {
     $hjPagePermalink = trim((string) ($this->permalink ?? ''));

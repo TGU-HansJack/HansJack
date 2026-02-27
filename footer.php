@@ -4867,8 +4867,21 @@
                 return;
             }
 
+            function setLinkKind(kind) {
+                try {
+                    a.classList.toggle("hj-link-mail", kind === "mail");
+                    a.classList.toggle("hj-link-internal", kind === "internal");
+                    a.classList.toggle("hj-link-external", kind === "external");
+                } catch (e) {}
+            }
+
             var lower = raw.toLowerCase();
-            if (lower.indexOf("mailto:") === 0 || lower.indexOf("tel:") === 0 || lower.indexOf("javascript:") === 0) {
+            if (lower.indexOf("mailto:") === 0) {
+                setLinkKind("mail");
+                return;
+            }
+            if (lower.indexOf("tel:") === 0 || lower.indexOf("javascript:") === 0) {
+                setLinkKind("external");
                 return;
             }
 
@@ -4876,9 +4889,11 @@
             try {
                 url = new URL(raw, window.location.href);
             } catch (e) {
+                setLinkKind("external");
                 return;
             }
             if (!url || !url.host) {
+                setLinkKind("external");
                 return;
             }
 
@@ -4889,10 +4904,7 @@
                 isInternal = false;
             }
 
-            try {
-                a.classList.toggle("hj-link-internal", isInternal);
-                a.classList.toggle("hj-link-external", !isInternal);
-            } catch (e) {}
+            setLinkKind(isInternal ? "internal" : "external");
         }
 
         for (var c = 0; c < contents.length; c++) {
