@@ -13,6 +13,8 @@
                 $hjIcpBeian = trim((string) $this->options->hjIcpBeian);
                 $hjMpsBeian = trim((string) $this->options->hjMpsBeian);
                 $hjFooterCustomCode = trim((string) $this->options->hjFooterCustomCode);
+                $hjRewardImageUrl = hansJackNormalizeAssetUrl($this->options, (string) ($this->options->hjRewardImageUrl ?? ''));
+                $hjShowRewardFab = $this->is('post') && $hjRewardImageUrl !== '';
                 ?>
                 <?php if ($hjIcpBeian !== ''): ?>
                     <span class="hj-footer-sep" aria-hidden="true">·</span>
@@ -71,6 +73,20 @@
         </span>
         <span class="hj-fab-tip" aria-hidden="true"><?php _e('设置'); ?></span>
     </button>
+    <?php if ($hjShowRewardFab): ?>
+        <button class="hj-fab-btn hj-fab-reward" type="button" aria-label="<?php _e('赞赏'); ?>" aria-haspopup="true" aria-expanded="false">
+            <span class="hj-fab-ring" aria-hidden="true">
+                <svg class="hj-fab-ring-svg" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+                    <circle class="hj-fab-ring-bg" cx="20" cy="20" r="18"></circle>
+                    <circle class="hj-fab-ring-fg" cx="20" cy="20" r="18"></circle>
+                </svg>
+            </span>
+            <span class="hj-fab-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-hand-heart-icon lucide-hand-heart" aria-hidden="true"><path d="M11 14h2a2 2 0 0 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16"/><path d="m14.45 13.39 5.05-4.694C20.196 8 21 6.85 21 5.75a2.75 2.75 0 0 0-4.797-1.837.276.276 0 0 1-.406 0A2.75 2.75 0 0 0 11 5.75c0 1.2.802 2.248 1.5 2.946L16 11.95"/><path d="m2 15 6 6"/><path d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a1 1 0 0 0-2.75-2.91"/></svg>
+            </span>
+            <span class="hj-fab-tip" aria-hidden="true"><?php _e('赞赏'); ?></span>
+        </button>
+    <?php endif; ?>
     <button class="hj-fab-btn hj-fab-comment" type="button" aria-label="<?php _e('评论'); ?>">
         <span class="hj-fab-ring" aria-hidden="true">
             <svg class="hj-fab-ring-svg" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
@@ -123,6 +139,19 @@
         </div>
     </div>
 </div>
+<?php if ($hjShowRewardFab): ?>
+    <div class="hj-fab-reward-backdrop" data-hj-reward-backdrop aria-hidden="true" hidden></div>
+    <div class="hj-fab-reward-popover" data-hj-reward-popover aria-hidden="true" hidden>
+        <div class="hj-fab-reward-panel" role="dialog" aria-modal="true" aria-label="<?php _e('赞赏码'); ?>" data-hj-reward-panel>
+            <div class="hj-fab-reward-media">
+                <img src="<?php echo hansJackEscape($hjRewardImageUrl); ?>" alt="<?php _e('赞赏码'); ?>" loading="lazy" decoding="async">
+                <button class="hj-fab-reward-close" type="button" aria-label="<?php _e('关闭'); ?>" data-hj-reward-close>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
 
 <div class="hj-mobile-toc-backdrop" data-hj-mobile-toc-backdrop aria-hidden="true"></div>
 
@@ -245,6 +274,7 @@
 
         var topBtn = fab.querySelector(".hj-fab-top");
         var settingsBtn = fab.querySelector(".hj-fab-settings");
+        var rewardBtn = fab.querySelector(".hj-fab-reward");
         var commentBtn = fab.querySelector(".hj-fab-comment");
         var tocBtn = fab.querySelector(".hj-fab-toc");
         var settingsPopover = document.querySelector("[data-hj-posts-settings-popover]");
@@ -252,17 +282,24 @@
         var settingsSortModeSelect = settingsPopover ? settingsPopover.querySelector("[data-hj-posts-setting-sort-mode]") : null;
         var settingsOrderSelect = settingsPopover ? settingsPopover.querySelector("[data-hj-posts-setting-order]") : null;
         var settingsListModeSelect = settingsPopover ? settingsPopover.querySelector("[data-hj-posts-setting-list-mode]") : null;
+        var rewardBackdrop = document.querySelector("[data-hj-reward-backdrop]");
+        var rewardPopover = document.querySelector("[data-hj-reward-popover]");
+        var rewardPanel = rewardPopover ? rewardPopover.querySelector("[data-hj-reward-panel]") : null;
+        var rewardCloseBtn = rewardPopover ? rewardPopover.querySelector("[data-hj-reward-close]") : null;
         var tocBackdrop = document.querySelector("[data-hj-mobile-toc-backdrop]");
         var tocCloseBtn = document.querySelector(".hj-article-toc-close");
         var tocOpenClass = "hj-mobile-toc-open";
         var wideMql = null;
         var narrowMql = null;
+        var rewardHoverMql = null;
         try {
             wideMql = window.matchMedia ? window.matchMedia("(min-width: 1100px)") : null;
             narrowMql = window.matchMedia ? window.matchMedia("(max-width: 980px)") : null;
+            rewardHoverMql = window.matchMedia ? window.matchMedia("(hover: hover) and (pointer: fine)") : null;
         } catch (e) {
             wideMql = null;
             narrowMql = null;
+            rewardHoverMql = null;
         }
         var raf = window.requestAnimationFrame
             ? window.requestAnimationFrame.bind(window)
@@ -752,6 +789,108 @@
             }
         }
 
+        function shouldUseRewardHover() {
+            if (rewardHoverMql) {
+                return !!rewardHoverMql.matches;
+            }
+            return !isNarrowScreen();
+        }
+
+        function positionRewardPopover() {
+            if (!rewardPopover || !rewardPanel) {
+                return;
+            }
+
+            var panelRect = rewardPanel.getBoundingClientRect();
+            var viewportPad = 8;
+            var left = (window.innerWidth - panelRect.width) / 2;
+            var top = (window.innerHeight - panelRect.height) / 2;
+            var maxLeft = Math.max(viewportPad, window.innerWidth - panelRect.width - viewportPad);
+            var maxTop = Math.max(viewportPad, window.innerHeight - panelRect.height - viewportPad);
+            if (left < viewportPad) {
+                left = viewportPad;
+            } else if (left > maxLeft) {
+                left = maxLeft;
+            }
+            if (top < viewportPad) {
+                top = viewportPad;
+            } else if (top > maxTop) {
+                top = maxTop;
+            }
+
+            rewardPopover.style.left = left.toFixed(0) + "px";
+            rewardPopover.style.top = top.toFixed(0) + "px";
+        }
+
+        function isRewardPopoverOpen() {
+            return !!(rewardPopover && rewardPopover.classList && rewardPopover.classList.contains("is-open"));
+        }
+
+        var rewardPopoverHideTimer = null;
+
+        function clearRewardPopoverHideTimer() {
+            if (rewardPopoverHideTimer) {
+                window.clearTimeout(rewardPopoverHideTimer);
+                rewardPopoverHideTimer = null;
+            }
+        }
+
+        function closeRewardPopover(immediate) {
+            if (!rewardPopover) {
+                return;
+            }
+            clearRewardPopoverHideTimer();
+            rewardPopover.classList.remove("is-open");
+            rewardPopover.setAttribute("aria-hidden", "true");
+            if (rewardBackdrop) {
+                rewardBackdrop.classList.remove("is-open");
+                rewardBackdrop.setAttribute("aria-hidden", "true");
+            }
+            if (rewardBtn) {
+                rewardBtn.setAttribute("aria-expanded", "false");
+            }
+
+            var hideNow = function () {
+                rewardPopover.hidden = true;
+                rewardPopover.style.left = "";
+                rewardPopover.style.top = "";
+                if (rewardBackdrop) {
+                    rewardBackdrop.hidden = true;
+                }
+            };
+
+            if (immediate) {
+                hideNow();
+                return;
+            }
+
+            rewardPopoverHideTimer = window.setTimeout(function () {
+                rewardPopoverHideTimer = null;
+                hideNow();
+            }, 180);
+        }
+
+        function openRewardPopover() {
+            if (!rewardPopover || !rewardPanel || !rewardBtn) {
+                return;
+            }
+            clearRewardPopoverHideTimer();
+            if (rewardBackdrop) {
+                rewardBackdrop.hidden = false;
+                rewardBackdrop.setAttribute("aria-hidden", "false");
+            }
+            rewardPopover.hidden = false;
+            rewardPopover.setAttribute("aria-hidden", "false");
+            rewardBtn.setAttribute("aria-expanded", "true");
+            positionRewardPopover();
+            window.setTimeout(function () {
+                if (rewardBackdrop) {
+                    rewardBackdrop.classList.add("is-open");
+                }
+                rewardPopover.classList.add("is-open");
+            }, 0);
+        }
+
         postsSettings = loadPostsSettings();
         syncPostsSettingsUI();
         applyPostsSettingsToAllLists();
@@ -800,27 +939,63 @@
             });
         }
 
+        if (rewardBtn && rewardPopover && rewardPanel) {
+            rewardBtn.addEventListener("click", function (e) {
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+                openRewardPopover();
+            });
+
+            rewardBtn.addEventListener("focus", function () {
+                openRewardPopover();
+            });
+
+            rewardBtn.addEventListener("mouseenter", function () {
+                if (!shouldUseRewardHover()) {
+                    return;
+                }
+                openRewardPopover();
+            });
+        }
+
+        if (rewardCloseBtn) {
+            rewardCloseBtn.addEventListener("click", function (e) {
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+                closeRewardPopover();
+            });
+        }
+
         document.addEventListener("mousedown", function (e) {
-            if (!isSettingsPopoverOpen()) {
-                return;
-            }
             var t = e ? e.target : null;
             if (!t || !t.closest) {
                 return;
             }
-            if (t.closest(".hj-fab-settings-popover") || t.closest(".hj-fab-settings")) {
-                return;
+
+            if (isSettingsPopoverOpen()) {
+                if (!t.closest(".hj-fab-settings-popover") && !t.closest(".hj-fab-settings")) {
+                    closeSettingsPopover();
+                }
             }
-            closeSettingsPopover();
+
+            if (isRewardPopoverOpen()) {
+                if (!t.closest(".hj-fab-reward-popover") && !t.closest(".hj-fab-reward")) {
+                    closeRewardPopover();
+                }
+            }
         }, true);
 
         window.addEventListener("keydown", function (e) {
-            if (!isSettingsPopoverOpen()) {
-                return;
-            }
             var key = e && (e.key || e.code);
             if (key === "Escape" || key === "Esc") {
-                closeSettingsPopover();
+                if (isSettingsPopoverOpen()) {
+                    closeSettingsPopover();
+                }
+                if (isRewardPopoverOpen()) {
+                    closeRewardPopover();
+                }
             }
         });
 
@@ -828,6 +1003,9 @@
             updateSettingsFabVisibility();
             if (isSettingsPopoverOpen()) {
                 positionSettingsPopover();
+            }
+            if (isRewardPopoverOpen()) {
+                positionRewardPopover();
             }
         });
 

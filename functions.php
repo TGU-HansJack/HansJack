@@ -44,6 +44,15 @@ function themeConfig($form)
     );
     $form->addInput($creativeUrl);
 
+    $rewardImageUrl = new \Typecho\Widget\Helper\Form\Element\Text(
+        'hjRewardImageUrl',
+        null,
+        '',
+        _t('赞赏码图片链接'),
+        _t('用于文章页 FAB 赞赏弹窗；支持完整 URL 或站内相对路径（如 /usr/uploads/reward.png），留空则不显示。')
+    );
+    $form->addInput($rewardImageUrl);
+
     $githubOauthEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
         'hjGithubOauthEnabled',
         [
