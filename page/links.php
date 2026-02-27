@@ -40,6 +40,284 @@ if (!function_exists('hansJackV3aLinksStr')) {
     }
 }
 
+if (!function_exists('hansJackLinksJsonExit')) {
+    /**
+     * @param array<string,mixed> $payload
+     */
+    function hansJackLinksJsonExit(array $payload, int $statusCode = 200): void
+    {
+        if (!headers_sent()) {
+            http_response_code($statusCode);
+            header('Content-Type: application/json; charset=UTF-8');
+            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        }
+
+        $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (!is_string($json)) {
+            $json = '{"ok":false,"message":"编码失败。"}';
+        }
+        echo $json;
+        exit;
+    }
+}
+
+if (!function_exists('hansJackLinksFeedExcerpt')) {
+    function hansJackLinksFeedExcerpt(string $value, int $max = 120): string
+    {
+        $text = trim($value);
+        if ($text === '') {
+            return '';
+        }
+
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = strip_tags($text);
+        $text = preg_replace('/\s+/', ' ', $text);
+        $text = trim((string) $text);
+        if ($text === '') {
+            return '';
+        }
+
+        if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+            if (mb_strlen($text, 'UTF-8') > $max) {
+                return (string) mb_substr($text, 0, $max, 'UTF-8') . '...';
+            }
+            return $text;
+        }
+
+        if (strlen($text) > $max) {
+            return substr($text, 0, $max) . '...';
+        }
+
+        return $text;
+    }
+}
+
+if (!function_exists('hansJackLinksFeedResolveUrl')) {
+    function hansJackLinksFeedResolveUrl(string $url, string $feedUrl): string
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+
+        if (preg_match('/^https?:\\/\\//i', $url)) {
+            return $url;
+        }
+
+        if (strpos($url, '//') === 0) {
+            $scheme = (string) (parse_url($feedUrl, PHP_URL_SCHEME) ?: 'https');
+            return $scheme . ':' . $url;
+        }
+
+        if (class_exists('\\Typecho\\Common')) {
+            return (string) \Typecho\Common::url($url, $feedUrl);
+        }
+
+        return $url;
+    }
+}
+
+if (!function_exists('hansJackLinksFeedFetchBody')) {
+    /**
+     * @return array{ok:bool,body:string,message:string}
+     */
+    function hansJackLinksFeedFetchBody(string $url): array
+    {
+        $url = trim($url);
+        if ($url === '' || filter_var($url, FILTER_VALIDATE_URL) === false) {
+            return ['ok' => false, 'body' => '', 'message' => '订阅地址无效。'];
+        }
+
+        $scheme = strtolower((string) (parse_url($url, PHP_URL_SCHEME) ?? ''));
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            return ['ok' => false, 'body' => '', 'message' => '仅支持 http/https 订阅地址。'];
+        }
+
+        $ua = 'HansJackFeedPreview/1.0';
+
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            if ($ch !== false) {
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 6);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                curl_setopt($ch, CURLOPT_USERAGENT, $ua);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Accept: application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
+                ]);
+
+                $body = curl_exec($ch);
+                $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $err = (string) curl_error($ch);
+                curl_close($ch);
+
+                if (is_string($body) && $body !== '' && $code >= 200 && $code < 400) {
+                    return ['ok' => true, 'body' => $body, 'message' => ''];
+                }
+
+                return ['ok' => false, 'body' => '', 'message' => $err !== '' ? $err : '订阅抓取失败。'];
+            }
+        }
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 10,
+                'follow_location' => 1,
+                'max_redirects' => 3,
+                'header' => "User-Agent: {$ua}\r\nAccept: application/rss+xml, application/atom+xml, application/xml, text/xml, */*\r\n",
+            ],
+            'ssl' => [
+                'verify_peer' => true,
+                'verify_peer_name' => true,
+            ],
+        ]);
+
+        $body = @file_get_contents($url, false, $context);
+        if (is_string($body) && $body !== '') {
+            return ['ok' => true, 'body' => $body, 'message' => ''];
+        }
+
+        return ['ok' => false, 'body' => '', 'message' => '订阅抓取失败。'];
+    }
+}
+
+if (!function_exists('hansJackLinksFeedParseItems')) {
+    /**
+     * @return array<int,array{title:string,url:string,publishedAt:int,summary:string}>
+     */
+    function hansJackLinksFeedParseItems(string $xml, string $feedUrl, int $limit = 8): array
+    {
+        $items = [];
+        if (trim($xml) === '') {
+            return $items;
+        }
+        if (!function_exists('simplexml_load_string')) {
+            return $items;
+        }
+
+        $old = libxml_use_internal_errors(true);
+        try {
+            $feed = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NOCDATA | LIBXML_NONET);
+        } catch (\Throwable $e) {
+            $feed = false;
+        }
+
+        if (!$feed) {
+            libxml_clear_errors();
+            libxml_use_internal_errors($old);
+            return $items;
+        }
+
+        $pushItem = function (string $title, string $url, string $summary, int $publishedAt) use (&$items): void {
+            $title = hansJackLinksFeedExcerpt($title, 120);
+            if ($title === '') {
+                $title = '未命名文章';
+            }
+
+            $summary = hansJackLinksFeedExcerpt($summary, 150);
+            if ($summary === '') {
+                $summary = '暂无摘要';
+            }
+
+            $items[] = [
+                'title' => $title,
+                'url' => $url,
+                'publishedAt' => max(0, $publishedAt),
+                'summary' => $summary,
+            ];
+        };
+
+        if (isset($feed->channel->item) || isset($feed->item)) {
+            $channels = isset($feed->channel) ? [$feed->channel] : [$feed];
+            foreach ($channels as $channel) {
+                if (!isset($channel->item)) {
+                    continue;
+                }
+
+                foreach ($channel->item as $item) {
+                    $title = trim((string) ($item->title ?? ''));
+                    $link = trim((string) ($item->link ?? ''));
+                    $summary = trim((string) ($item->description ?? ''));
+                    $publishedText = trim((string) ($item->pubDate ?? ''));
+
+                    $ns = $item->getNamespaces(true);
+                    if ($summary === '' && isset($ns['content'])) {
+                        $contentChild = $item->children($ns['content']);
+                        $summary = trim((string) ($contentChild->encoded ?? ''));
+                    }
+                    if ($publishedText === '' && isset($ns['dc'])) {
+                        $dcChild = $item->children($ns['dc']);
+                        $publishedText = trim((string) ($dcChild->date ?? ''));
+                    }
+
+                    $publishedAt = $publishedText !== '' ? (int) strtotime($publishedText) : 0;
+                    $link = hansJackLinksFeedResolveUrl($link, $feedUrl);
+                    if ($link !== '' && filter_var($link, FILTER_VALIDATE_URL) === false) {
+                        $link = '';
+                    }
+
+                    $pushItem($title, $link, $summary, $publishedAt);
+                }
+            }
+        }
+
+        if (isset($feed->entry)) {
+            foreach ($feed->entry as $entry) {
+                $title = trim((string) ($entry->title ?? ''));
+                $summary = trim((string) ($entry->summary ?? ''));
+                if ($summary === '') {
+                    $summary = trim((string) ($entry->content ?? ''));
+                }
+
+                $publishedText = trim((string) ($entry->updated ?? ''));
+                if ($publishedText === '') {
+                    $publishedText = trim((string) ($entry->published ?? ''));
+                }
+                $publishedAt = $publishedText !== '' ? (int) strtotime($publishedText) : 0;
+
+                $link = '';
+                if (isset($entry->link)) {
+                    foreach ($entry->link as $linkNode) {
+                        $attrs = $linkNode->attributes();
+                        $href = trim((string) ($attrs['href'] ?? ''));
+                        $rel = strtolower(trim((string) ($attrs['rel'] ?? 'alternate')));
+                        if ($href !== '' && ($rel === '' || $rel === 'alternate')) {
+                            $link = $href;
+                            break;
+                        }
+                        if ($link === '' && $href !== '') {
+                            $link = $href;
+                        }
+                    }
+                }
+
+                $link = hansJackLinksFeedResolveUrl($link, $feedUrl);
+                if ($link !== '' && filter_var($link, FILTER_VALIDATE_URL) === false) {
+                    $link = '';
+                }
+
+                $pushItem($title, $link, $summary, $publishedAt);
+            }
+        }
+
+        usort($items, function (array $a, array $b): int {
+            return ((int) ($b['publishedAt'] ?? 0)) <=> ((int) ($a['publishedAt'] ?? 0));
+        });
+
+        if (count($items) > $limit) {
+            $items = array_slice($items, 0, $limit);
+        }
+
+        libxml_clear_errors();
+        libxml_use_internal_errors($old);
+
+        return $items;
+    }
+}
+
 $applySettings = [
     'allowTypeSelect' => 0,
     'defaultType' => 'friend',
@@ -54,6 +332,9 @@ $applySettings = [
         'message' => 0,
     ],
 ];
+
+$isFeedPreviewRequest = (string) ($request->get('hj_links_feed_preview') ?? '') === '1';
+$feedPreviewLinkId = (int) ($request->get('link_id') ?? 0);
 
 try {
     $raw = (string) ($this->options->v3a_friend_apply_settings ?? '');
@@ -103,6 +384,51 @@ try {
 
         if (!$pdo) {
             throw new \RuntimeException('Local storage unavailable: please enable PHP extension pdo_sqlite.');
+        }
+
+        if ($isFeedPreviewRequest) {
+            if ($feedPreviewLinkId <= 0) {
+                hansJackLinksJsonExit([
+                    'ok' => false,
+                    'message' => '参数错误。',
+                ], 400);
+            }
+
+            $stmt = $pdo->prepare('SELECT id,name,feed FROM v3a_friend_link WHERE id = :id AND status = :status LIMIT 1');
+            $stmt->execute([
+                ':id' => $feedPreviewLinkId,
+                ':status' => 1,
+            ]);
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!is_array($row)) {
+                hansJackLinksJsonExit([
+                    'ok' => false,
+                    'message' => '未找到订阅信息。',
+                ], 404);
+            }
+
+            $feedUrl = trim((string) ($row['feed'] ?? ''));
+            if ($feedUrl === '') {
+                hansJackLinksJsonExit([
+                    'ok' => false,
+                    'message' => '无订阅信息。',
+                ], 404);
+            }
+
+            $remote = hansJackLinksFeedFetchBody($feedUrl);
+            if (empty($remote['ok'])) {
+                hansJackLinksJsonExit([
+                    'ok' => false,
+                    'message' => (string) ($remote['message'] ?? '订阅抓取失败。'),
+                ], 502);
+            }
+
+            $items = hansJackLinksFeedParseItems((string) ($remote['body'] ?? ''), $feedUrl, 8);
+            hansJackLinksJsonExit([
+                'ok' => true,
+                'title' => trim((string) ($row['name'] ?? '')),
+                'items' => $items,
+            ]);
         }
 
         if (
@@ -250,6 +576,19 @@ try {
 } catch (\Throwable $e) {
     $noticeType = 'error';
     $noticeMessage = $noticeMessage ?: ('加载失败：' . $e->getMessage());
+    if ($isFeedPreviewRequest) {
+        hansJackLinksJsonExit([
+            'ok' => false,
+            'message' => $noticeMessage,
+        ], 500);
+    }
+}
+
+if ($isFeedPreviewRequest) {
+    hansJackLinksJsonExit([
+        'ok' => false,
+        'message' => $v3aEnabled ? '暂时无法加载订阅信息。' : '未启用 Vue3Admin 插件，无法加载订阅信息。',
+    ], 400);
 }
 
 $siteTitleRaw = trim((string) ($this->options->title ?? ''));
@@ -304,6 +643,7 @@ $this->need('header.php');
                         <?php foreach ((array) $links as $link):
                             $rawName = (string) ($link['name'] ?? '');
                             $name = hansJackEscape($rawName);
+                            $linkId = (int) ($link['id'] ?? 0);
                             $url = hansJackEscape((string) ($link['url'] ?? ''));
                             $feed = trim((string) ($link['feed'] ?? ''));
                             $feed = $feed !== '' ? hansJackEscape($feed) : '';
@@ -326,15 +666,36 @@ $this->need('header.php');
                                 }
                             }
                             $initial = hansJackEscape($initial);
+                            $hasFeedInfo = $feed !== '' && $linkId > 0;
+                            $avatarLabel = trim($trimName) !== '' ? ('查看 ' . $trimName . ' 的订阅信息') : '查看该站点的订阅信息';
+                            $avatarLabel = hansJackEscape($avatarLabel);
                         ?>
                             <li class="hj-links-item" data-hj-link-type="<?php echo $typeLabel; ?>">
-                                <div class="hj-links-avatar" aria-hidden="true">
-                                    <?php if ($avatar !== ''): ?>
-                                        <img src="<?php echo $avatar; ?>" alt="" loading="lazy">
-                                    <?php else: ?>
-                                        <span><?php echo $initial; ?></span>
-                                    <?php endif; ?>
-                                </div>
+                                <?php if ($hasFeedInfo): ?>
+                                    <button
+                                        class="hj-links-avatar hj-links-avatar-btn"
+                                        type="button"
+                                        data-hj-feed-link-id="<?php echo $linkId; ?>"
+                                        data-hj-feed-link-name="<?php echo $name !== '' ? $name : '—'; ?>"
+                                        aria-label="<?php echo $avatarLabel; ?>"
+                                        aria-haspopup="dialog"
+                                        aria-expanded="false"
+                                    >
+                                        <?php if ($avatar !== ''): ?>
+                                            <img src="<?php echo $avatar; ?>" alt="" loading="lazy">
+                                        <?php else: ?>
+                                            <span><?php echo $initial; ?></span>
+                                        <?php endif; ?>
+                                    </button>
+                                <?php else: ?>
+                                    <div class="hj-links-avatar is-no-feed" data-hj-feed-tip="<?php _e('无订阅信息'); ?>" tabindex="0" aria-label="<?php _e('无订阅信息'); ?>">
+                                        <?php if ($avatar !== ''): ?>
+                                            <img src="<?php echo $avatar; ?>" alt="" loading="lazy">
+                                        <?php else: ?>
+                                            <span><?php echo $initial; ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
 
                                 <div class="hj-links-body">
                                     <div class="hj-links-name-row">
@@ -351,6 +712,19 @@ $this->need('header.php');
                             </li>
                         <?php endforeach; ?>
                     </ul>
+
+                    <div class="hj-links-feed-popover" data-hj-links-feed-popover hidden aria-hidden="true" role="dialog" aria-modal="false" aria-label="<?php _e('订阅信息'); ?>">
+                        <div class="hj-links-feed-popover-head">
+                            <p class="hj-links-feed-popover-title" data-hj-links-feed-popover-title><?php _e('订阅信息'); ?></p>
+                            <button class="hj-links-feed-popover-close" type="button" data-hj-links-feed-popover-close aria-label="<?php _e('关闭订阅信息'); ?>">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M18 6 6 18"></path>
+                                    <path d="m6 6 12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="hj-links-feed-popover-body" data-hj-links-feed-popover-body></div>
+                    </div>
                 <?php else: ?>
                     <p class="hj-links-empty"><?php _e('暂无友链'); ?></p>
                 <?php endif; ?>
@@ -611,6 +985,361 @@ $this->need('header.php');
                 });
             });
         });
+    })();
+</script>
+
+<script>
+    (function () {
+        var page = document.querySelector('.hj-links-page');
+        if (!page || !window.fetch) {
+            return;
+        }
+
+        var avatarButtons = Array.prototype.slice.call(
+            page.querySelectorAll('.hj-links-avatar-btn[data-hj-feed-link-id]')
+        );
+        var popover = page.querySelector('[data-hj-links-feed-popover]');
+        if (!popover || avatarButtons.length === 0) {
+            return;
+        }
+
+        var popoverTitle = popover.querySelector('[data-hj-links-feed-popover-title]');
+        var popoverBody = popover.querySelector('[data-hj-links-feed-popover-body]');
+        var popoverClose = popover.querySelector('[data-hj-links-feed-popover-close]');
+        if (!popoverTitle || !popoverBody) {
+            return;
+        }
+
+        var activeButton = null;
+        var cache = Object.create(null);
+        var requestToken = 0;
+
+        function setExpanded(btn, expanded) {
+            if (!btn || !btn.setAttribute) {
+                return;
+            }
+            btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        }
+
+        function closePopover() {
+            if (activeButton) {
+                setExpanded(activeButton, false);
+            }
+            activeButton = null;
+            popover.hidden = true;
+            popover.setAttribute('aria-hidden', 'true');
+        }
+
+        function formatRelativeTime(seconds) {
+            var ts = parseInt(String(seconds || ''), 10);
+            if (!isFinite(ts) || ts <= 0) {
+                return '未知时间';
+            }
+
+            var now = Math.floor(Date.now() / 1000);
+            var diff = now - ts;
+            if (!isFinite(diff) || diff < 0) {
+                diff = 0;
+            }
+
+            if (diff < 5) {
+                return '刚刚';
+            }
+            if (diff < 60) {
+                return diff + '秒前';
+            }
+
+            var minutes = Math.floor(diff / 60);
+            if (minutes < 60) {
+                return minutes + '分钟前';
+            }
+
+            var hours = Math.floor(minutes / 60);
+            if (hours < 24) {
+                return hours + '小时前';
+            }
+
+            var days = Math.floor(hours / 24);
+            if (days < 30) {
+                return days + '天前';
+            }
+
+            var months = Math.floor(days / 30);
+            if (months < 12) {
+                return months + '月前';
+            }
+
+            var years = Math.floor(days / 365);
+            return years + '年前';
+        }
+
+        function renderMessage(msg, title) {
+            popoverTitle.textContent = title || '订阅信息';
+            popoverBody.innerHTML = '';
+            var p = document.createElement('p');
+            p.className = 'hj-links-feed-empty';
+            p.textContent = msg || '暂无订阅信息';
+            popoverBody.appendChild(p);
+        }
+
+        function renderLoading(title) {
+            popoverTitle.textContent = title || '订阅信息';
+            popoverBody.innerHTML = '';
+            var p = document.createElement('p');
+            p.className = 'hj-links-feed-loading';
+            p.textContent = '正在加载订阅信息...';
+            popoverBody.appendChild(p);
+        }
+
+        function renderFeed(data, fallbackTitle) {
+            var siteName = data && data.title ? String(data.title) : '';
+            var heading = siteName ? (siteName + ' · 订阅信息') : (fallbackTitle || '订阅信息');
+            popoverTitle.textContent = heading;
+            popoverBody.innerHTML = '';
+
+            var items = data && Array.isArray(data.items) ? data.items : [];
+            if (items.length === 0) {
+                renderMessage('暂无可展示文章', heading);
+                return;
+            }
+
+            var list = document.createElement('ul');
+            list.className = 'hj-links-feed-list';
+
+            items.forEach(function (item) {
+                if (!item) {
+                    return;
+                }
+
+                var row = document.createElement('li');
+                row.className = 'hj-links-feed-entry';
+
+                var titleText = item.title ? String(item.title) : '未命名文章';
+                var itemUrl = item.url ? String(item.url) : '';
+
+                if (itemUrl) {
+                    var a = document.createElement('a');
+                    a.className = 'hj-links-feed-entry-title';
+                    a.href = itemUrl;
+                    a.target = '_blank';
+                    a.rel = 'noreferrer';
+                    a.textContent = titleText;
+                    row.appendChild(a);
+                } else {
+                    var span = document.createElement('span');
+                    span.className = 'hj-links-feed-entry-title';
+                    span.textContent = titleText;
+                    row.appendChild(span);
+                }
+
+                var time = document.createElement('span');
+                time.className = 'hj-links-feed-entry-time';
+                time.textContent = formatRelativeTime(item.publishedAt);
+                row.appendChild(time);
+
+                var summary = document.createElement('p');
+                summary.className = 'hj-links-feed-entry-summary';
+                summary.textContent = item.summary ? String(item.summary) : '暂无摘要';
+                row.appendChild(summary);
+
+                list.appendChild(row);
+            });
+
+            if (list.children.length === 0) {
+                renderMessage('暂无可展示文章', heading);
+                return;
+            }
+
+            popoverBody.appendChild(list);
+        }
+
+        function positionPopover() {
+            if (!activeButton || popover.hidden) {
+                return;
+            }
+
+            var viewportW = window.innerWidth || document.documentElement.clientWidth || 0;
+            var viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
+            var gap = 8;
+            var minBelow = 180;
+            var rect = activeButton.getBoundingClientRect();
+            var below = viewportH - rect.bottom - gap;
+
+            if (below < minBelow && window.scrollBy) {
+                var doc = document.documentElement;
+                var maxScroll = Math.max(0, (doc.scrollHeight || 0) - ((window.scrollY || 0) + viewportH));
+                var delta = Math.min(maxScroll, minBelow - below);
+                if (delta > 0) {
+                    window.scrollBy(0, delta);
+                    rect = activeButton.getBoundingClientRect();
+                }
+            }
+
+            var top = rect.bottom + gap;
+            var availableHeight = viewportH - top - gap;
+            if (availableHeight < 120) {
+                top = Math.max(gap, viewportH - 140);
+                availableHeight = viewportH - top - gap;
+            }
+            if (availableHeight < 72) {
+                availableHeight = 72;
+            }
+
+            var headHeight = 44;
+            var head = popover.querySelector('.hj-links-feed-popover-head');
+            if (head) {
+                headHeight = Math.max(30, head.getBoundingClientRect().height || 44);
+            }
+            var bodyHeight = Math.max(72, availableHeight - headHeight);
+            popoverBody.style.maxHeight = Math.round(bodyHeight) + 'px';
+
+            var popRect = popover.getBoundingClientRect();
+            var width = popRect.width;
+            var left = rect.left + (rect.width / 2) - (width / 2);
+            if (left < gap) {
+                left = gap;
+            }
+            if (left + width > viewportW - gap) {
+                left = viewportW - width - gap;
+            }
+
+            popover.style.left = Math.round(left) + 'px';
+            popover.style.top = Math.round(top) + 'px';
+        }
+
+        function buildRequestUrl(linkId) {
+            var base = window.location.href.split('#')[0];
+            var join = base.indexOf('?') === -1 ? '?' : '&';
+            return base + join + 'hj_links_feed_preview=1&link_id=' + encodeURIComponent(linkId);
+        }
+
+        function loadFeed(button) {
+            var linkId = String(button.getAttribute('data-hj-feed-link-id') || '').trim();
+            var fallbackName = String(button.getAttribute('data-hj-feed-link-name') || '').trim();
+            var fallbackTitle = fallbackName ? (fallbackName + ' · 订阅信息') : '订阅信息';
+            if (linkId === '') {
+                renderMessage('订阅信息不存在', fallbackTitle);
+                return;
+            }
+
+            if (cache[linkId]) {
+                renderFeed(cache[linkId], fallbackTitle);
+                positionPopover();
+                return;
+            }
+
+            renderLoading(fallbackTitle);
+            var token = ++requestToken;
+
+            window.fetch(buildRequestUrl(linkId), {
+                method: 'GET',
+                cache: 'no-store',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(function (response) {
+                    if (!response || !response.ok) {
+                        throw new Error('请求失败');
+                    }
+                    return response.json();
+                })
+                .then(function (data) {
+                    if (token !== requestToken) {
+                        return;
+                    }
+                    if (!data || !data.ok) {
+                        throw new Error(data && data.message ? String(data.message) : '读取失败');
+                    }
+
+                    cache[linkId] = data;
+                    if (activeButton === button && !popover.hidden) {
+                        renderFeed(data, fallbackTitle);
+                        positionPopover();
+                    }
+                })
+                .catch(function (error) {
+                    if (token !== requestToken) {
+                        return;
+                    }
+                    if (activeButton === button && !popover.hidden) {
+                        var msg = error && error.message ? String(error.message) : '暂时无法加载订阅信息';
+                        renderMessage(msg, fallbackTitle);
+                        positionPopover();
+                    }
+                });
+        }
+
+        function openPopover(button) {
+            if (activeButton === button && !popover.hidden) {
+                closePopover();
+                return;
+            }
+
+            if (activeButton && activeButton !== button) {
+                setExpanded(activeButton, false);
+            }
+
+            activeButton = button;
+            setExpanded(button, true);
+            popover.hidden = false;
+            popover.setAttribute('aria-hidden', 'false');
+            positionPopover();
+            loadFeed(button);
+        }
+
+        avatarButtons.forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+                openPopover(btn);
+            });
+        });
+
+        if (popoverClose) {
+            popoverClose.addEventListener('click', function (e) {
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+                closePopover();
+            });
+        }
+
+        document.addEventListener('click', function (e) {
+            if (!activeButton || popover.hidden) {
+                return;
+            }
+            var target = e && e.target ? e.target : null;
+            if (!target) {
+                closePopover();
+                return;
+            }
+            if (popover.contains(target) || activeButton.contains(target)) {
+                return;
+            }
+            closePopover();
+        });
+
+        document.addEventListener('keydown', function (e) {
+            var key = e && e.key ? String(e.key) : '';
+            if (key === 'Escape' || key === 'Esc') {
+                closePopover();
+            }
+        });
+
+        window.addEventListener('resize', function () {
+            if (!popover.hidden) {
+                positionPopover();
+            }
+        });
+
+        window.addEventListener('scroll', function () {
+            if (!popover.hidden) {
+                positionPopover();
+            }
+        }, true);
     })();
 </script>
 

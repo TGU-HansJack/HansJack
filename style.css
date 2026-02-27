@@ -2339,6 +2339,7 @@ html.hj-theme-dark .hj-posts-pager.page-navigator li a:focus-visible {
     width: 48px;
     height: 48px;
     flex: 0 0 48px;
+    position: relative;
     border-radius: 50%;
     overflow: hidden;
     background: rgba(42, 42, 40, 0.06);
@@ -2356,6 +2357,197 @@ html.hj-theme-dark .hj-posts-pager.page-navigator li a:focus-visible {
     object-fit: cover;
     display: block;
     border-radius: inherit;
+}
+
+.hj-links-avatar-btn {
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.hj-links-avatar-btn:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.hj-links-avatar.is-no-feed {
+    cursor: default;
+    overflow: visible;
+}
+
+.hj-links-avatar.is-no-feed:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.hj-links-avatar.is-no-feed:hover,
+.hj-links-avatar.is-no-feed:focus-visible {
+    z-index: 2;
+}
+
+.hj-links-avatar.is-no-feed::after {
+    content: attr(data-hj-feed-tip);
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translate(-50%, -0.12rem);
+    padding: 0.12rem 0.35rem;
+    border-radius: 0;
+    background: var(--hj-nav-block-bg);
+    color: var(--hj-nav-block-fg);
+    font-family: var(--hj-font-ui);
+    font-size: 0.72rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
+    z-index: 24;
+}
+
+.hj-links-avatar.is-no-feed:hover::after,
+.hj-links-avatar.is-no-feed:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -0.24rem);
+}
+
+.hj-links-feed-popover {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 2200;
+    width: min(420px, calc(100vw - 1rem));
+    border: 2px solid var(--hj-line-day);
+    background: var(--hj-day-bg);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+    overflow: hidden;
+}
+
+.hj-links-feed-popover[hidden] {
+    display: none;
+}
+
+.hj-links-feed-popover-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.45rem;
+    padding: 0.55rem 0.6rem;
+    border-bottom: 1px dashed var(--hj-line-day);
+}
+
+.hj-links-feed-popover-title {
+    margin: 0;
+    min-width: 0;
+    font-family: var(--hj-font-ui);
+    font-size: 0.84rem;
+    line-height: 1.3;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hj-links-feed-popover-close {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.hj-links-feed-popover-close svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+}
+
+.hj-links-feed-popover-close:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.hj-links-feed-popover-body {
+    padding: 0.5rem 0.6rem;
+    max-height: 320px;
+    overflow: auto;
+}
+
+.hj-links-feed-loading,
+.hj-links-feed-empty {
+    margin: 0;
+    font-family: var(--hj-font-ui);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--hj-muted-day);
+}
+
+.hj-links-feed-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.hj-links-feed-entry {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.24rem;
+}
+
+.hj-links-feed-entry + .hj-links-feed-entry {
+    padding-top: 0.48rem;
+    border-top: 1px dashed var(--hj-line-day);
+}
+
+.hj-links-feed-entry-title {
+    min-width: 0;
+    display: block;
+    font-family: var(--hj-font-ui);
+    font-size: 0.84rem;
+    line-height: 1.35;
+    font-weight: 700;
+    color: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+a.hj-links-feed-entry-title:hover,
+a.hj-links-feed-entry-title:focus-visible {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.12em;
+}
+
+.hj-links-feed-entry-time {
+    font-family: var(--hj-font-ui);
+    font-size: 0.74rem;
+    line-height: 1.2;
+    color: var(--hj-muted-day);
+}
+
+.hj-links-feed-entry-summary {
+    margin: 0;
+    min-width: 0;
+    font-family: var(--hj-font-ui);
+    font-size: 0.78rem;
+    line-height: 1.35;
+    color: var(--hj-muted-day);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .hj-links-body {
@@ -6345,6 +6537,24 @@ html.hj-login-modal-open .hj-login-modal {
         color: var(--hj-muted-night);
     }
 
+    html:not(.hj-theme-light) .hj-links-feed-popover {
+        border-color: var(--hj-night-white);
+        background: var(--hj-night-bg);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+    }
+
+    html:not(.hj-theme-light) .hj-links-feed-popover-head,
+    html:not(.hj-theme-light) .hj-links-feed-entry + .hj-links-feed-entry {
+        border-color: var(--hj-line-night);
+    }
+
+    html:not(.hj-theme-light) .hj-links-feed-loading,
+    html:not(.hj-theme-light) .hj-links-feed-empty,
+    html:not(.hj-theme-light) .hj-links-feed-entry-time,
+    html:not(.hj-theme-light) .hj-links-feed-entry-summary {
+        color: var(--hj-muted-night);
+    }
+
     html:not(.hj-theme-light) .hj-links-type {
         border-color: var(--hj-line-night);
         color: var(--hj-muted-night);
@@ -6860,6 +7070,24 @@ html.hj-theme-dark .hj-links-item {
 
 html.hj-theme-dark .hj-links-avatar {
     background: rgba(221, 221, 219, 0.08);
+    color: var(--hj-muted-night);
+}
+
+html.hj-theme-dark .hj-links-feed-popover {
+    border-color: var(--hj-night-white);
+    background: var(--hj-night-bg);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+html.hj-theme-dark .hj-links-feed-popover-head,
+html.hj-theme-dark .hj-links-feed-entry + .hj-links-feed-entry {
+    border-color: var(--hj-line-night);
+}
+
+html.hj-theme-dark .hj-links-feed-loading,
+html.hj-theme-dark .hj-links-feed-empty,
+html.hj-theme-dark .hj-links-feed-entry-time,
+html.hj-theme-dark .hj-links-feed-entry-summary {
     color: var(--hj-muted-night);
 }
 
