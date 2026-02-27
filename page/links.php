@@ -669,6 +669,8 @@ $this->need('header.php');
                             $hasFeedInfo = $feed !== '' && $linkId > 0;
                             $avatarLabel = trim($trimName) !== '' ? ('查看 ' . $trimName . ' 的订阅信息') : '查看该站点的订阅信息';
                             $avatarLabel = hansJackEscape($avatarLabel);
+                            $feedTip = hansJackEscape(_t('订阅信息'));
+                            $noFeedTip = hansJackEscape(_t('无订阅信息'));
                         ?>
                             <li class="hj-links-item" data-hj-link-type="<?php echo $typeLabel; ?>">
                                 <?php if ($hasFeedInfo): ?>
@@ -677,6 +679,8 @@ $this->need('header.php');
                                         type="button"
                                         data-hj-feed-link-id="<?php echo $linkId; ?>"
                                         data-hj-feed-link-name="<?php echo $name !== '' ? $name : '—'; ?>"
+                                        data-hj-feed-tip="<?php echo $feedTip; ?>"
+                                        title="<?php echo $feedTip; ?>"
                                         aria-label="<?php echo $avatarLabel; ?>"
                                         aria-haspopup="dialog"
                                         aria-expanded="false"
@@ -688,7 +692,7 @@ $this->need('header.php');
                                         <?php endif; ?>
                                     </button>
                                 <?php else: ?>
-                                    <div class="hj-links-avatar is-no-feed" data-hj-feed-tip="<?php _e('无订阅信息'); ?>" tabindex="0" aria-label="<?php _e('无订阅信息'); ?>">
+                                    <div class="hj-links-avatar is-no-feed" data-hj-feed-tip="<?php echo $noFeedTip; ?>" title="<?php echo $noFeedTip; ?>" tabindex="0" aria-label="<?php echo $noFeedTip; ?>">
                                         <?php if ($avatar !== ''): ?>
                                             <img src="<?php echo $avatar; ?>" alt="" loading="lazy">
                                         <?php else: ?>

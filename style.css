@@ -2363,6 +2363,9 @@ html.hj-theme-dark .hj-posts-pager.page-navigator li a:focus-visible {
     border: 0;
     padding: 0;
     cursor: pointer;
+    overflow: visible;
+    isolation: isolate;
+    z-index: 1;
 }
 
 .hj-links-avatar-btn:focus-visible {
@@ -2373,6 +2376,8 @@ html.hj-theme-dark .hj-posts-pager.page-navigator li a:focus-visible {
 .hj-links-avatar.is-no-feed {
     cursor: default;
     overflow: visible;
+    isolation: isolate;
+    z-index: 1;
 }
 
 .hj-links-avatar.is-no-feed:focus-visible {
@@ -2380,12 +2385,14 @@ html.hj-theme-dark .hj-posts-pager.page-navigator li a:focus-visible {
     outline-offset: 2px;
 }
 
+.hj-links-avatar-btn:hover,
+.hj-links-avatar-btn:focus-visible,
 .hj-links-avatar.is-no-feed:hover,
 .hj-links-avatar.is-no-feed:focus-visible {
-    z-index: 2;
+    z-index: 4;
 }
 
-.hj-links-avatar.is-no-feed::after {
+.hj-links-avatar[data-hj-feed-tip]::after {
     content: attr(data-hj-feed-tip);
     position: absolute;
     left: 50%;
@@ -2403,11 +2410,11 @@ html.hj-theme-dark .hj-posts-pager.page-navigator li a:focus-visible {
     visibility: hidden;
     pointer-events: none;
     transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
-    z-index: 24;
+    z-index: 60;
 }
 
-.hj-links-avatar.is-no-feed:hover::after,
-.hj-links-avatar.is-no-feed:focus-visible::after {
+.hj-links-avatar[data-hj-feed-tip]:hover::after,
+.hj-links-avatar[data-hj-feed-tip]:focus-visible::after {
     opacity: 1;
     visibility: visible;
     transform: translate(-50%, -0.24rem);

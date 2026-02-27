@@ -154,10 +154,371 @@ function themeConfig($form)
 function themeInit(Archive $archive)
 {
     hansJackHandleGithubOauthRequest($archive);
+    hansJackEnableFeedStylesheet($archive);
 
     if ($archive->is('category', 'posts') || $archive->is('category', 'notes')) {
         $archive->parameter->pageSize = 15;
     }
+}
+
+/**
+ * Feed output strategy:
+ * - Browser requests (Accept: text/html): render a readable HTML feed page.
+ * - Feed reader requests: keep raw XML output (no browser-side XSLT dependency).
+ */
+function hansJackEnableFeedStylesheet(Archive $archive): void
+{
+    static $registered = false;
+    if ($registered) {
+        return;
+    }
+
+    $isFeed = false;
+    try {
+        $isFeed = !empty($archive->parameter->isFeed);
+    } catch (\Throwable $e) {
+        $isFeed = false;
+    }
+
+    if (!$isFeed) {
+        return;
+    }
+
+    $renderHtml = hansJackShouldRenderFeedAsHtml();
+
+    $registered = true;
+    ob_start(function ($buffer) use ($renderHtml) {
+        return hansJackHandleFeedOutput((string) $buffer, $renderHtml);
+    });
+}
+
+function hansJackShouldRenderFeedAsHtml(): bool
+{
+    $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+    if ($method !== 'GET') {
+        return false;
+    }
+
+    $format = strtolower(trim((string) ($_GET['format'] ?? '')));
+    if ($format === 'xml' || $format === 'raw') {
+        return false;
+    }
+    if ($format === 'html') {
+        return true;
+    }
+
+    $accept = strtolower((string) ($_SERVER['HTTP_ACCEPT'] ?? ''));
+    if ($accept === '') {
+        return false;
+    }
+
+    return strpos($accept, 'text/html') !== false;
+}
+
+function hansJackHandleFeedOutput(string $buffer, bool $renderHtml): string
+{
+    if ($buffer === '' || strpos($buffer, '<?xml') === false) {
+        return $buffer;
+    }
+
+    if ($renderHtml) {
+        $html = hansJackRenderFeedHtmlFromXml($buffer);
+        if ($html !== '') {
+            if (!headers_sent()) {
+                header('Content-Type: text/html; charset=UTF-8');
+                header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+            }
+            return $html;
+        }
+    }
+
+    return $buffer;
+}
+
+function hansJackFeedHtmlEscape(string $text): string
+{
+    return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+}
+
+function hansJackFeedSafeUrl(string $url, string $fallback = '#'): string
+{
+    $url = trim($url);
+    if ($url === '') {
+        return $fallback;
+    }
+
+    if (strpos($url, '//') === 0) {
+        return 'https:' . $url;
+    }
+
+    if (preg_match('/^https?:\\/\\//i', $url)) {
+        return $url;
+    }
+
+    return $fallback;
+}
+
+function hansJackFeedXPathString(\DOMXPath $xp, string $expr, ?\DOMNode $ctx = null): string
+{
+    $query = 'string(' . $expr . ')';
+    $raw = $ctx ? $xp->evaluate($query, $ctx) : $xp->evaluate($query);
+    return trim((string) $raw);
+}
+
+/**
+ * Parse RSS/Atom XML string and render readable HTML (no browser XSLT dependency).
+ */
+function hansJackRenderFeedHtmlFromXml(string $xml): string
+{
+    if (!class_exists('\\DOMDocument') || !class_exists('\\DOMXPath')) {
+        return '';
+    }
+
+    $doc = new \DOMDocument();
+    $previousUseErrors = libxml_use_internal_errors(true);
+    $loaded = false;
+    try {
+        $loaded = $doc->loadXML($xml, LIBXML_NOCDATA | LIBXML_NONET);
+    } catch (\Throwable $e) {
+        $loaded = false;
+    }
+    libxml_clear_errors();
+    libxml_use_internal_errors($previousUseErrors);
+
+    if (!$loaded || !$doc->documentElement) {
+        return '';
+    }
+
+    $xp = new \DOMXPath($doc);
+    $xp->registerNamespace('atom', 'http://www.w3.org/2005/Atom');
+    $xp->registerNamespace('rss1', 'http://purl.org/rss/1.0/');
+    $xp->registerNamespace('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+    $xp->registerNamespace('dc', 'http://purl.org/dc/elements/1.1/');
+
+    $root = $doc->documentElement;
+    $rootName = strtolower((string) $root->localName);
+    $rootNs = strtolower((string) ($root->namespaceURI ?? ''));
+
+    $siteTitle = '订阅源';
+    $siteLink = '#';
+    $siteDesc = '订阅源页面';
+    $feedUrl = '';
+    $lastUpdate = '未知';
+    $items = [];
+
+    if ($rootName === 'rss') {
+        $siteTitle = hansJackFeedXPathString($xp, '/rss/channel/title');
+        $siteLink = hansJackFeedXPathString($xp, '/rss/channel/link');
+        $siteDesc = hansJackFeedXPathString($xp, '/rss/channel/description');
+        $feedUrl = hansJackFeedXPathString($xp, "/rss/channel/atom:link[@rel='self'][1]/@href");
+        if ($feedUrl === '') {
+            $feedUrl = $siteLink;
+        }
+        $lastUpdate = hansJackFeedXPathString($xp, '/rss/channel/lastBuildDate');
+        if ($lastUpdate === '') {
+            $lastUpdate = hansJackFeedXPathString($xp, '/rss/channel/pubDate');
+        }
+
+        $nodes = $xp->query('/rss/channel/item');
+        if ($nodes) {
+            foreach ($nodes as $node) {
+                $title = hansJackFeedXPathString($xp, 'title', $node);
+                $link = hansJackFeedXPathString($xp, 'link', $node);
+                $time = hansJackFeedXPathString($xp, 'pubDate', $node);
+
+                $tags = [];
+                $tagNodes = $xp->query('category', $node);
+                if ($tagNodes) {
+                    foreach ($tagNodes as $tagNode) {
+                        $tag = trim((string) $tagNode->textContent);
+                        if ($tag !== '') {
+                            $tags[] = $tag;
+                        }
+                    }
+                }
+
+                $items[] = [
+                    'title' => $title !== '' ? $title : '未命名文章',
+                    'url' => hansJackFeedSafeUrl($link),
+                    'time' => $time !== '' ? $time : '未知时间',
+                    'tags' => $tags,
+                ];
+            }
+        }
+    } elseif ($rootName === 'feed' && $rootNs === 'http://www.w3.org/2005/atom') {
+        $siteTitle = hansJackFeedXPathString($xp, '/atom:feed/atom:title');
+        $siteLink = hansJackFeedXPathString($xp, "/atom:feed/atom:link[@rel='alternate'][1]/@href");
+        if ($siteLink === '') {
+            $siteLink = hansJackFeedXPathString($xp, '/atom:feed/atom:link[1]/@href');
+        }
+        $siteDesc = hansJackFeedXPathString($xp, '/atom:feed/atom:subtitle');
+        $feedUrl = hansJackFeedXPathString($xp, "/atom:feed/atom:link[@rel='self'][1]/@href");
+        if ($feedUrl === '') {
+            $feedUrl = hansJackFeedXPathString($xp, '/atom:feed/atom:id');
+        }
+        if ($feedUrl === '') {
+            $feedUrl = $siteLink;
+        }
+        $lastUpdate = hansJackFeedXPathString($xp, '/atom:feed/atom:updated');
+
+        $nodes = $xp->query('/atom:feed/atom:entry');
+        if ($nodes) {
+            foreach ($nodes as $node) {
+                $title = hansJackFeedXPathString($xp, 'atom:title', $node);
+                $link = hansJackFeedXPathString($xp, "atom:link[@rel='alternate'][1]/@href", $node);
+                if ($link === '') {
+                    $link = hansJackFeedXPathString($xp, 'atom:link[1]/@href', $node);
+                }
+                $time = hansJackFeedXPathString($xp, 'atom:published', $node);
+                if ($time === '') {
+                    $time = hansJackFeedXPathString($xp, 'atom:updated', $node);
+                }
+
+                $tags = [];
+                $tagNodes = $xp->query('atom:category', $node);
+                if ($tagNodes) {
+                    foreach ($tagNodes as $tagNode) {
+                        $tag = '';
+                        if ($tagNode instanceof \DOMElement && $tagNode->hasAttribute('term')) {
+                            $tag = trim((string) $tagNode->getAttribute('term'));
+                        }
+                        if ($tag !== '') {
+                            $tags[] = $tag;
+                        }
+                    }
+                }
+
+                $items[] = [
+                    'title' => $title !== '' ? $title : '未命名文章',
+                    'url' => hansJackFeedSafeUrl($link),
+                    'time' => $time !== '' ? $time : '未知时间',
+                    'tags' => $tags,
+                ];
+            }
+        }
+    } elseif ($rootName === 'rdf') {
+        $siteTitle = hansJackFeedXPathString($xp, '/rdf:RDF/rss1:channel/rss1:title');
+        $siteLink = hansJackFeedXPathString($xp, '/rdf:RDF/rss1:channel/rss1:link');
+        $siteDesc = hansJackFeedXPathString($xp, '/rdf:RDF/rss1:channel/rss1:description');
+        $feedUrl = $siteLink;
+        $lastUpdate = hansJackFeedXPathString($xp, '/rdf:RDF/rss1:channel/dc:date');
+
+        $nodes = $xp->query('/rdf:RDF/rss1:item');
+        if ($nodes) {
+            foreach ($nodes as $node) {
+                $title = hansJackFeedXPathString($xp, 'rss1:title', $node);
+                $link = hansJackFeedXPathString($xp, 'rss1:link', $node);
+                $time = hansJackFeedXPathString($xp, 'dc:date', $node);
+
+                $items[] = [
+                    'title' => $title !== '' ? $title : '未命名文章',
+                    'url' => hansJackFeedSafeUrl($link),
+                    'time' => $time !== '' ? $time : '未知时间',
+                    'tags' => [],
+                ];
+            }
+        }
+    } else {
+        return '';
+    }
+
+    if ($siteTitle === '') {
+        $siteTitle = '订阅源';
+    }
+    if ($siteDesc === '') {
+        $siteDesc = '订阅源页面';
+    }
+    if ($lastUpdate === '') {
+        $lastUpdate = '未知';
+    }
+
+    $siteLinkSafe = hansJackFeedSafeUrl($siteLink);
+    $feedUrlSafe = hansJackFeedSafeUrl($feedUrl, $siteLinkSafe);
+
+    $titleEsc = hansJackFeedHtmlEscape($siteTitle);
+    $siteDescEsc = hansJackFeedHtmlEscape($siteDesc);
+    $siteLinkEsc = hansJackFeedHtmlEscape($siteLinkSafe);
+    $feedUrlEsc = hansJackFeedHtmlEscape($feedUrlSafe);
+    $lastUpdateEsc = hansJackFeedHtmlEscape($lastUpdate);
+
+    $itemHtml = '';
+    foreach ($items as $index => $item) {
+        $titleRaw = trim((string) ($item['title'] ?? ''));
+        if ($titleRaw === '') {
+            $titleRaw = '未命名文章';
+        }
+        $itemTitle = hansJackFeedHtmlEscape($titleRaw);
+        $itemUrl = hansJackFeedHtmlEscape(hansJackFeedSafeUrl((string) ($item['url'] ?? ''), $siteLinkSafe));
+
+        $itemTimeRaw = trim((string) ($item['time'] ?? ''));
+        $itemTimestamp = 0;
+        if ($itemTimeRaw !== '') {
+            $parsed = strtotime($itemTimeRaw);
+            if ($parsed !== false && $parsed > 0) {
+                $itemTimestamp = (int) $parsed;
+            }
+        }
+
+        $displayTime = $itemTimeRaw !== '' ? $itemTimeRaw : '未知时间';
+        $datetimeAttr = '';
+        $createdAttr = '';
+        if ($itemTimestamp > 0) {
+            $displayTime = date('Y/m/d-H:i:s', $itemTimestamp);
+            $datetimeAttr = ' datetime="' . hansJackFeedHtmlEscape(date(DATE_ATOM, $itemTimestamp)) . '"';
+            $createdAttr = ' data-hj-post-created="' . $itemTimestamp . '" data-hj-post-modified="' . $itemTimestamp . '"';
+        }
+        $itemTime = hansJackFeedHtmlEscape($displayTime);
+
+        $tagsHtml = '';
+        $tags = is_array($item['tags'] ?? null) ? $item['tags'] : [];
+        foreach ($tags as $tag) {
+            $tagText = trim((string) $tag);
+            if ($tagText === '') {
+                continue;
+            }
+            $tagsHtml .= '<span class="hj-posts-tag">#' . hansJackFeedHtmlEscape($tagText) . '</span>';
+        }
+
+        $itemHtml .= '<li class="hj-posts-item"'
+            . ' data-hj-post-original-index="' . (int) $index . '"'
+            . $createdAttr . '>';
+        $itemHtml .= '<div class="hj-posts-item-left">';
+        $itemHtml .= '<a class="hj-posts-title" href="' . $itemUrl . '">' . $itemTitle . '</a>';
+        $itemHtml .= '<time class="hj-posts-date"' . $datetimeAttr . '>' . $itemTime . '</time>';
+        $itemHtml .= '</div>';
+        $itemHtml .= '<div class="hj-posts-item-right" aria-label="标签">' . $tagsHtml . '</div>';
+        $itemHtml .= '</li>';
+    }
+
+    if ($itemHtml === '') {
+        $itemHtml = '<li class="hj-posts-empty">当前订阅源暂无可展示内容。</li>';
+    }
+
+    $options = Options::alloc();
+    $theme = trim((string) ($options->theme ?? ''));
+    $themeStyleHref = '';
+    if ($theme !== '') {
+        $themeStyleHref = (string) $options->themeUrl('style.css', $theme);
+    }
+    $themeStyleTag = '';
+    if ($themeStyleHref !== '') {
+        $themeStyleTag = '<link rel="stylesheet" href="' . hansJackFeedHtmlEscape($themeStyleHref) . '">';
+    }
+
+    return '<!DOCTYPE html><html lang="zh-CN"><head>'
+        . '<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+        . '<title>' . $titleEsc . ' · 订阅源</title>'
+        . $themeStyleTag
+        . '<style>body{margin:0}.hj-feed-page{padding:1.1rem 0 1.8rem}.hj-feed-head{margin-bottom:.75rem}.hj-feed-head h1{margin:0 0 .3rem;font-size:clamp(1.38rem,2.7vw,2rem);line-height:1.25}.hj-feed-head p{margin:0;color:var(--hj-muted-day)}.hj-feed-note{margin-bottom:1rem}.copy-btn{margin-left:.35rem;border:1px solid var(--hj-line-day);background:var(--hj-day-bg);color:inherit;font-family:var(--hj-font-ui);font-size:.78rem;line-height:1;padding:.25rem .5rem;cursor:pointer}.copy-btn:hover,.copy-btn:focus-visible{border-color:currentColor}.hj-feed-foot{margin-top:1.1rem;font-family:var(--hj-font-ui);font-size:.84rem;color:var(--hj-muted-day)}.hj-feed-foot p{margin:.22rem 0}@media (max-width:980px){.hj-feed-page{padding:1rem 0 1.35rem}}</style>'
+        . '</head><body class="hj-page-posts"><div class="hj-shell">'
+        . '<main class="hj-main hj-feed-page" role="main"><section class="hj-posts" aria-label="订阅文章列表">'
+        . '<div class="hj-feed-head"><h1><a href="' . $siteLinkEsc . '">' . $titleEsc . '</a></h1><p>' . $siteDescEsc . '</p></div>'
+        . '<div class="hj-posts-main"><div class="hj-article-content hj-feed-note"><blockquote><p>本页面是内容订阅源。</p><p>您可以在任何支持的阅读器中添加当前地址来订阅此内容，以便及时获取最新更新。</p><p>订阅地址: <code id="feed-url">'
+        . $feedUrlEsc . '</code><button type="button" class="copy-btn" onclick="copyFeedUrl()">复制</button></p></blockquote></div>'
+        . '<ul class="hj-posts-list" aria-label="文章">' . $itemHtml . '</ul>'
+        . '<footer class="hj-feed-foot"><p>这是订阅源页面。访问 <a href="' . $siteLinkEsc . '">' . $titleEsc
+        . '</a> 以获得完整的网站体验。</p><p>最后更新: ' . $lastUpdateEsc
+        . '</p></footer></div></section></main></div><script>function copyFeedUrl(){var node=document.getElementById("feed-url");var text=node?(node.textContent||""):"";if(!text){alert("未获取到订阅地址");return;}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){alert("订阅地址已复制到剪贴板！");}).catch(function(){alert("订阅地址已复制到剪贴板！");});}else{alert("订阅地址已复制到剪贴板！");}}</script></body></html>';
 }
 
 function hansJackGithubBindingPanelHtml(Options $options): string
