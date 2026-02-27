@@ -48,6 +48,9 @@ if ($hjCanPostMemo) {
 }
 
 $hjTagPattern = '/#([\p{L}\p{N}_\-]{1,40})/u';
+$hjReactionEmojis = function_exists('hansJackMemoryReactionAllowedEmojis')
+    ? hansJackMemoryReactionAllowedEmojis()
+    : ['👍', '❤️', '😂', '😮', '😢', '😡', '🎉', '👏', '🔥', '🤔', '👀', '🙏', '💯', '🚀'];
 $hjCommentsData = [];
 $hjMonthCounts = [];
 $hjTagCounts = [];
@@ -235,6 +238,19 @@ if (!empty($hjTagRows)) {
 
 $hjTotalComments = count($hjCommentsData);
 $hjLatestText = ($hjLatestCreated > 0) ? date('Y/m/d H:i:s', $hjLatestCreated) : _t('暂无');
+$hjPagePermalink = '';
+try {
+    $hjPagePermalink = trim((string) ($this->permalink ?? ''));
+} catch (\Throwable $e) {
+    $hjPagePermalink = '';
+}
+if ($hjPagePermalink === '') {
+    try {
+        $hjPagePermalink = trim((string) $this->options->siteUrl);
+    } catch (\Throwable $e) {
+        $hjPagePermalink = '';
+    }
+}
 ?>
 
 <main class="hj-main" role="main" data-hj-memory-root>
@@ -285,8 +301,6 @@ $hjLatestText = ($hjLatestCreated > 0) ? date('Y/m/d H:i:s', $hjLatestCreated) :
                         </form>
                     <?php elseif (!$hjAllowComment): ?>
                         <h2 class="hj-comments-closed"><?php _e('当前页面评论已关闭'); ?></h2>
-                    <?php elseif ($hjUserLoggedIn): ?>
-                        <h2 class="hj-comments-closed"><?php _e('仅管理员可以在此页面发布评论'); ?></h2>
                     <?php endif; ?>
 
                     <div class="hj-comments-head" aria-label="<?php _e('评论'); ?>">
@@ -307,9 +321,14 @@ $hjLatestText = ($hjLatestCreated > 0) ? date('Y/m/d H:i:s', $hjLatestCreated) :
                                 $tagKeys = isset($item['tagKeys']) && is_array($item['tagKeys']) ? $item['tagKeys'] : [];
                                 $tagKeysAttr = implode(',', array_map('strval', $tagKeys));
                                 $status = (string) ($item['status'] ?? '');
+                                $commentId = (int) ($item['id'] ?? 0);
+                                $commentShareUrl = $hjPagePermalink;
+                                if ($commentId > 0) {
+                                    $commentShareUrl .= '#comment-' . $commentId;
+                                }
                                 ?>
                                 <li
-                                    id="comment-<?php echo (int) ($item['id'] ?? 0); ?>"
+                                    id="comment-<?php echo $commentId; ?>"
                                     class="comment-body comment-parent"
                                     data-hj-memory-item
                                     data-hj-month="<?php echo hansJackEscape((string) ($item['month'] ?? '')); ?>"
@@ -345,6 +364,24 @@ $hjLatestText = ($hjLatestCreated > 0) ? date('Y/m/d H:i:s', $hjLatestCreated) :
                                             <?php endforeach; ?>
                                         </div>
                                     <?php endif; ?>
+                                    <div class="comment-reply hj-memory-comment-reply" data-hj-memory-action-row data-hj-memory-coid="<?php echo $commentId; ?>">
+                                        <span class="hj-memory-reaction-wrap" data-hj-memory-reactor data-hj-memory-coid="<?php echo $commentId; ?>">
+                                            <button class="hj-comment-memory-react-btn" type="button" aria-label="<?php _e('互动'); ?>" title="<?php _e('互动'); ?>" data-hj-memory-react-toggle aria-haspopup="dialog" aria-expanded="false">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-smile-icon lucide-smile" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
+                                            </button>
+                                            <div class="hj-emoji-picker hj-memory-emoji-picker" role="dialog" aria-label="<?php _e('互动表情'); ?>" data-hj-memory-emoji-picker hidden>
+                                                <div class="hj-emoji-picker-grid hj-memory-emoji-picker-grid" role="listbox" aria-label="<?php _e('互动表情列表'); ?>">
+                                                    <?php foreach ($hjReactionEmojis as $emoji): ?>
+                                                        <button type="button" class="hj-emoji-picker-btn hj-memory-emoji-btn" data-hj-memory-emoji="<?php echo hansJackEscape((string) $emoji); ?>" aria-label="<?php echo hansJackEscape((string) $emoji); ?>"><?php echo hansJackEscape((string) $emoji); ?></button>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            </div>
+                                        </span>
+                                        <button class="hj-comment-share-btn" type="button" aria-label="<?php _e('分享'); ?>" title="<?php _e('分享'); ?>" data-hj-comment-share="<?php echo hansJackEscape($commentShareUrl); ?>">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-share2-icon lucide-share-2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+                                        </button>
+                                        <span class="hj-memory-reaction-list" data-hj-memory-reactions hidden></span>
+                                    </div>
                                 </li>
                             <?php endforeach; ?>
                         </ol>
@@ -509,6 +546,335 @@ $hjLatestText = ($hjLatestCreated > 0) ? date('Y/m/d H:i:s', $hjLatestCreated) :
         });
 
         applyFilters();
+    })();
+</script>
+
+<script>
+    (function () {
+        var root = document.querySelector("[data-hj-memory-root]");
+        if (!root || !window.fetch || !window.FormData) {
+            return;
+        }
+
+        var reactors = Array.prototype.slice.call(root.querySelectorAll("[data-hj-memory-reactor][data-hj-memory-coid]"));
+        if (!reactors || reactors.length === 0) {
+            return;
+        }
+
+        var entries = {};
+        reactors.forEach(function (reactor) {
+            var coid = parseInt(reactor.getAttribute("data-hj-memory-coid") || "0", 10);
+            if (!isFinite(coid) || coid <= 0) {
+                return;
+            }
+
+            var row = reactor.closest("[data-hj-memory-action-row]");
+            var entry = {
+                coid: coid,
+                reactor: reactor,
+                row: row,
+                summary: row ? row.querySelector("[data-hj-memory-reactions]") : null,
+                toggle: reactor.querySelector("[data-hj-memory-react-toggle]"),
+                picker: reactor.querySelector("[data-hj-memory-emoji-picker]"),
+                busy: false
+            };
+            entries[String(coid)] = entry;
+        });
+
+        var coids = Object.keys(entries);
+        if (!coids.length) {
+            return;
+        }
+
+        var emojiOrder = [];
+        coids.forEach(function (coidKey) {
+            var entry = entries[coidKey];
+            if (!entry || !entry.picker) {
+                return;
+            }
+            var buttons = Array.prototype.slice.call(entry.picker.querySelectorAll("[data-hj-memory-emoji]"));
+            buttons.forEach(function (btn) {
+                var emoji = (btn.getAttribute("data-hj-memory-emoji") || "").trim();
+                if (!emoji) {
+                    return;
+                }
+                if (emojiOrder.indexOf(emoji) === -1) {
+                    emojiOrder.push(emoji);
+                }
+            });
+        });
+        if (!emojiOrder.length) {
+            emojiOrder = ["👍", "❤️", "😂", "😮", "😢", "😡", "🎉", "👏", "🔥", "🤔", "👀", "🙏", "💯", "🚀"];
+        }
+
+        var openEntry = null;
+
+        function parseJSON(text) {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function buildEndpoint(extraQuery) {
+            var raw = "";
+            try {
+                raw = String(window.location.href || "");
+            } catch (e) {
+                raw = "";
+            }
+
+            try {
+                var url = new URL(raw);
+                url.hash = "";
+                url.searchParams.set("hj_memory_reaction", "1");
+                if (extraQuery && typeof extraQuery === "object") {
+                    Object.keys(extraQuery).forEach(function (key) {
+                        var value = String(extraQuery[key] || "").trim();
+                        if (!value) {
+                            return;
+                        }
+                        url.searchParams.set(key, value);
+                    });
+                }
+                return url.toString();
+            } catch (e) {
+                var clean = raw ? raw.split("#")[0] : "";
+                if (!clean) {
+                    clean = "?";
+                }
+                var sep = clean.indexOf("?") === -1 ? "?" : "&";
+                var built = clean + sep + "hj_memory_reaction=1";
+                if (extraQuery && typeof extraQuery === "object") {
+                    Object.keys(extraQuery).forEach(function (key) {
+                        var value = String(extraQuery[key] || "").trim();
+                        if (!value) {
+                            return;
+                        }
+                        built += "&" + encodeURIComponent(key) + "=" + encodeURIComponent(value);
+                    });
+                }
+                return built;
+            }
+        }
+
+        function setPickerOpen(entry, isOpen) {
+            if (!entry || !entry.picker || !entry.toggle) {
+                return;
+            }
+
+            if (isOpen && openEntry && openEntry !== entry) {
+                setPickerOpen(openEntry, false);
+            }
+
+            entry.reactor.classList.toggle("is-open", !!isOpen);
+            entry.picker.hidden = !isOpen;
+            entry.toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+
+            if (isOpen) {
+                openEntry = entry;
+            } else if (openEntry === entry) {
+                openEntry = null;
+            }
+        }
+
+        function closeOpenPicker() {
+            if (!openEntry) {
+                return;
+            }
+            setPickerOpen(openEntry, false);
+        }
+
+        function renderEntry(entry, payload) {
+            if (!entry) {
+                return;
+            }
+
+            var selected = payload && typeof payload.selected === "string" ? payload.selected : "";
+            var counts = payload && payload.counts && typeof payload.counts === "object" ? payload.counts : {};
+
+            if (entry.toggle) {
+                entry.toggle.classList.toggle("is-reacted", !!selected);
+                entry.toggle.setAttribute("title", selected ? ("已选择 " + selected) : "互动");
+            }
+
+            if (!entry.summary) {
+                return;
+            }
+
+            while (entry.summary.firstChild) {
+                entry.summary.removeChild(entry.summary.firstChild);
+            }
+
+            var hasAny = false;
+            emojiOrder.forEach(function (emoji) {
+                var count = Number(counts[emoji] || 0);
+                if (!isFinite(count) || count <= 0) {
+                    return;
+                }
+                hasAny = true;
+
+                var chip = document.createElement("span");
+                chip.className = "hj-memory-reaction-chip";
+                if (selected === emoji) {
+                    chip.classList.add("is-active");
+                }
+                var emojiNode = document.createElement("span");
+                emojiNode.className = "hj-memory-reaction-emoji";
+                emojiNode.textContent = emoji;
+                var countNode = document.createElement("span");
+                countNode.className = "hj-memory-reaction-count";
+                countNode.textContent = String(count);
+                chip.appendChild(emojiNode);
+                chip.appendChild(countNode);
+                entry.summary.appendChild(chip);
+            });
+
+            entry.summary.hidden = !hasAny;
+        }
+
+        function applyPayload(comments) {
+            var map = comments && typeof comments === "object" ? comments : {};
+            coids.forEach(function (coidKey) {
+                renderEntry(entries[coidKey], map[coidKey] || null);
+            });
+        }
+
+        function requestInitialState() {
+            var endpoint = buildEndpoint({ coids: coids.join(",") });
+            window.fetch(endpoint, {
+                method: "GET",
+                credentials: "same-origin",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            }).then(function (response) {
+                return response.text().then(function (text) {
+                    var payload = parseJSON(text);
+                    if (!response.ok || !payload || !payload.ok) {
+                        throw new Error("load_failed");
+                    }
+                    return payload;
+                });
+            }).then(function (payload) {
+                if (payload && payload.emojis && payload.emojis.length) {
+                    var nextOrder = [];
+                    payload.emojis.forEach(function (emoji) {
+                        var e = String(emoji || "").trim();
+                        if (!e || nextOrder.indexOf(e) !== -1) {
+                            return;
+                        }
+                        nextOrder.push(e);
+                    });
+                    if (nextOrder.length) {
+                        emojiOrder = nextOrder;
+                    }
+                }
+                applyPayload(payload.comments || {});
+            }).catch(function () {
+                applyPayload({});
+            });
+        }
+
+        function submitReaction(entry, emoji) {
+            if (!entry || !emoji || entry.busy) {
+                return;
+            }
+
+            entry.busy = true;
+            entry.reactor.classList.add("is-busy");
+
+            var formData = new FormData();
+            formData.append("action", "set");
+            formData.append("coid", String(entry.coid));
+            formData.append("emoji", emoji);
+
+            window.fetch(buildEndpoint(), {
+                method: "POST",
+                body: formData,
+                credentials: "same-origin",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            }).then(function (response) {
+                return response.text().then(function (text) {
+                    var payload = parseJSON(text);
+                    if (!response.ok || !payload || !payload.ok) {
+                        var message = payload && payload.message ? String(payload.message) : "互动失败，请稍后重试";
+                        throw new Error(message);
+                    }
+                    return payload;
+                });
+            }).then(function (payload) {
+                applyPayload(payload.comments || {});
+            }).catch(function (err) {
+                var msg = err && err.message ? String(err.message) : "互动失败，请稍后重试";
+                try {
+                    window.alert(msg);
+                } catch (e) {}
+            }).finally(function () {
+                entry.busy = false;
+                entry.reactor.classList.remove("is-busy");
+                setPickerOpen(entry, false);
+            });
+        }
+
+        coids.forEach(function (coidKey) {
+            var entry = entries[coidKey];
+            if (!entry || !entry.toggle || !entry.picker) {
+                return;
+            }
+
+            entry.toggle.addEventListener("click", function (event) {
+                if (event && event.preventDefault) {
+                    event.preventDefault();
+                }
+                var isOpen = entry.reactor.classList.contains("is-open");
+                setPickerOpen(entry, !isOpen);
+            });
+
+            entry.picker.addEventListener("click", function (event) {
+                var target = event && event.target && event.target.closest
+                    ? event.target.closest("[data-hj-memory-emoji]")
+                    : null;
+                if (!target) {
+                    return;
+                }
+                if (event && event.preventDefault) {
+                    event.preventDefault();
+                }
+                var emoji = (target.getAttribute("data-hj-memory-emoji") || "").trim();
+                if (!emoji) {
+                    return;
+                }
+                submitReaction(entry, emoji);
+            });
+        });
+
+        document.addEventListener("mousedown", function (event) {
+            if (!openEntry || !openEntry.reactor) {
+                return;
+            }
+            var target = event && event.target ? event.target : null;
+            if (!target) {
+                return;
+            }
+            if (openEntry.reactor.contains(target)) {
+                return;
+            }
+            closeOpenPicker();
+        }, true);
+
+        window.addEventListener("keydown", function (event) {
+            var key = event && (event.key || event.code);
+            if (key === "Escape" || key === "Esc") {
+                closeOpenPicker();
+            }
+        }, true);
+
+        applyPayload({});
+        requestInitialState();
     })();
 </script>
 

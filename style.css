@@ -4823,6 +4823,130 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     outline: 2px solid currentColor;  
     outline-offset: 2px;  
 }  
+
+.hj-comments .comment-reply.hj-memory-comment-reply {
+    flex-wrap: wrap;
+    row-gap: 0.42rem;
+}
+
+.hj-memory-comment-reply .hj-memory-reaction-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+}
+
+.hj-memory-comment-reply .hj-comment-memory-react-btn.is-reacted {
+    opacity: 1;
+    color: var(--hj-muted-day);
+    background: transparent;
+}
+
+.hj-memory-comment-reply .hj-comment-memory-react-btn.is-reacted svg {
+    fill: none;
+    fill-opacity: 1;
+    stroke: currentColor;
+}
+
+.hj-memory-comment-reply .hj-memory-emoji-picker {
+    left: 0;
+    right: auto;
+    bottom: calc(100% + 0.36rem);
+    padding: 0.16rem;
+    border: 2px solid var(--hj-day-black);
+    border-radius: 4px;
+    background: var(--hj-day-bg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    max-width: min(78vw, 560px);
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    z-index: 60;
+}
+
+.hj-memory-comment-reply .hj-memory-emoji-picker[hidden] {
+    display: none;
+}
+
+.hj-memory-comment-reply .hj-memory-emoji-picker-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    grid-template-columns: none;
+    gap: 0.15rem;
+}
+
+.hj-comments .comment-reply.hj-memory-comment-reply .hj-memory-emoji-picker .hj-emoji-picker-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    line-height: 1;
+}
+
+.hj-memory-comment-reply .hj-memory-emoji-picker .hj-emoji-picker-btn::after {
+    content: none !important;
+}
+
+.hj-memory-comment-reply .hj-memory-reaction-list {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.18rem;
+    min-height: 34px;
+}
+
+.hj-memory-comment-reply .hj-memory-reaction-list[hidden] {
+    display: none;
+}
+
+.hj-memory-comment-reply .hj-memory-reaction-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    gap: 0.22rem;
+    padding: 0 0.1rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    font-family: var(--hj-font-ui);
+    font-size: 0.9rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.hj-memory-comment-reply .hj-memory-reaction-emoji {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    font-size: 1em;
+    transform: translateY(-0.75px);
+}
+
+.hj-memory-comment-reply .hj-memory-reaction-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.hj-memory-comment-reply .hj-memory-reaction-chip.is-active {
+    font-weight: 600;
+}
+
+.hj-memory-comment-reply .hj-memory-reaction-wrap.is-busy .hj-comment-memory-react-btn {
+    opacity: 0.48;
+    pointer-events: none;
+}
  
 .hj-comments .hj-comment-more-toggle { 
     flex-basis: 100%; 
@@ -6613,6 +6737,31 @@ html.hj-login-modal-open .hj-login-modal {
         background: rgba(221, 221, 219, 0.06);
     }
 
+    html:not(.hj-theme-light) .hj-memory-comment-reply .hj-memory-emoji-picker {
+        background: var(--hj-night-bg);
+        border-color: var(--hj-night-white);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    }
+
+    html:not(.hj-theme-light) .hj-memory-comment-reply .hj-memory-emoji-picker .hj-emoji-picker-btn:hover,
+    html:not(.hj-theme-light) .hj-memory-comment-reply .hj-memory-emoji-picker .hj-emoji-picker-btn:focus-visible {
+        background: rgba(221, 221, 219, 0.06);
+    }
+
+    html:not(.hj-theme-light) .hj-memory-comment-reply .hj-memory-reaction-chip {
+        border-color: transparent;
+        background: transparent;
+    }
+
+    html:not(.hj-theme-light) .hj-memory-comment-reply .hj-memory-reaction-chip.is-active {
+        border-color: transparent;
+        background: transparent;
+    }
+
+    html:not(.hj-theme-light) .hj-memory-comment-reply .hj-comment-memory-react-btn.is-reacted {
+        color: var(--hj-muted-night);
+    }
+
     html:not(.hj-theme-light) .hj-comment-attachment-preview {
         border-color: var(--hj-line-night);
         background: color-mix(in oklab, var(--hj-night-bg) 88%, var(--hj-night-white) 12%);
@@ -7160,6 +7309,31 @@ html.hj-theme-dark .hj-emoji-picker {
 html.hj-theme-dark .hj-emoji-picker-btn:hover,
 html.hj-theme-dark .hj-emoji-picker-btn:focus-visible {
     background: rgba(221, 221, 219, 0.06);
+}
+
+html.hj-theme-dark .hj-memory-comment-reply .hj-memory-emoji-picker {
+    background: var(--hj-night-bg);
+    border-color: var(--hj-night-white);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+html.hj-theme-dark .hj-memory-comment-reply .hj-memory-emoji-picker .hj-emoji-picker-btn:hover,
+html.hj-theme-dark .hj-memory-comment-reply .hj-memory-emoji-picker .hj-emoji-picker-btn:focus-visible {
+    background: rgba(221, 221, 219, 0.06);
+}
+
+html.hj-theme-dark .hj-memory-comment-reply .hj-memory-reaction-chip {
+    border-color: transparent;
+    background: transparent;
+}
+
+html.hj-theme-dark .hj-memory-comment-reply .hj-memory-reaction-chip.is-active {
+    border-color: transparent;
+    background: transparent;
+}
+
+html.hj-theme-dark .hj-memory-comment-reply .hj-comment-memory-react-btn.is-reacted {
+    color: var(--hj-muted-night);
 }
 
 html.hj-theme-dark .hj-comment-attachment-preview {

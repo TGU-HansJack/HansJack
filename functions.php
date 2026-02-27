@@ -154,6 +154,7 @@ function themeConfig($form)
 function themeInit(Archive $archive)
 {
     hansJackHandleCommentUploadRequest($archive);
+    hansJackHandleMemoryReactionRequest($archive);
     hansJackHandleGithubOauthRequest($archive);
     hansJackEnableFeedStylesheet($archive);
 
@@ -413,6 +414,534 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
         'mime' => $mime,
         'isImage' => $isImage,
         'size' => $size,
+    ]);
+}
+
+function hansJackMemoryReactionAllowedEmojis(): array
+{
+    return ['👍', '❤️', '😂', '😮', '😢', '😡', '🎉', '👏', '🔥', '🤔', '👀', '🙏', '💯', '🚀'];
+}
+
+function hansJackMemoryReactionCacheFilePath(): string
+{
+    $base = rtrim((string) __TYPECHO_ROOT_DIR__, '/\\');
+    return $base
+        . DIRECTORY_SEPARATOR . 'usr'
+        . DIRECTORY_SEPARATOR . 'themes'
+        . DIRECTORY_SEPARATOR . 'HansJack'
+        . DIRECTORY_SEPARATOR . 'cache'
+        . DIRECTORY_SEPARATOR . 'memory-reactions.json';
+}
+
+function hansJackMemoryReactionDefaultStore(): array
+{
+    return [
+        'version' => 1,
+        'updated' => 0,
+        'comments' => [],
+    ];
+}
+
+function hansJackMemoryReactionNormalizeStore($store): array
+{
+    $normalized = hansJackMemoryReactionDefaultStore();
+    if (!is_array($store)) {
+        return $normalized;
+    }
+
+    $commentsRaw = $store['comments'] ?? [];
+    if (!is_array($commentsRaw)) {
+        $commentsRaw = [];
+    }
+
+    $comments = [];
+    foreach ($commentsRaw as $coidRaw => $reactionRows) {
+        $coid = (int) $coidRaw;
+        if ($coid <= 0 || !is_array($reactionRows)) {
+            continue;
+        }
+
+        $bucket = [];
+        foreach ($reactionRows as $ipHashRaw => $reaction) {
+            $ipHash = trim((string) $ipHashRaw);
+            if ($ipHash === '' || !is_array($reaction)) {
+                continue;
+            }
+
+            $emoji = trim((string) ($reaction['emoji'] ?? ''));
+            if ($emoji === '') {
+                continue;
+            }
+
+            $bucket[$ipHash] = [
+                'emoji' => $emoji,
+                'updated' => (int) ($reaction['updated'] ?? 0),
+            ];
+        }
+
+        if (!empty($bucket)) {
+            $comments[(string) $coid] = $bucket;
+        }
+    }
+
+    $normalized['comments'] = $comments;
+    $normalized['updated'] = (int) ($store['updated'] ?? 0);
+
+    return $normalized;
+}
+
+function hansJackMemoryReactionEnsureCacheDir(): bool
+{
+    $dir = dirname(hansJackMemoryReactionCacheFilePath());
+    if (is_dir($dir)) {
+        return true;
+    }
+
+    return @mkdir($dir, 0755, true);
+}
+
+function hansJackMemoryReactionReadStore(): array
+{
+    $path = hansJackMemoryReactionCacheFilePath();
+    if (!is_file($path)) {
+        return hansJackMemoryReactionDefaultStore();
+    }
+
+    $fp = @fopen($path, 'rb');
+    if (!is_resource($fp)) {
+        return hansJackMemoryReactionDefaultStore();
+    }
+
+    $raw = '';
+    if (@flock($fp, LOCK_SH)) {
+        $content = stream_get_contents($fp);
+        if (is_string($content)) {
+            $raw = $content;
+        }
+        @flock($fp, LOCK_UN);
+    } else {
+        $content = stream_get_contents($fp);
+        if (is_string($content)) {
+            $raw = $content;
+        }
+    }
+    @fclose($fp);
+
+    if ($raw === '') {
+        return hansJackMemoryReactionDefaultStore();
+    }
+
+    $decoded = json_decode($raw, true);
+    return hansJackMemoryReactionNormalizeStore($decoded);
+}
+
+function hansJackMemoryReactionParseCoids($raw): array
+{
+    $parts = [];
+    if (is_array($raw)) {
+        foreach ($raw as $item) {
+            $parts[] = (string) $item;
+        }
+    } else {
+        $rawText = trim((string) $raw);
+        if ($rawText !== '') {
+            $parts = preg_split('/[\s,;|]+/u', $rawText) ?: [];
+        }
+    }
+
+    $map = [];
+    foreach ($parts as $part) {
+        $id = (int) $part;
+        if ($id <= 0) {
+            continue;
+        }
+        $map[$id] = $id;
+        if (count($map) >= 200) {
+            break;
+        }
+    }
+
+    return array_values($map);
+}
+
+function hansJackMemoryReactionCommentCid(int $coid): int
+{
+    if ($coid <= 0) {
+        return 0;
+    }
+
+    $db = hansJackGithubDb();
+    if (!is_object($db)) {
+        return 0;
+    }
+
+    try {
+        $row = $db->fetchRow(
+            $db->select('cid')
+                ->from('table.comments')
+                ->where('coid = ?', $coid)
+                ->limit(1)
+        );
+    } catch (\Throwable $e) {
+        return 0;
+    }
+
+    if (is_array($row)) {
+        return (int) ($row['cid'] ?? 0);
+    }
+    if (is_object($row)) {
+        return (int) ($row->cid ?? 0);
+    }
+
+    return 0;
+}
+
+function hansJackMemoryReactionIsMemoryComment(int $coid): bool
+{
+    static $cache = [];
+
+    if ($coid <= 0) {
+        return false;
+    }
+    if (array_key_exists($coid, $cache)) {
+        return (bool) $cache[$coid];
+    }
+
+    $cid = hansJackMemoryReactionCommentCid($coid);
+    if ($cid <= 0) {
+        $cache[$coid] = false;
+        return false;
+    }
+
+    $db = hansJackGithubDb();
+    if (!is_object($db)) {
+        $cache[$coid] = false;
+        return false;
+    }
+
+    try {
+        $row = $db->fetchRow(
+            $db->select('slug', 'type')
+                ->from('table.contents')
+                ->where('cid = ?', $cid)
+                ->limit(1)
+        );
+    } catch (\Throwable $e) {
+        $cache[$coid] = false;
+        return false;
+    }
+
+    $slug = '';
+    $type = '';
+    if (is_array($row)) {
+        $slug = trim((string) ($row['slug'] ?? ''));
+        $type = trim((string) ($row['type'] ?? ''));
+    } elseif (is_object($row)) {
+        $slug = trim((string) ($row->slug ?? ''));
+        $type = trim((string) ($row->type ?? ''));
+    }
+
+    $ok = (strtolower($slug) === 'memory' && strtolower($type) === 'page');
+    $cache[$coid] = $ok;
+    return $ok;
+}
+
+function hansJackMemoryReactionClientIp(): string
+{
+    $keys = [
+        'HTTP_CF_CONNECTING_IP',
+        'HTTP_X_FORWARDED_FOR',
+        'HTTP_X_REAL_IP',
+        'REMOTE_ADDR',
+    ];
+
+    foreach ($keys as $key) {
+        $value = trim((string) ($_SERVER[$key] ?? ''));
+        if ($value === '') {
+            continue;
+        }
+
+        $candidates = [$value];
+        if ($key === 'HTTP_X_FORWARDED_FOR') {
+            $candidates = preg_split('/\s*,\s*/', $value) ?: [$value];
+        }
+
+        foreach ($candidates as $candidate) {
+            $candidate = trim((string) $candidate);
+            if ($candidate === '') {
+                continue;
+            }
+            if (filter_var($candidate, FILTER_VALIDATE_IP)) {
+                return $candidate;
+            }
+        }
+    }
+
+    return '';
+}
+
+function hansJackMemoryReactionClientHash(): string
+{
+    $ip = hansJackMemoryReactionClientIp();
+    if ($ip === '') {
+        $ip = trim((string) ($_SERVER['HTTP_USER_AGENT'] ?? 'unknown-client'));
+    }
+
+    return hash('sha256', $ip . '|' . (string) __TYPECHO_ROOT_DIR__);
+}
+
+function hansJackMemoryReactionBuildPayloads(array $store, array $coids, string $ipHash, array $allowedEmojis): array
+{
+    $allowedMap = [];
+    foreach ($allowedEmojis as $emoji) {
+        $emojiText = trim((string) $emoji);
+        if ($emojiText === '') {
+            continue;
+        }
+        $allowedMap[$emojiText] = true;
+    }
+
+    $payload = [];
+    foreach ($coids as $coidRaw) {
+        $coid = (int) $coidRaw;
+        if ($coid <= 0) {
+            continue;
+        }
+
+        $bucket = $store['comments'][(string) $coid] ?? [];
+        if (!is_array($bucket)) {
+            $bucket = [];
+        }
+
+        $counts = [];
+        $selected = '';
+        foreach ($bucket as $storedHash => $reaction) {
+            if (!is_array($reaction)) {
+                continue;
+            }
+            $emoji = trim((string) ($reaction['emoji'] ?? ''));
+            if ($emoji === '' || !isset($allowedMap[$emoji])) {
+                continue;
+            }
+
+            $counts[$emoji] = (int) ($counts[$emoji] ?? 0) + 1;
+            if ((string) $storedHash === $ipHash) {
+                $selected = $emoji;
+            }
+        }
+
+        if ($selected !== '' && !isset($allowedMap[$selected])) {
+            $selected = '';
+        }
+
+        $orderedCounts = [];
+        $total = 0;
+        foreach ($allowedEmojis as $emoji) {
+            $emojiText = trim((string) $emoji);
+            if ($emojiText === '') {
+                continue;
+            }
+            $count = (int) ($counts[$emojiText] ?? 0);
+            if ($count <= 0) {
+                continue;
+            }
+            $orderedCounts[$emojiText] = $count;
+            $total += $count;
+        }
+
+        $payload[(string) $coid] = [
+            'selected' => $selected,
+            'counts' => $orderedCounts,
+            'total' => $total,
+        ];
+    }
+
+    return $payload;
+}
+
+function hansJackHandleMemoryReactionRequest(Archive $archive): void
+{
+    $exists = false;
+    $flag = '';
+    try {
+        $flag = trim((string) $archive->request->get('hj_memory_reaction', '', $exists));
+    } catch (\Throwable $e) {
+        $exists = false;
+        $flag = '';
+    }
+
+    if (!$exists) {
+        return;
+    }
+    if ($flag === '' || $flag === '0' || strtolower($flag) === 'false') {
+        return;
+    }
+
+    $allowedEmojis = hansJackMemoryReactionAllowedEmojis();
+    $allowedMap = [];
+    foreach ($allowedEmojis as $emoji) {
+        $key = trim((string) $emoji);
+        if ($key === '') {
+            continue;
+        }
+        $allowedMap[$key] = true;
+    }
+
+    $clientHash = hansJackMemoryReactionClientHash();
+    if ($clientHash === '') {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('无法识别客户端'),
+        ], 400);
+    }
+
+    if ($archive->request->isPost()) {
+        $action = '';
+        try {
+            $action = strtolower(trim((string) $archive->request->get('action', 'set')));
+        } catch (\Throwable $e) {
+            $action = 'set';
+        }
+
+        if ($action === '' || $action === 'set') {
+            $coid = 0;
+            $emoji = '';
+            try {
+                $coid = (int) $archive->request->get('coid', 0);
+            } catch (\Throwable $e) {
+                $coid = 0;
+            }
+            try {
+                $emoji = trim((string) $archive->request->get('emoji', ''));
+            } catch (\Throwable $e) {
+                $emoji = '';
+            }
+
+            if ($coid <= 0 || !hansJackMemoryReactionIsMemoryComment($coid)) {
+                hansJackCommentUploadJson([
+                    'ok' => false,
+                    'message' => _t('评论不存在或不支持互动'),
+                ], 400);
+            }
+            if ($emoji === '' || !isset($allowedMap[$emoji])) {
+                hansJackCommentUploadJson([
+                    'ok' => false,
+                    'message' => _t('互动表情不合法'),
+                ], 400);
+            }
+
+            if (!hansJackMemoryReactionEnsureCacheDir()) {
+                hansJackCommentUploadJson([
+                    'ok' => false,
+                    'message' => _t('缓存目录不可写'),
+                ], 500);
+            }
+
+            $path = hansJackMemoryReactionCacheFilePath();
+            $fp = @fopen($path, 'c+');
+            if (!is_resource($fp)) {
+                hansJackCommentUploadJson([
+                    'ok' => false,
+                    'message' => _t('缓存文件打开失败'),
+                ], 500);
+            }
+
+            $store = hansJackMemoryReactionDefaultStore();
+            $writeOk = false;
+
+            if (@flock($fp, LOCK_EX)) {
+                rewind($fp);
+                $raw = stream_get_contents($fp);
+                if (!is_string($raw)) {
+                    $raw = '';
+                }
+
+                if ($raw !== '') {
+                    $decoded = json_decode($raw, true);
+                    $store = hansJackMemoryReactionNormalizeStore($decoded);
+                }
+
+                $commentKey = (string) $coid;
+                if (!isset($store['comments'][$commentKey]) || !is_array($store['comments'][$commentKey])) {
+                    $store['comments'][$commentKey] = [];
+                }
+                $store['comments'][$commentKey][$clientHash] = [
+                    'emoji' => $emoji,
+                    'updated' => time(),
+                ];
+                $store['updated'] = time();
+
+                $json = json_encode($store, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                if (is_string($json)) {
+                    rewind($fp);
+                    if (@ftruncate($fp, 0)) {
+                        $written = @fwrite($fp, $json);
+                        @fflush($fp);
+                        $writeOk = ($written !== false);
+                    }
+                }
+
+                @flock($fp, LOCK_UN);
+            }
+
+            @fclose($fp);
+
+            if (!$writeOk) {
+                hansJackCommentUploadJson([
+                    'ok' => false,
+                    'message' => _t('互动写入失败，请稍后重试'),
+                ], 500);
+            }
+
+            @chmod($path, 0644);
+            $comments = hansJackMemoryReactionBuildPayloads($store, [$coid], $clientHash, $allowedEmojis);
+            hansJackCommentUploadJson([
+                'ok' => true,
+                'comments' => $comments,
+                'coids' => [(int) $coid],
+                'emojis' => $allowedEmojis,
+            ]);
+        }
+    }
+
+    $coids = [];
+    try {
+        $coids = hansJackMemoryReactionParseCoids($archive->request->get('coids', ''));
+    } catch (\Throwable $e) {
+        $coids = [];
+    }
+
+    if (empty($coids)) {
+        $single = 0;
+        try {
+            $single = (int) $archive->request->get('coid', 0);
+        } catch (\Throwable $e) {
+            $single = 0;
+        }
+        if ($single > 0) {
+            $coids = [$single];
+        }
+    }
+
+    $validCoids = [];
+    foreach ($coids as $coidRaw) {
+        $coid = (int) $coidRaw;
+        if ($coid <= 0) {
+            continue;
+        }
+        if (!hansJackMemoryReactionIsMemoryComment($coid)) {
+            continue;
+        }
+        $validCoids[] = $coid;
+    }
+
+    $store = hansJackMemoryReactionReadStore();
+    $comments = hansJackMemoryReactionBuildPayloads($store, $validCoids, $clientHash, $allowedEmojis);
+    hansJackCommentUploadJson([
+        'ok' => true,
+        'comments' => $comments,
+        'coids' => $validCoids,
+        'emojis' => $allowedEmojis,
     ]);
 }
 
