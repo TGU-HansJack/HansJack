@@ -161,7 +161,7 @@ img {
 }
 
 .hj-shell {
-    width: 60%;
+    width: 50%;
     margin: 0 auto;
     padding: 0 0.8rem;
     max-width: 100%;
@@ -3853,8 +3853,8 @@ html.hj-theme-dark .hj-activity-bubble.is-private {
 
 .hj-fab {
     position: fixed;
-    /* Align to the right edge of the centered .hj-shell (60% width). */
-    right: calc((100vw - 60vw) / 2 - var(--hj-fab-size) + env(safe-area-inset-right, 0px));
+    /* Align to the right edge of the centered .hj-shell (50% width). */
+    right: calc((100vw - 50vw) / 2 - var(--hj-fab-size) + env(safe-area-inset-right, 0px));
     bottom: calc(0.8rem + env(safe-area-inset-bottom, 0px));
     display: flex;
     flex-direction: column;
