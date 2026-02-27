@@ -47,7 +47,7 @@
 </footer>
 
 <div class="hj-fab" aria-label="<?php _e('快捷操作'); ?>">
-    <button class="hj-fab-btn hj-fab-top" type="button" aria-label="<?php _e('返回顶部'); ?>" title="<?php _e('返回顶部'); ?>">
+    <button class="hj-fab-btn hj-fab-top" type="button" aria-label="<?php _e('返回顶部'); ?>">
         <span class="hj-fab-ring" aria-hidden="true">
             <svg class="hj-fab-ring-svg" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
                 <circle class="hj-fab-ring-bg" cx="20" cy="20" r="18"></circle>
@@ -57,8 +57,9 @@
         <span class="hj-fab-icon" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-to-line-icon lucide-arrow-up-to-line" aria-hidden="true"><path d="M5 3h14"/><path d="m18 13-6-6-6 6"/><path d="M12 7v14"/></svg>
         </span>
+        <span class="hj-fab-tip" aria-hidden="true"><?php _e('返回顶部'); ?></span>
     </button>
-    <button class="hj-fab-btn hj-fab-settings" type="button" aria-label="<?php _e('设置'); ?>" title="<?php _e('设置'); ?>" aria-haspopup="true" aria-expanded="false">
+    <button class="hj-fab-btn hj-fab-settings" type="button" aria-label="<?php _e('设置'); ?>" aria-haspopup="true" aria-expanded="false">
         <span class="hj-fab-ring" aria-hidden="true">
             <svg class="hj-fab-ring-svg" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
                 <circle class="hj-fab-ring-bg" cx="20" cy="20" r="18"></circle>
@@ -68,8 +69,9 @@
         <span class="hj-fab-icon" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sliders-vertical-icon lucide-sliders-vertical" aria-hidden="true"><path d="M10 8h4"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M17 16h4"/><path d="M19 12V3"/><path d="M19 21v-5"/><path d="M3 14h4"/><path d="M5 10V3"/><path d="M5 21v-7"/></svg>
         </span>
+        <span class="hj-fab-tip" aria-hidden="true"><?php _e('设置'); ?></span>
     </button>
-    <button class="hj-fab-btn hj-fab-comment" type="button" aria-label="<?php _e('评论'); ?>" title="<?php _e('评论'); ?>">
+    <button class="hj-fab-btn hj-fab-comment" type="button" aria-label="<?php _e('评论'); ?>">
         <span class="hj-fab-ring" aria-hidden="true">
             <svg class="hj-fab-ring-svg" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
                 <circle class="hj-fab-ring-bg" cx="20" cy="20" r="18"></circle>
@@ -79,8 +81,9 @@
         <span class="hj-fab-icon" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
         </span>
+        <span class="hj-fab-tip" aria-hidden="true"><?php _e('评论'); ?></span>
     </button>
-    <button class="hj-fab-btn hj-fab-toc" type="button" aria-label="<?php _e('目录'); ?>" title="<?php _e('目录'); ?>" aria-haspopup="true" aria-expanded="false">
+    <button class="hj-fab-btn hj-fab-toc" type="button" aria-label="<?php _e('目录'); ?>" aria-haspopup="true" aria-expanded="false">
         <span class="hj-fab-ring" aria-hidden="true">
             <svg class="hj-fab-ring-svg" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
                 <circle class="hj-fab-ring-bg" cx="20" cy="20" r="18"></circle>
@@ -90,6 +93,7 @@
         <span class="hj-fab-icon" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-table-of-contents-icon lucide-table-of-contents" aria-hidden="true"><path d="M16 5H3"/><path d="M16 12H3"/><path d="M16 19H3"/><path d="M21 5h.01"/><path d="M21 12h.01"/><path d="M21 19h.01"/></svg>
         </span>
+        <span class="hj-fab-tip" aria-hidden="true"><?php _e('目录'); ?></span>
     </button>
 </div>
 
