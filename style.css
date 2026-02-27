@@ -4561,6 +4561,7 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    position: relative;
     width: 34px;
     height: 34px;
     padding: 0;
@@ -4576,9 +4577,37 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     display: block;
 }
 
+.hj-comments .hj-comments-head-btn::after {
+    content: attr(aria-label);
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translate(-50%, -0.12rem);
+    padding: 0.12rem 0.35rem;
+    border-radius: 4px;
+    background: var(--hj-nav-block-bg);
+    color: var(--hj-nav-block-fg);
+    font-family: var(--hj-font-ui);
+    font-size: 0.72rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 20;
+    transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
+}
+
 .hj-comments .hj-comments-head-btn:hover,
 .hj-comments .hj-comments-head-btn:focus-visible {
     opacity: 1;
+}
+
+.hj-comments .hj-comments-head-btn:hover::after,
+.hj-comments .hj-comments-head-btn:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -0.24rem);
 }
 
 .hj-comments .hj-comments-head-btn:focus-visible {
