@@ -3714,6 +3714,18 @@ html.hj-theme-dark .hj-activity-bubble.is-private {
     opacity: 0.85;
 }
 
+@media (max-width: 768px) {
+    .hj-article-meta {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.45rem;
+    }
+
+    .hj-article-meta-item {
+        width: 100%;
+    }
+}
+
 .hj-article-content {
     color: inherit;
     min-width: 0;
