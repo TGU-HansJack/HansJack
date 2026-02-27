@@ -26,6 +26,9 @@ $githubUrl = '';
 $creativeUrl = '';
 $blogSlug = 'posts';
 $memoSlug = 'notes';
+$landingHeatmapDays = 140;
+$landingHeatmapSeries = [];
+$landingLatestContent = null;
 if ($this->is('index')) {
     $brandName = trim((string) ($themeConfig['brandName'] ?? ''));
     if ($brandName === '') {
@@ -48,6 +51,236 @@ if ($this->is('index')) {
     $cvUrl = trim((string) (($themeConfig['links']['cv'] ?? '') ?: ''));
     $githubUrl = trim((string) (($themeConfig['links']['github'] ?? '') ?: ''));
     $creativeUrl = trim((string) (($themeConfig['links']['creative'] ?? '') ?: ''));
+
+    $heatmapDayCount = max(1, (int) $landingHeatmapDays);
+    $todayStartTs = strtotime(date('Y-m-d 00:00:00'));
+    if ($todayStartTs === false) {
+        $todayStartTs = time();
+    }
+    $heatmapStartTs = $todayStartTs - (($heatmapDayCount - 1) * 86400);
+    $heatmapEndTs = $todayStartTs + 86399;
+
+    for ($i = 0; $i < $heatmapDayCount; $i++) {
+        $dayTs = $heatmapStartTs + ($i * 86400);
+        $dayKey = date('Y-m-d', $dayTs);
+        $landingHeatmapSeries[$dayKey] = [
+            'dateLabel' => date('Y年n月j日', $dayTs),
+            'notes' => [],
+            'memos' => [],
+            'others' => [],
+            'total' => 0,
+        ];
+    }
+
+    $landingCategoryByMid = [];
+    $landingPostsRootMid = 0;
+    $landingMemosRootMid = 0;
+    try {
+        $this->widget('Widget_Metas_Category_List@hj_landing_categories')->to($landingCategories);
+        if ($landingCategories && $landingCategories->have()) {
+            while ($landingCategories->next()) {
+                $mid = (int) ($landingCategories->mid ?? 0);
+                if ($mid <= 0) {
+                    continue;
+                }
+                $slug = (string) ($landingCategories->slug ?? '');
+                $landingCategoryByMid[$mid] = [
+                    'mid' => $mid,
+                    'parent' => (int) ($landingCategories->parent ?? 0),
+                    'slug' => $slug,
+                ];
+                if ($slug === $blogSlug || $slug === 'posts') {
+                    $landingPostsRootMid = $mid;
+                } elseif ($slug === $memoSlug || $slug === 'notes') {
+                    $landingMemosRootMid = $mid;
+                }
+            }
+        }
+    } catch (\Throwable $e) {
+        $landingCategoryByMid = [];
+        $landingPostsRootMid = 0;
+        $landingMemosRootMid = 0;
+    }
+
+    $landingPosts = null;
+    try {
+        $this->widget('Widget_Contents_Post_Recent@hj_landing_posts', 'pageSize=9999', null, false)->to($landingPosts);
+    } catch (\Throwable $e) {
+        $landingPosts = null;
+    }
+
+    if ($landingPosts && $landingPosts->have()) {
+        while ($landingPosts->next()) {
+            $created = (int) ($landingPosts->created ?? 0);
+            if ($created <= 0) {
+                continue;
+            }
+
+            if ($landingLatestContent === null || $created > (int) ($landingLatestContent['created'] ?? 0)) {
+                $latestTitle = trim((string) ($landingPosts->title ?? ''));
+                if ($latestTitle === '') {
+                    $latestTitle = _t('无标题');
+                }
+
+                $latestTags = [];
+                $latestTagKeys = [];
+                $postTags = [];
+                try {
+                    $postTags = is_array($landingPosts->tags) ? $landingPosts->tags : [];
+                } catch (\Throwable $e) {
+                    $postTags = [];
+                }
+
+                foreach ($postTags as $tag) {
+                    if (count($latestTags) >= 3) {
+                        break;
+                    }
+                    $tagName = trim((string) ($tag['name'] ?? ''));
+                    $tagUrl = trim((string) ($tag['permalink'] ?? ''));
+                    if ($tagName === '' || $tagUrl === '') {
+                        continue;
+                    }
+                    $tagKey = function_exists('mb_strtolower')
+                        ? mb_strtolower($tagName, 'UTF-8')
+                        : strtolower($tagName);
+                    if (isset($latestTagKeys[$tagKey])) {
+                        continue;
+                    }
+                    $latestTagKeys[$tagKey] = true;
+                    $latestTags[] = [
+                        'name' => $tagName,
+                        'url' => $tagUrl,
+                    ];
+                }
+
+                if (count($latestTags) < 3) {
+                    $postCategoriesForTags = [];
+                    try {
+                        $postCategoriesForTags = is_array($landingPosts->categories) ? $landingPosts->categories : [];
+                    } catch (\Throwable $e) {
+                        $postCategoriesForTags = [];
+                    }
+
+                    foreach ($postCategoriesForTags as $cat) {
+                        if (count($latestTags) >= 3) {
+                            break;
+                        }
+
+                        $catName = trim((string) ($cat['name'] ?? ''));
+                        $catUrl = trim((string) ($cat['permalink'] ?? ''));
+                        if ($catName === '' || $catUrl === '') {
+                            continue;
+                        }
+
+                        $catMid = (int) ($cat['mid'] ?? 0);
+                        $catSlug = trim((string) ($cat['slug'] ?? ''));
+                        if ($catMid > 0 && isset($landingCategoryByMid[$catMid])) {
+                            $catInfo = $landingCategoryByMid[$catMid];
+                            $catSlug = trim((string) ($catInfo['slug'] ?? $catSlug));
+                        }
+
+                        $isRootCategory = (
+                            ($landingPostsRootMid > 0 && $catMid === $landingPostsRootMid) ||
+                            ($landingMemosRootMid > 0 && $catMid === $landingMemosRootMid) ||
+                            $catSlug === $blogSlug ||
+                            $catSlug === $memoSlug ||
+                            $catSlug === 'posts' ||
+                            $catSlug === 'notes'
+                        );
+                        if ($isRootCategory) {
+                            continue;
+                        }
+
+                        $catKey = function_exists('mb_strtolower')
+                            ? mb_strtolower($catName, 'UTF-8')
+                            : strtolower($catName);
+                        if (isset($latestTagKeys[$catKey])) {
+                            continue;
+                        }
+                        $latestTagKeys[$catKey] = true;
+
+                        $latestTags[] = [
+                            'name' => $catName,
+                            'url' => $catUrl,
+                        ];
+                    }
+                }
+
+                $landingLatestContent = [
+                    'created' => $created,
+                    'title' => $latestTitle,
+                    'url' => (string) ($landingPosts->permalink ?? ''),
+                    'datetime' => date('c', $created),
+                    'timeLabel' => date('Y/m/d-H:i:s', $created),
+                    'timeTitle' => date('Y年n月j日 H:i:s', $created),
+                    'tags' => $latestTags,
+                ];
+            }
+
+            if ($created < $heatmapStartTs || $created > $heatmapEndTs) {
+                continue;
+            }
+
+            $dayKey = date('Y-m-d', $created);
+            if (!isset($landingHeatmapSeries[$dayKey])) {
+                continue;
+            }
+
+            $itemTitle = trim((string) ($landingPosts->title ?? ''));
+            if ($itemTitle === '') {
+                $itemTitle = _t('无标题');
+            }
+            $itemUrl = trim((string) ($landingPosts->permalink ?? ''));
+            if ($itemUrl === '') {
+                continue;
+            }
+
+            $bucket = 'others';
+            $postCategories = [];
+            try {
+                $postCategories = is_array($landingPosts->categories) ? $landingPosts->categories : [];
+            } catch (\Throwable $e) {
+                $postCategories = [];
+            }
+
+            foreach ($postCategories as $cat) {
+                $mid = (int) ($cat['mid'] ?? 0);
+                if ($mid <= 0 || !isset($landingCategoryByMid[$mid])) {
+                    continue;
+                }
+
+                $catInfo = $landingCategoryByMid[$mid];
+                $catMid = (int) ($catInfo['mid'] ?? 0);
+                $catParent = (int) ($catInfo['parent'] ?? 0);
+                $catSlug = (string) ($catInfo['slug'] ?? '');
+
+                if (
+                    ($landingMemosRootMid > 0 && ($catMid === $landingMemosRootMid || $catParent === $landingMemosRootMid))
+                    || $catSlug === $memoSlug
+                    || $catSlug === 'notes'
+                ) {
+                    $bucket = 'memos';
+                    break;
+                }
+
+                if (
+                    ($landingPostsRootMid > 0 && ($catMid === $landingPostsRootMid || $catParent === $landingPostsRootMid))
+                    || $catSlug === $blogSlug
+                    || $catSlug === 'posts'
+                ) {
+                    $bucket = 'notes';
+                }
+            }
+
+            $landingHeatmapSeries[$dayKey][$bucket][] = [
+                'title' => $itemTitle,
+                'url' => $itemUrl,
+            ];
+            $landingHeatmapSeries[$dayKey]['total'] += 1;
+        }
+    }
+
+    $landingHeatmapSeries = array_values($landingHeatmapSeries);
 }
 ?>
 
@@ -88,6 +321,120 @@ if ($this->is('index')) {
                         <img src="<?php echo hansJackEscape($faviconUrl); ?>" alt="">
                     </div>
                 </div>
+            </div>
+
+            <div class="hj-landing-insights" role="region" aria-label="<?php _e('热力图与最新内容'); ?>">
+                <footer class="hj-landing-insights-footer">
+                    <section class="hj-landing-heatmap-grid" aria-label="<?php echo hansJackEscape(sprintf(_t('最近 %d 天内容热力图'), (int) $landingHeatmapDays)); ?>">
+                        <?php foreach ($landingHeatmapSeries as $day): ?>
+                            <?php
+                            $dayTotal = (int) ($day['total'] ?? 0);
+                            $dotClass = 'is-empty';
+                            if ($dayTotal >= 3) {
+                                $dotClass = 'is-level-3';
+                            } elseif ($dayTotal === 2) {
+                                $dotClass = 'is-level-2';
+                            } elseif ($dayTotal === 1) {
+                                $dotClass = 'is-level-1';
+                            }
+
+                            $dayNotes = is_array($day['notes'] ?? null) ? $day['notes'] : [];
+                            $dayMemos = is_array($day['memos'] ?? null) ? $day['memos'] : [];
+                            $dayOthers = is_array($day['others'] ?? null) ? $day['others'] : [];
+                            $previewLimit = 3;
+                            ?>
+                            <figure class="hj-landing-heatmap-item">
+                                <i class="hj-landing-heatmap-dot <?php echo hansJackEscape($dotClass); ?>" aria-hidden="true"></i>
+                                <figcaption class="hj-landing-heatmap-pop">
+                                    <time class="hj-landing-heatmap-date"><?php echo hansJackEscape((string) ($day['dateLabel'] ?? '')); ?></time>
+                                    <?php if ($dayTotal <= 0): ?>
+                                        <p class="hj-landing-heatmap-empty"><?php _e('无字'); ?></p>
+                                    <?php else: ?>
+                                        <?php if (!empty($dayNotes)): ?>
+                                            <p class="hj-landing-heatmap-kind"><?php echo hansJackEscape(sprintf(_t('博文 %d 篇：'), count($dayNotes))); ?></p>
+                                            <ul class="hj-landing-heatmap-list">
+                                                <?php foreach (array_slice($dayNotes, 0, $previewLimit) as $item): ?>
+                                                    <li><a class="hj-landing-heatmap-link" href="<?php echo hansJackEscape((string) ($item['url'] ?? '')); ?>"><?php echo hansJackEscape((string) ($item['title'] ?? '')); ?></a></li>
+                                                <?php endforeach; ?>
+                                                <?php if (count($dayNotes) > $previewLimit): ?>
+                                                    <li class="hj-landing-heatmap-more"><?php echo hansJackEscape(sprintf(_t('另有 %d 篇'), count($dayNotes) - $previewLimit)); ?></li>
+                                                <?php endif; ?>
+                                            </ul>
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($dayMemos)): ?>
+                                            <p class="hj-landing-heatmap-kind"><?php echo hansJackEscape(sprintf(_t('手记 %d 则：'), count($dayMemos))); ?></p>
+                                            <ul class="hj-landing-heatmap-list">
+                                                <?php foreach (array_slice($dayMemos, 0, $previewLimit) as $item): ?>
+                                                    <li><a class="hj-landing-heatmap-link" href="<?php echo hansJackEscape((string) ($item['url'] ?? '')); ?>"><?php echo hansJackEscape((string) ($item['title'] ?? '')); ?></a></li>
+                                                <?php endforeach; ?>
+                                                <?php if (count($dayMemos) > $previewLimit): ?>
+                                                    <li class="hj-landing-heatmap-more"><?php echo hansJackEscape(sprintf(_t('另有 %d 则'), count($dayMemos) - $previewLimit)); ?></li>
+                                                <?php endif; ?>
+                                            </ul>
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($dayOthers)): ?>
+                                            <p class="hj-landing-heatmap-kind"><?php echo hansJackEscape(sprintf(_t('内容 %d 条：'), count($dayOthers))); ?></p>
+                                            <ul class="hj-landing-heatmap-list">
+                                                <?php foreach (array_slice($dayOthers, 0, $previewLimit) as $item): ?>
+                                                    <li><a class="hj-landing-heatmap-link" href="<?php echo hansJackEscape((string) ($item['url'] ?? '')); ?>"><?php echo hansJackEscape((string) ($item['title'] ?? '')); ?></a></li>
+                                                <?php endforeach; ?>
+                                                <?php if (count($dayOthers) > $previewLimit): ?>
+                                                    <li class="hj-landing-heatmap-more"><?php echo hansJackEscape(sprintf(_t('另有 %d 条'), count($dayOthers) - $previewLimit)); ?></li>
+                                                <?php endif; ?>
+                                            </ul>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </figcaption>
+                            </figure>
+                        <?php endforeach; ?>
+                    </section>
+
+                    <blockquote class="hj-landing-latest">
+                        <h1><?php _e('最新内容'); ?></h1>
+                        <?php if ($landingLatestContent !== null): ?>
+                            <?php
+                            $latestTitle = (string) ($landingLatestContent['title'] ?? '');
+                            $latestUrl = trim((string) ($landingLatestContent['url'] ?? ''));
+                            $latestTimeLabel = (string) ($landingLatestContent['timeLabel'] ?? '');
+                            $latestTimeTitle = (string) ($landingLatestContent['timeTitle'] ?? '');
+                            $latestDatetime = (string) ($landingLatestContent['datetime'] ?? '');
+                            $latestTags = is_array($landingLatestContent['tags'] ?? null) ? $landingLatestContent['tags'] : [];
+                            ?>
+                            <div class="hj-landing-latest-main">
+                                <div class="hj-landing-latest-head">
+                                    <?php if ($latestUrl !== ''): ?>
+                                        <a href="<?php echo hansJackEscape($latestUrl); ?>" class="hj-landing-latest-link"><?php echo hansJackEscape($latestTitle); ?></a>
+                                    <?php else: ?>
+                                        <span class="hj-landing-latest-link"><?php echo hansJackEscape($latestTitle); ?></span>
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($latestTags)): ?>
+                                        <div class="hj-landing-latest-tags">
+                                            <?php foreach ($latestTags as $tag): ?>
+                                                <?php
+                                                $tagName = trim((string) ($tag['name'] ?? ''));
+                                                $tagUrl = trim((string) ($tag['url'] ?? ''));
+                                                if ($tagName === '' || $tagUrl === '') {
+                                                    continue;
+                                                }
+                                                ?>
+                                                <a href="<?php echo hansJackEscape($tagUrl); ?>" class="hj-landing-latest-tag">#<?php echo hansJackEscape($tagName); ?></a>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+
+                                <?php if ($latestTimeLabel !== ''): ?>
+                                    <time datetime="<?php echo hansJackEscape($latestDatetime); ?>" class="hj-landing-latest-time" title="<?php echo hansJackEscape($latestTimeTitle); ?>"><?php echo hansJackEscape($latestTimeLabel); ?></time>
+                                <?php endif; ?>
+                            </div>
+                        <?php else: ?>
+                            <p class="hj-landing-latest-empty"><?php _e('暂无内容'); ?></p>
+                        <?php endif; ?>
+                    </blockquote>
+                </footer>
             </div>
 
             <div class="hj-landing-bottom" role="group" aria-label="<?php _e('名言'); ?>">
