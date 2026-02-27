@@ -618,12 +618,12 @@ html:not(.hj-motion-ready) .hj-nav-dropdown {
     .hj-nav-link-text,
     .hj-nav-float-icon,
     .hj-nav-dropdown,
-    .hj-article-content h1::before,
-    .hj-article-content h2::before,
-    .hj-article-content h3::before,
-    .hj-article-content h4::before,
-    .hj-article-content h5::before,
-    .hj-article-content h6::before,
+    :is(.hj-article-content, .hj-comment-content) h1::before,
+    :is(.hj-article-content, .hj-comment-content) h2::before,
+    :is(.hj-article-content, .hj-comment-content) h3::before,
+    :is(.hj-article-content, .hj-comment-content) h4::before,
+    :is(.hj-article-content, .hj-comment-content) h5::before,
+    :is(.hj-article-content, .hj-comment-content) h6::before,
     .hj-posts-tag-pill,
     .hj-theme-toggle,
     .hj-nav-toggle,
@@ -4073,7 +4073,7 @@ html.hj-theme-dark .hj-activity-bubble.is-private {
     }
 }
 
-.hj-article-content {
+:is(.hj-article-content, .hj-comment-content) {
     color: inherit;
     min-width: 0;
     --hj-spoiler-blur: 3.5px;
@@ -5145,6 +5145,87 @@ html.hj-mobile-toc-open .hj-mobile-toc-backdrop {
     border-radius: 0;
 }
 
+.hj-comment-attach[disabled] {
+    opacity: 0.42;
+    cursor: wait;
+}
+
+.hj-comment-box.has-attachment-preview .hj-comment-textarea {
+    padding-bottom: 5.35rem;
+}
+
+.hj-comment-attachment-preview {
+    position: absolute;
+    left: 0.75rem;
+    bottom: calc(34px + 0.48rem);
+    width: 64px;
+    height: 64px;
+    border: 1px solid var(--hj-line-day);
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--hj-day-bg);
+    z-index: 42;
+    pointer-events: auto;
+}
+
+.hj-comment-attachment-preview-link {
+    display: block;
+    width: 100%;
+    height: 100%;
+    text-decoration: none;
+}
+
+.hj-comment-attachment-preview-img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.hj-comment-attachment-preview-file {
+    width: 100%;
+    height: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem;
+    font-family: var(--hj-font-ui);
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--hj-day-black);
+    text-align: center;
+}
+
+.hj-comment-attachment-preview-remove {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    background: rgba(42, 42, 40, 0.82);
+    color: #fff;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.hj-comment-attachment-preview-remove:hover,
+.hj-comment-attachment-preview-remove:focus-visible {
+    background: rgba(42, 42, 40, 0.96);
+}
+
+.hj-comment-attachment-preview-remove:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
+}
+
 .hj-emoji-picker {
     position: absolute;
     left: 0.75rem;
@@ -5500,7 +5581,7 @@ html.hj-login-modal-open .hj-login-modal {
     pointer-events: auto;
 }
 
-.hj-article-content a {
+:is(.hj-article-content, .hj-comment-content) a {
     position: relative;
     display: inline;
     color: var(--hj-day-black);
@@ -5510,20 +5591,20 @@ html.hj-login-modal-open .hj-login-modal {
     --hj-article-link-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M15%203h6v6%22/%3E%3Cpath%20d%3D%22M10%2014%2021%203%22/%3E%3Cpath%20d%3D%22M18%2013v6a2%202%200%200%201-2%202H5a2%202%200%200%201-2-2V8a2%202%200%200%201%202-2h6%22/%3E%3C/svg%3E");
 }
 
-.hj-article-content a.hj-link-internal {
+:is(.hj-article-content, .hj-comment-content) a.hj-link-internal {
     --hj-article-link-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2011V4a2%202%200%200%201%202-2h8a2.4%202.4%200%200%201%201.706.706l3.588%203.588A2.4%202.4%200%200%201%2020%208v12a2%202%200%200%201-2%202H6a2%202%200%200%201-2-2v-3a2%202%200%200%201%202-2h7%22/%3E%3Cpath%20d%3D%22M14%202v5a1%201%200%200%200%201%201h5%22/%3E%3Cpath%20d%3D%22m10%2018%203-3-3-3%22/%3E%3C/svg%3E");
 }
 
-.hj-article-content a:visited {
+:is(.hj-article-content, .hj-comment-content) a:visited {
     color: var(--hj-day-black);
 }
 
-.hj-article-content a::before {
+:is(.hj-article-content, .hj-comment-content) a::before {
     content: none;
 }
 
-.hj-article-content a:hover,
-.hj-article-content a:focus-visible {
+:is(.hj-article-content, .hj-comment-content) a:hover,
+:is(.hj-article-content, .hj-comment-content) a:focus-visible {
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 0.12em;
@@ -5531,8 +5612,8 @@ html.hj-login-modal-open .hj-login-modal {
     text-decoration-skip-ink: auto;
 }
 
-.hj-article-content a:hover::after,
-.hj-article-content a:focus-visible::after {
+:is(.hj-article-content, .hj-comment-content) a:hover::after,
+:is(.hj-article-content, .hj-comment-content) a:focus-visible::after {
     /* Explicit underline for the generated icon-area so it never "drops" the underline. */
     text-decoration: underline;
     text-decoration-thickness: 1px;
@@ -5541,7 +5622,7 @@ html.hj-login-modal-open .hj-login-modal {
     text-decoration-skip-ink: auto;
 }
 
-.hj-article-content a::after {
+:is(.hj-article-content, .hj-comment-content) a::after {
     /* Reserve real text width so the underline can include the icon area too. */
     content: "\2006\3000";
     display: inline;
@@ -5563,41 +5644,41 @@ html.hj-login-modal-open .hj-login-modal {
     mask-size: 0.92em 0.92em;
 }
 
-.hj-article-content a.footnote-ref::after,
-.hj-article-content a.footnote-backref::after {
+:is(.hj-article-content, .hj-comment-content) a.footnote-ref::after,
+:is(.hj-article-content, .hj-comment-content) a.footnote-backref::after {
     content: none;
     background-image: none;
 }
 
-.hj-article-content ol > li[id^="fn-"]::marker {
+:is(.hj-article-content, .hj-comment-content) ol > li[id^="fn-"]::marker {
     content: "[" counter(list-item) "] ";
     color: inherit;
 }
 
-.hj-article-content ol:has(> li[id^="fn-"]) {
+:is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) {
     padding-left: 0;
     margin-left: 0;
     list-style-position: inside;
 }
 
-.hj-article-content ol:has(> li[id^="fn-"]) > li {
+:is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) > li {
     color: var(--hj-muted-day);
 }
 
-.hj-article-content ol:has(> li[id^="fn-"]) a {
+:is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) a {
     color: var(--hj-muted-day);
 }
 
-.hj-article-content ol:has(> li[id^="fn-"]) a:visited {
+:is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) a:visited {
     color: var(--hj-muted-day);
 }
 
-.hj-article-content h1,
-.hj-article-content h2,
-.hj-article-content h3,
-.hj-article-content h4,
-.hj-article-content h5,
-.hj-article-content h6 {
+:is(.hj-article-content, .hj-comment-content) h1,
+:is(.hj-article-content, .hj-comment-content) h2,
+:is(.hj-article-content, .hj-comment-content) h3,
+:is(.hj-article-content, .hj-comment-content) h4,
+:is(.hj-article-content, .hj-comment-content) h5,
+:is(.hj-article-content, .hj-comment-content) h6 {
     position: relative;
     font-weight: 700;
     text-decoration: underline;
@@ -5607,12 +5688,12 @@ html.hj-login-modal-open .hj-login-modal {
     scroll-margin-top: 12px;
 }
 
-.hj-article-content h1::before,
-.hj-article-content h2::before,
-.hj-article-content h3::before,
-.hj-article-content h4::before,
-.hj-article-content h5::before,
-.hj-article-content h6::before {
+:is(.hj-article-content, .hj-comment-content) h1::before,
+:is(.hj-article-content, .hj-comment-content) h2::before,
+:is(.hj-article-content, .hj-comment-content) h3::before,
+:is(.hj-article-content, .hj-comment-content) h4::before,
+:is(.hj-article-content, .hj-comment-content) h5::before,
+:is(.hj-article-content, .hj-comment-content) h6::before {
     content: "";
     position: absolute;
     left: -1.15em;
@@ -5628,79 +5709,79 @@ html.hj-login-modal-open .hj-login-modal {
     mask: none;
 }
 
-.hj-article-content h1:hover::before,
-.hj-article-content h1:focus-within::before,
-.hj-article-content h2:hover::before,
-.hj-article-content h2:focus-within::before,
-.hj-article-content h3:hover::before,
-.hj-article-content h3:focus-within::before,
-.hj-article-content h4:hover::before,
-.hj-article-content h4:focus-within::before,
-.hj-article-content h5:hover::before,
-.hj-article-content h5:focus-within::before,
-.hj-article-content h6:hover::before,
-.hj-article-content h6:focus-within::before {
+:is(.hj-article-content, .hj-comment-content) h1:hover::before,
+:is(.hj-article-content, .hj-comment-content) h1:focus-within::before,
+:is(.hj-article-content, .hj-comment-content) h2:hover::before,
+:is(.hj-article-content, .hj-comment-content) h2:focus-within::before,
+:is(.hj-article-content, .hj-comment-content) h3:hover::before,
+:is(.hj-article-content, .hj-comment-content) h3:focus-within::before,
+:is(.hj-article-content, .hj-comment-content) h4:hover::before,
+:is(.hj-article-content, .hj-comment-content) h4:focus-within::before,
+:is(.hj-article-content, .hj-comment-content) h5:hover::before,
+:is(.hj-article-content, .hj-comment-content) h5:focus-within::before,
+:is(.hj-article-content, .hj-comment-content) h6:hover::before,
+:is(.hj-article-content, .hj-comment-content) h6:focus-within::before {
     opacity: 0.92;
     transform: translateX(0);
 }
 
-.hj-article-content h1::before {
+:is(.hj-article-content, .hj-comment-content) h1::before {
     -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22m17%2012%203-2v8%22/%3E%3C/svg%3E") no-repeat center / contain;
     mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22m17%2012%203-2v8%22/%3E%3C/svg%3E") no-repeat center / contain;
 }
 
-.hj-article-content h2::before {
+:is(.hj-article-content, .hj-comment-content) h2::before {
     -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M21%2018h-4c0-4%204-3%204-6%200-1.5-2-2.5-4-1%22/%3E%3C/svg%3E") no-repeat center / contain;
     mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M21%2018h-4c0-4%204-3%204-6%200-1.5-2-2.5-4-1%22/%3E%3C/svg%3E") no-repeat center / contain;
 }
 
-.hj-article-content h3::before {
+:is(.hj-article-content, .hj-comment-content) h3::before {
     -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M17.5%2010.5c1.7-1%203.5%200%203.5%201.5a2%202%200%200%201-2%202%22/%3E%3Cpath%20d%3D%22M17%2017.5c2%201.5%204%20.3%204-1.5a2%202%200%200%200-2-2%22/%3E%3C/svg%3E") no-repeat center / contain;
     mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M17.5%2010.5c1.7-1%203.5%200%203.5%201.5a2%202%200%200%201-2%202%22/%3E%3Cpath%20d%3D%22M17%2017.5c2%201.5%204%20.3%204-1.5a2%202%200%200%200-2-2%22/%3E%3C/svg%3E") no-repeat center / contain;
 }
 
-.hj-article-content h4::before {
+:is(.hj-article-content, .hj-comment-content) h4::before {
     -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M17%2010v3a1%201%200%200%200%201%201h3%22/%3E%3Cpath%20d%3D%22M21%2010v8%22/%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3C/svg%3E") no-repeat center / contain;
     mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M17%2010v3a1%201%200%200%200%201%201h3%22/%3E%3Cpath%20d%3D%22M21%2010v8%22/%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3C/svg%3E") no-repeat center / contain;
 }
 
-.hj-article-content h5::before {
+:is(.hj-article-content, .hj-comment-content) h5::before {
     -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M17%2013v-3h4%22/%3E%3Cpath%20d%3D%22M17%2017.7c.4.2.8.3%201.3.3%201.5%200%202.7-1.1%202.7-2.5S19.8%2013%2018.3%2013H17%22/%3E%3C/svg%3E") no-repeat center / contain;
     mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M17%2013v-3h4%22/%3E%3Cpath%20d%3D%22M17%2017.7c.4.2.8.3%201.3.3%201.5%200%202.7-1.1%202.7-2.5S19.8%2013%2018.3%2013H17%22/%3E%3C/svg%3E") no-repeat center / contain;
 }
 
-.hj-article-content h6::before {
+:is(.hj-article-content, .hj-comment-content) h6::before {
     -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Ccircle%20cx%3D%2219%22%20cy%3D%2216%22%20r%3D%222%22/%3E%3Cpath%20d%3D%22M20%2010c-2%202-3%203.5-3%206%22/%3E%3C/svg%3E") no-repeat center / contain;
     mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Ccircle%20cx%3D%2219%22%20cy%3D%2216%22%20r%3D%222%22/%3E%3Cpath%20d%3D%22M20%2010c-2%202-3%203.5-3%206%22/%3E%3C/svg%3E") no-repeat center / contain;
 }
 
 @media (max-width: 1099px) {
-    .hj-article-content h1,
-    .hj-article-content h2,
-    .hj-article-content h3,
-    .hj-article-content h4,
-    .hj-article-content h5,
-    .hj-article-content h6 {
+    :is(.hj-article-content, .hj-comment-content) h1,
+    :is(.hj-article-content, .hj-comment-content) h2,
+    :is(.hj-article-content, .hj-comment-content) h3,
+    :is(.hj-article-content, .hj-comment-content) h4,
+    :is(.hj-article-content, .hj-comment-content) h5,
+    :is(.hj-article-content, .hj-comment-content) h6 {
         text-decoration: none;
     }
 
     /* On narrow screens the heading icon should sit next to the title text,
        not pinned to the right edge of the full-width <h*> block. */
-    .hj-article-content h1::before,
-    .hj-article-content h2::before,
-    .hj-article-content h3::before,
-    .hj-article-content h4::before,
-    .hj-article-content h5::before,
-    .hj-article-content h6::before {
+    :is(.hj-article-content, .hj-comment-content) h1::before,
+    :is(.hj-article-content, .hj-comment-content) h2::before,
+    :is(.hj-article-content, .hj-comment-content) h3::before,
+    :is(.hj-article-content, .hj-comment-content) h4::before,
+    :is(.hj-article-content, .hj-comment-content) h5::before,
+    :is(.hj-article-content, .hj-comment-content) h6::before {
         content: none;
     }
 
-    .hj-article-content h1::after,
-    .hj-article-content h2::after,
-    .hj-article-content h3::after,
-    .hj-article-content h4::after,
-    .hj-article-content h5::after,
-    .hj-article-content h6::after {
+    :is(.hj-article-content, .hj-comment-content) h1::after,
+    :is(.hj-article-content, .hj-comment-content) h2::after,
+    :is(.hj-article-content, .hj-comment-content) h3::after,
+    :is(.hj-article-content, .hj-comment-content) h4::after,
+    :is(.hj-article-content, .hj-comment-content) h5::after,
+    :is(.hj-article-content, .hj-comment-content) h6::after {
         content: "";
         display: inline-block;
         text-decoration: none;
@@ -5717,58 +5798,58 @@ html.hj-login-modal-open .hj-login-modal {
         mask: none;
     }
 
-    .hj-article-content h1:hover::after,
-    .hj-article-content h1:focus-within::after,
-    .hj-article-content h2:hover::after,
-    .hj-article-content h2:focus-within::after,
-    .hj-article-content h3:hover::after,
-    .hj-article-content h3:focus-within::after,
-    .hj-article-content h4:hover::after,
-    .hj-article-content h4:focus-within::after,
-    .hj-article-content h5:hover::after,
-    .hj-article-content h5:focus-within::after,
-    .hj-article-content h6:hover::after,
-    .hj-article-content h6:focus-within::after {
+    :is(.hj-article-content, .hj-comment-content) h1:hover::after,
+    :is(.hj-article-content, .hj-comment-content) h1:focus-within::after,
+    :is(.hj-article-content, .hj-comment-content) h2:hover::after,
+    :is(.hj-article-content, .hj-comment-content) h2:focus-within::after,
+    :is(.hj-article-content, .hj-comment-content) h3:hover::after,
+    :is(.hj-article-content, .hj-comment-content) h3:focus-within::after,
+    :is(.hj-article-content, .hj-comment-content) h4:hover::after,
+    :is(.hj-article-content, .hj-comment-content) h4:focus-within::after,
+    :is(.hj-article-content, .hj-comment-content) h5:hover::after,
+    :is(.hj-article-content, .hj-comment-content) h5:focus-within::after,
+    :is(.hj-article-content, .hj-comment-content) h6:hover::after,
+    :is(.hj-article-content, .hj-comment-content) h6:focus-within::after {
         opacity: 0.92;
         transform: translateX(0);
     }
 
-    .hj-article-content h1::after {
+    :is(.hj-article-content, .hj-comment-content) h1::after {
         -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22m17%2012%203-2v8%22/%3E%3C/svg%3E") no-repeat center / contain;
         mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22m17%2012%203-2v8%22/%3E%3C/svg%3E") no-repeat center / contain;
     }
 
-    .hj-article-content h2::after {
+    :is(.hj-article-content, .hj-comment-content) h2::after {
         -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M21%2018h-4c0-4%204-3%204-6%200-1.5-2-2.5-4-1%22/%3E%3C/svg%3E") no-repeat center / contain;
         mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M21%2018h-4c0-4%204-3%204-6%200-1.5-2-2.5-4-1%22/%3E%3C/svg%3E") no-repeat center / contain;
     }
 
-    .hj-article-content h3::after {
+    :is(.hj-article-content, .hj-comment-content) h3::after {
         -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M17.5%2010.5c1.7-1%203.5%200%203.5%201.5a2%202%200%200%201-2%202%22/%3E%3Cpath%20d%3D%22M17%2017.5c2%201.5%204%20.3%204-1.5a2%202%200%200%200-2-2%22/%3E%3C/svg%3E") no-repeat center / contain;
         mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M17.5%2010.5c1.7-1%203.5%200%203.5%201.5a2%202%200%200%201-2%202%22/%3E%3Cpath%20d%3D%22M17%2017.5c2%201.5%204%20.3%204-1.5a2%202%200%200%200-2-2%22/%3E%3C/svg%3E") no-repeat center / contain;
     }
 
-    .hj-article-content h4::after {
+    :is(.hj-article-content, .hj-comment-content) h4::after {
         -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M17%2010v3a1%201%200%200%200%201%201h3%22/%3E%3Cpath%20d%3D%22M21%2010v8%22/%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3C/svg%3E") no-repeat center / contain;
         mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M17%2010v3a1%201%200%200%200%201%201h3%22/%3E%3Cpath%20d%3D%22M21%2010v8%22/%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3C/svg%3E") no-repeat center / contain;
     }
 
-    .hj-article-content h5::after {
+    :is(.hj-article-content, .hj-comment-content) h5::after {
         -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M17%2013v-3h4%22/%3E%3Cpath%20d%3D%22M17%2017.7c.4.2.8.3%201.3.3%201.5%200%202.7-1.1%202.7-2.5S19.8%2013%2018.3%2013H17%22/%3E%3C/svg%3E") no-repeat center / contain;
         mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Cpath%20d%3D%22M17%2013v-3h4%22/%3E%3Cpath%20d%3D%22M17%2017.7c.4.2.8.3%201.3.3%201.5%200%202.7-1.1%202.7-2.5S19.8%2013%2018.3%2013H17%22/%3E%3C/svg%3E") no-repeat center / contain;
     }
 
-    .hj-article-content h6::after {
+    :is(.hj-article-content, .hj-comment-content) h6::after {
         -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Ccircle%20cx%3D%2219%22%20cy%3D%2216%22%20r%3D%222%22/%3E%3Cpath%20d%3D%22M20%2010c-2%202-3%203.5-3%206%22/%3E%3C/svg%3E") no-repeat center / contain;
         mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2012h8%22/%3E%3Cpath%20d%3D%22M4%2018V6%22/%3E%3Cpath%20d%3D%22M12%2018V6%22/%3E%3Ccircle%20cx%3D%2219%22%20cy%3D%2216%22%20r%3D%222%22/%3E%3Cpath%20d%3D%22M20%2010c-2%202-3%203.5-3%206%22/%3E%3C/svg%3E") no-repeat center / contain;
     }
 }
 
-.hj-article-content p {
+:is(.hj-article-content, .hj-comment-content) p {
     margin: 0 0 1rem;
 }
 
-.hj-article-content blockquote {
+:is(.hj-article-content, .hj-comment-content) blockquote {
     margin: 1rem 0;
     padding: 0.65rem 0.85rem;
     border-left: 2px solid rgba(42, 42, 40, 0.55);
@@ -5776,15 +5857,15 @@ html.hj-login-modal-open .hj-login-modal {
     border-radius: 0 4px 4px 0;
 }
 
-.hj-article-content blockquote p {
+:is(.hj-article-content, .hj-comment-content) blockquote p {
     margin: 0 0 0.75rem;
 }
 
-.hj-article-content blockquote p:last-child {
+:is(.hj-article-content, .hj-comment-content) blockquote p:last-child {
     margin-bottom: 0;
 }
 
-.hj-article-content .markdown-alert {
+:is(.hj-article-content, .hj-comment-content) .markdown-alert {
     margin: 0.72rem 0;
     padding: 0.65rem 0.85rem;
     border-left: 3px solid var(--hj-alert-accent, #50504d);
@@ -5792,36 +5873,36 @@ html.hj-login-modal-open .hj-login-modal {
     border-radius: 0 4px 4px 0;
 }
 
-.hj-article-content .markdown-alert + .markdown-alert {
+:is(.hj-article-content, .hj-comment-content) .markdown-alert + .markdown-alert {
     margin-top: 0.5rem;
 }
 
-.hj-article-content .markdown-alert-note {
+:is(.hj-article-content, .hj-comment-content) .markdown-alert-note {
     --hj-alert-accent: #50504d;
     --hj-alert-bg: rgba(80, 80, 77, 0.08);
 }
 
-.hj-article-content .markdown-alert-tip {
+:is(.hj-article-content, .hj-comment-content) .markdown-alert-tip {
     --hj-alert-accent: #48a131;
     --hj-alert-bg: rgba(72, 161, 49, 0.1);
 }
 
-.hj-article-content .markdown-alert-important {
+:is(.hj-article-content, .hj-comment-content) .markdown-alert-important {
     --hj-alert-accent: #3366cc;
     --hj-alert-bg: rgba(51, 102, 204, 0.1);
 }
 
-.hj-article-content .markdown-alert-warning {
+:is(.hj-article-content, .hj-comment-content) .markdown-alert-warning {
     --hj-alert-accent: #bf8700;
     --hj-alert-bg: rgba(191, 135, 0, 0.1);
 }
 
-.hj-article-content .markdown-alert-caution {
+:is(.hj-article-content, .hj-comment-content) .markdown-alert-caution {
     --hj-alert-accent: #ee3838;
     --hj-alert-bg: rgba(238, 56, 56, 0.1);
 }
 
-.hj-article-content .markdown-alert-title {
+:is(.hj-article-content, .hj-comment-content) .markdown-alert-title {
     display: flex;
     align-items: center;
     gap: 0.4rem;
@@ -5832,40 +5913,40 @@ html.hj-login-modal-open .hj-login-modal {
     color: var(--hj-alert-accent, #50504d);
 }
 
-.hj-article-content .markdown-alert-title svg {
+:is(.hj-article-content, .hj-comment-content) .markdown-alert-title svg {
     flex: 0 0 auto;
     width: 1rem;
     height: 1rem;
     fill: currentColor;
 }
 
-.hj-article-content .markdown-alert-title strong {
+:is(.hj-article-content, .hj-comment-content) .markdown-alert-title strong {
     font-weight: 700;
     color: inherit;
 }
 
-.hj-article-content .markdown-alert > :not(.markdown-alert-title) {
+:is(.hj-article-content, .hj-comment-content) .markdown-alert > :not(.markdown-alert-title) {
     margin: 0 0 0.55rem;
 }
 
-.hj-article-content .markdown-alert > :last-child {
+:is(.hj-article-content, .hj-comment-content) .markdown-alert > :last-child {
     margin-bottom: 0;
 }
 
-.hj-article-content hr {
+:is(.hj-article-content, .hj-comment-content) hr {
     border: 0;
     border-top: 1.5px dashed rgba(42, 42, 40, 0.35);
     margin: 1.25rem 0;
 }
 
-.hj-article-content img {
+:is(.hj-article-content, .hj-comment-content) img {
     border-radius: 0;
     margin: 1rem 0;
     max-height: 60vh;
     max-height: min(60vh, 520px);
 }
 
-.hj-article-content figure {
+:is(.hj-article-content, .hj-comment-content) figure {
     display: block;
     width: fit-content;
     max-width: 100%;
@@ -5873,38 +5954,38 @@ html.hj-login-modal-open .hj-login-modal {
     text-align: left;
 }
 
-.hj-article-content figure > a {
+:is(.hj-article-content, .hj-comment-content) figure > a {
     display: inline-block;
     max-width: 100%;
 }
 
-.hj-article-content figure > img {
+:is(.hj-article-content, .hj-comment-content) figure > img {
     display: block;
     max-width: 100%;
     margin-left: 0;
     margin-right: 0;
 }
 
-.hj-article-content figure > a::after,
-.hj-article-content figure > a:hover::after,
-.hj-article-content figure > a:focus-visible::after {
+:is(.hj-article-content, .hj-comment-content) figure > a::after,
+:is(.hj-article-content, .hj-comment-content) figure > a:hover::after,
+:is(.hj-article-content, .hj-comment-content) figure > a:focus-visible::after {
     content: none;
     background-image: none;
 }
 
-.hj-article-content figure > a:hover,
-.hj-article-content figure > a:focus-visible {
+:is(.hj-article-content, .hj-comment-content) figure > a:hover,
+:is(.hj-article-content, .hj-comment-content) figure > a:focus-visible {
     text-decoration: none;
 }
 
-.hj-article-content figure img {
+:is(.hj-article-content, .hj-comment-content) figure img {
     display: block;
     max-width: 100%;
     height: auto;
     margin: 0;
 }
 
-.hj-article-content img.hj-lazy-blurup {
+:is(.hj-article-content, .hj-comment-content) img.hj-lazy-blurup {
     filter: blur(14px);
     transform: scale(1.02);
     opacity: 0.78;
@@ -5912,19 +5993,19 @@ html.hj-login-modal-open .hj-login-modal {
     will-change: filter, transform, opacity;
 }
 
-.hj-article-content img.hj-lazy-blurup.is-loaded {
+:is(.hj-article-content, .hj-comment-content) img.hj-lazy-blurup.is-loaded {
     filter: blur(0);
     transform: none;
     opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .hj-article-content img.hj-lazy-blurup {
+    :is(.hj-article-content, .hj-comment-content) img.hj-lazy-blurup {
         transition: none;
     }
 }
 
-.hj-article-content figcaption {
+:is(.hj-article-content, .hj-comment-content) figcaption {
     margin-top: 0.45rem;
     font-family: var(--hj-font-ui);
     font-size: 0.88rem;
@@ -5935,11 +6016,11 @@ html.hj-login-modal-open .hj-login-modal {
     overflow-wrap: anywhere;
 }
 
-.hj-article-content figure figcaption {
+:is(.hj-article-content, .hj-comment-content) figure figcaption {
     width: 100%;
 }
 
-.hj-article-content table {
+:is(.hj-article-content, .hj-comment-content) table {
     width: 100%;
     border-collapse: collapse;
     margin: 1.1rem 0;
@@ -5947,56 +6028,56 @@ html.hj-login-modal-open .hj-login-modal {
     border-bottom: 2px solid rgba(42, 42, 40, 0.72);
 }
 
-.hj-article-content thead th {
+:is(.hj-article-content, .hj-comment-content) thead th {
     font-weight: 700;
     border-bottom: 1px solid rgba(42, 42, 40, 0.42);
 }
 
-.hj-article-content th,
-.hj-article-content td {
+:is(.hj-article-content, .hj-comment-content) th,
+:is(.hj-article-content, .hj-comment-content) td {
     padding: 0.55rem 0.6rem;
     text-align: left;
     vertical-align: top;
     border: none;
 }
 
-.hj-article-content tbody tr {
+:is(.hj-article-content, .hj-comment-content) tbody tr {
     border: none;
 }
 
-.hj-article-content tbody tr + tr td {
+:is(.hj-article-content, .hj-comment-content) tbody tr + tr td {
     border-top: none;
 }
 
-.hj-article-content table caption {
+:is(.hj-article-content, .hj-comment-content) table caption {
     caption-side: bottom;
     padding-top: 0.55rem;
     font-size: 0.88rem;
     color: var(--hj-muted-day);
 }
 
-.hj-article-content table a {
+:is(.hj-article-content, .hj-comment-content) table a {
     overflow-wrap: anywhere;
 }
 
-.hj-article-content pre,
-.hj-article-content code {
+:is(.hj-article-content, .hj-comment-content) pre,
+:is(.hj-article-content, .hj-comment-content) code {
     font-family: "Consolas", "Monaco", "Courier New", monospace;
 }
 
-.hj-article-content :not(pre) > code {
+:is(.hj-article-content, .hj-comment-content) :not(pre) > code {
     font-size: 0.9em;
     padding: 0.08em 0.35em 0.12em;
     border-radius: 4px;
     background: rgba(18, 18, 18, 0.08);
 }
 
-.hj-article-content ins {
+:is(.hj-article-content, .hj-comment-content) ins {
     text-decoration-thickness: 1.4px;
     text-underline-offset: 0.14em;
 }
 
-.hj-article-content mark {
+:is(.hj-article-content, .hj-comment-content) mark {
     background: transparent;
     color: inherit;
     padding: 0;
@@ -6007,15 +6088,15 @@ html.hj-login-modal-open .hj-login-modal {
     text-decoration-color: color-mix(in oklab, currentColor 72%, transparent);
 }
 
-.hj-article-content .hj-term {
+:is(.hj-article-content, .hj-comment-content) .hj-term {
     position: relative;
 }
 
-.hj-article-content ruby {
+:is(.hj-article-content, .hj-comment-content) ruby {
     ruby-position: over;
 }
 
-.hj-article-content ruby rt {
+:is(.hj-article-content, .hj-comment-content) ruby rt {
     font-size: 0.66em;
     line-height: 1.05;
     font-weight: 500;
@@ -6023,7 +6104,7 @@ html.hj-login-modal-open .hj-login-modal {
     opacity: 0.86;
 }
 
-.hj-article-content .hj-term-tooltip {
+:is(.hj-article-content, .hj-comment-content) .hj-term-tooltip {
     display: inline-block;
     cursor: help;
     text-decoration-line: underline;
@@ -6033,12 +6114,12 @@ html.hj-login-modal-open .hj-login-modal {
     text-decoration-color: color-mix(in oklab, currentColor 60%, transparent);
 }
 
-.hj-article-content .hj-term-tooltip:focus-visible {
+:is(.hj-article-content, .hj-comment-content) .hj-term-tooltip:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
 }
 
-.hj-article-content .hj-term-tooltip::before {
+:is(.hj-article-content, .hj-comment-content) .hj-term-tooltip::before {
     content: attr(data-hj-term);
     position: absolute;
     left: 50%;
@@ -6066,37 +6147,37 @@ html.hj-login-modal-open .hj-login-modal {
     transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
 }
 
-.hj-article-content .hj-term-tooltip:hover::before,
-.hj-article-content .hj-term-tooltip:focus-visible::before,
-.hj-article-content .hj-term-tooltip.is-open::before {
+:is(.hj-article-content, .hj-comment-content) .hj-term-tooltip:hover::before,
+:is(.hj-article-content, .hj-comment-content) .hj-term-tooltip:focus-visible::before,
+:is(.hj-article-content, .hj-comment-content) .hj-term-tooltip.is-open::before {
     opacity: 1;
     visibility: visible;
     transform: translate(-50%, 0);
 }
 
-.hj-article-content .hj-term-spoiler,
-.hj-article-content .spoiler {
+:is(.hj-article-content, .hj-comment-content) .hj-term-spoiler,
+:is(.hj-article-content, .hj-comment-content) .spoiler {
     cursor: pointer;
     filter: blur(var(--hj-spoiler-blur));
     transition: filter var(--hj-spoiler-transition) ease;
 }
 
-.hj-article-content .hj-term-spoiler:hover,
-.hj-article-content .hj-term-spoiler:focus-visible,
-.hj-article-content .hj-term-spoiler.is-open,
-.hj-article-content .spoiler:hover,
-.hj-article-content .spoiler:focus-visible,
-.hj-article-content .spoiler.is-open {
+:is(.hj-article-content, .hj-comment-content) .hj-term-spoiler:hover,
+:is(.hj-article-content, .hj-comment-content) .hj-term-spoiler:focus-visible,
+:is(.hj-article-content, .hj-comment-content) .hj-term-spoiler.is-open,
+:is(.hj-article-content, .hj-comment-content) .spoiler:hover,
+:is(.hj-article-content, .hj-comment-content) .spoiler:focus-visible,
+:is(.hj-article-content, .hj-comment-content) .spoiler.is-open {
     filter: blur(0);
 }
 
-.hj-article-content .hj-term-spoiler:focus-visible,
-.hj-article-content .spoiler:focus-visible {
+:is(.hj-article-content, .hj-comment-content) .hj-term-spoiler:focus-visible,
+:is(.hj-article-content, .hj-comment-content) .spoiler:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
 }
 
-.hj-article-content pre {
+:is(.hj-article-content, .hj-comment-content) pre {
     font-size: 0.9em;
     background: rgba(18, 18, 18, 0.08);
     border-radius: 4px;
@@ -6105,7 +6186,7 @@ html.hj-login-modal-open .hj-login-modal {
     position: relative;
 }
 
-.hj-article-content pre > code {
+:is(.hj-article-content, .hj-comment-content) pre > code {
     display: block;
     overflow-x: hidden;
     line-height: 1.55;
@@ -6114,7 +6195,7 @@ html.hj-login-modal-open .hj-login-modal {
     word-break: break-word;
 }
 
-.hj-article-content pre.hj-code-collapsed > code {
+:is(.hj-article-content, .hj-comment-content) pre.hj-code-collapsed > code {
     max-height: calc(10 * 1.55em);
     overflow-y: auto;
     scrollbar-width: none; /* Firefox */
@@ -6127,26 +6208,26 @@ html.hj-login-modal-open .hj-login-modal {
     mask-repeat: no-repeat;
 }
 
-.hj-article-content pre.hj-code-at-bottom > code {
+:is(.hj-article-content, .hj-comment-content) pre.hj-code-at-bottom > code {
     -webkit-mask-image: none;
     mask-image: none;
 }
 
-.hj-article-content pre.hj-code-at-bottom .hj-code-fold {
+:is(.hj-article-content, .hj-comment-content) pre.hj-code-at-bottom .hj-code-fold {
     display: none;
 }
 
-.hj-article-content pre.hj-code-collapsed > code::-webkit-scrollbar {
+:is(.hj-article-content, .hj-comment-content) pre.hj-code-collapsed > code::-webkit-scrollbar {
     width: 0;
     height: 0;
 }
 
-.hj-article-content pre code.hljs {
+:is(.hj-article-content, .hj-comment-content) pre code.hljs {
     padding: 0;
     background: transparent;
 }
 
-.hj-article-content pre .hj-code-fold {
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-fold {
     position: absolute;
     left: 0;
     right: 0;
@@ -6164,7 +6245,7 @@ html.hj-login-modal-open .hj-login-modal {
     backdrop-filter: none;
 }
 
-.hj-article-content pre .hj-code-expand-btn {
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-expand-btn {
     pointer-events: auto;
     display: inline-flex;
     align-items: center;
@@ -6182,23 +6263,23 @@ html.hj-login-modal-open .hj-login-modal {
     opacity: 0.9;
 }
 
-.hj-article-content pre .hj-code-expand-btn svg {
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-expand-btn svg {
     width: 16px;
     height: 16px;
     display: block;
 }
 
-.hj-article-content pre .hj-code-expand-btn:hover,
-.hj-article-content pre .hj-code-expand-btn:focus-visible {
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-expand-btn:hover,
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-expand-btn:focus-visible {
     opacity: 1;
 }
 
-.hj-article-content pre .hj-code-expand-btn:focus-visible {
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-expand-btn:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
 }
 
-.hj-article-content pre .hj-code-copy-btn {
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-copy-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -6220,33 +6301,33 @@ html.hj-login-modal-open .hj-login-modal {
     transition: opacity 0.16s ease, visibility 0.16s ease;
 }
 
-.hj-article-content pre .hj-code-copy-btn svg {
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-copy-btn svg {
     width: 16px;
     height: 16px;
     display: block;
 }
 
-.hj-article-content pre:hover .hj-code-copy-btn,
-.hj-article-content pre:focus-within .hj-code-copy-btn,
-.hj-article-content pre .hj-code-copy-btn.is-copied {
+:is(.hj-article-content, .hj-comment-content) pre:hover .hj-code-copy-btn,
+:is(.hj-article-content, .hj-comment-content) pre:focus-within .hj-code-copy-btn,
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-copy-btn.is-copied {
     opacity: 0.82;
     visibility: visible;
     pointer-events: auto;
 }
 
-.hj-article-content pre .hj-code-copy-btn:hover,
-.hj-article-content pre .hj-code-copy-btn:focus-visible {
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-copy-btn:hover,
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-copy-btn:focus-visible {
     opacity: 1;
     background: transparent;
     color: inherit;
 }
 
-.hj-article-content pre .hj-code-copy-btn:focus-visible {
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-copy-btn:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
 }
 
-.hj-article-content pre .hj-code-copy-btn::after {
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-copy-btn::after {
     content: attr(data-hj-code-tip);
     position: absolute;
     left: 50%;
@@ -6266,16 +6347,16 @@ html.hj-login-modal-open .hj-login-modal {
     transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
 }
 
-.hj-article-content pre .hj-code-copy-btn:hover::after,
-.hj-article-content pre .hj-code-copy-btn:focus-visible::after,
-.hj-article-content pre .hj-code-copy-btn.is-copied::after {
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-copy-btn:hover::after,
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-copy-btn:focus-visible::after,
+:is(.hj-article-content, .hj-comment-content) pre .hj-code-copy-btn.is-copied::after {
     opacity: 1;
     visibility: visible;
     transform: translate(-50%, -0.24rem);
 }
 
 @media (hover: none) {
-    .hj-article-content pre .hj-code-copy-btn {
+    :is(.hj-article-content, .hj-comment-content) pre .hj-code-copy-btn {
         opacity: 0.82;
         visibility: visible;
         pointer-events: auto;
@@ -6530,6 +6611,20 @@ html.hj-login-modal-open .hj-login-modal {
     html:not(.hj-theme-light) .hj-emoji-picker-btn:hover,
     html:not(.hj-theme-light) .hj-emoji-picker-btn:focus-visible {
         background: rgba(221, 221, 219, 0.06);
+    }
+
+    html:not(.hj-theme-light) .hj-comment-attachment-preview {
+        border-color: var(--hj-line-night);
+        background: color-mix(in oklab, var(--hj-night-bg) 88%, var(--hj-night-white) 12%);
+    }
+
+    html:not(.hj-theme-light) .hj-comment-attachment-preview-file {
+        color: var(--hj-night-white);
+    }
+
+    html:not(.hj-theme-light) .hj-comment-attachment-preview-remove {
+        background: rgba(221, 221, 219, 0.88);
+        color: var(--hj-night-bg);
     }
   
     html:not(.hj-theme-light) .hj-comments .comment-meta time {   
@@ -6866,49 +6961,49 @@ html.hj-login-modal-open .hj-login-modal {
         color: var(--hj-night-black);
     }
 
-    html:not(.hj-theme-light) .hj-article-content pre {
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) pre {
         background: rgba(240, 240, 240, 0.08);
     }
 
-    html:not(.hj-theme-light) .hj-article-content :not(pre) > code {
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) :not(pre) > code {
         background: rgba(240, 240, 240, 0.08);
     }
 
-    html:not(.hj-theme-light) .hj-article-content ruby rt {
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) ruby rt {
         color: var(--hj-night-white);
     }
 
-    html:not(.hj-theme-light) .hj-article-content blockquote {
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) blockquote {
         border-left-color: rgba(221, 221, 219, 0.55);
         background: rgba(240, 240, 240, 0.06);
     }
 
-    html:not(.hj-theme-light) .hj-article-content a {
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) a {
         color: var(--hj-night-white);
     }
 
-    html:not(.hj-theme-light) .hj-article-content a:visited {
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) a:visited {
         color: var(--hj-night-white);
     }
 
-    html:not(.hj-theme-light) .hj-article-content ol:has(> li[id^="fn-"]) > li {
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) > li {
         color: var(--hj-muted-night);
     }
 
-    html:not(.hj-theme-light) .hj-article-content ol:has(> li[id^="fn-"]) a,
-    html:not(.hj-theme-light) .hj-article-content ol:has(> li[id^="fn-"]) a:visited {
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) a,
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) a:visited {
         color: var(--hj-muted-night);
     }
 
-    html:not(.hj-theme-light) .hj-article-content hr {
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) hr {
         border-top-color: rgba(221, 221, 219, 0.55);
     }
 
-    html:not(.hj-theme-light) .hj-article-content figcaption {
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) figcaption {
         color: var(--hj-night-text);
     }
 
-    html:not(.hj-theme-light) .hj-article-content pre .hj-code-fold {
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) pre .hj-code-fold {
         background: linear-gradient(to bottom, rgba(14, 14, 12, 0), rgba(14, 14, 12, 0.88));
     }
 
@@ -6981,41 +7076,41 @@ html.hj-theme-dark .hj-cv-full-btn:focus-visible {
     color: var(--hj-night-black);
 }
 
-html.hj-theme-dark .hj-article-content a {
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) a {
     color: var(--hj-night-white);
 }
 
-html.hj-theme-dark .hj-article-content a:visited {
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) a:visited {
     color: var(--hj-night-white);
 }
 
-html.hj-theme-dark .hj-article-content ol:has(> li[id^="fn-"]) > li {
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) > li {
     color: var(--hj-muted-night);
 }
 
-html.hj-theme-dark .hj-article-content ol:has(> li[id^="fn-"]) a,
-html.hj-theme-dark .hj-article-content ol:has(> li[id^="fn-"]) a:visited {
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) a,
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) a:visited {
     color: var(--hj-muted-night);
 }
 
-html.hj-theme-dark .hj-article-content table {
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) table {
     border-top-color: rgba(221, 221, 219, 0.65);
     border-bottom-color: rgba(221, 221, 219, 0.65);
 }
 
-html.hj-theme-dark .hj-article-content hr {
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) hr {
     border-top-color: rgba(221, 221, 219, 0.55);
 }
 
-html.hj-theme-dark .hj-article-content ruby rt {
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) ruby rt {
     color: var(--hj-night-white);
 }
 
-html.hj-theme-dark .hj-article-content thead th {
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) thead th {
     border-bottom-color: rgba(221, 221, 219, 0.35);
 }
 
-html.hj-theme-dark .hj-article-content table caption {
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) table caption {
     color: var(--hj-muted-night);
 }
 
@@ -7065,6 +7160,20 @@ html.hj-theme-dark .hj-emoji-picker {
 html.hj-theme-dark .hj-emoji-picker-btn:hover,
 html.hj-theme-dark .hj-emoji-picker-btn:focus-visible {
     background: rgba(221, 221, 219, 0.06);
+}
+
+html.hj-theme-dark .hj-comment-attachment-preview {
+    border-color: var(--hj-line-night);
+    background: color-mix(in oklab, var(--hj-night-bg) 88%, var(--hj-night-white) 12%);
+}
+
+html.hj-theme-dark .hj-comment-attachment-preview-file {
+    color: var(--hj-night-white);
+}
+
+html.hj-theme-dark .hj-comment-attachment-preview-remove {
+    background: rgba(221, 221, 219, 0.88);
+    color: var(--hj-night-bg);
 }
   
 html.hj-theme-dark .hj-comments .comment-meta time {   
@@ -7374,24 +7483,24 @@ html.hj-theme-dark .hj-avatar-fallback {
     color: var(--hj-night-white);
 }
 
-html.hj-theme-dark .hj-article-content pre {
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) pre {
     background: rgba(240, 240, 240, 0.08);
 }
 
-html.hj-theme-dark .hj-article-content :not(pre) > code {
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) :not(pre) > code {
     background: rgba(240, 240, 240, 0.08);
 }
 
-html.hj-theme-dark .hj-article-content blockquote {
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) blockquote {
     border-left-color: rgba(221, 221, 219, 0.55);
     background: rgba(240, 240, 240, 0.06);
 }
 
-html.hj-theme-dark .hj-article-content figcaption {
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) figcaption {
     color: var(--hj-night-text);
 }
 
-html.hj-theme-dark .hj-article-content pre .hj-code-fold {
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) pre .hj-code-fold {
     background: linear-gradient(to bottom, rgba(14, 14, 12, 0), rgba(14, 14, 12, 0.88));
 }
 
@@ -7400,3 +7509,4 @@ html.hj-theme-dark .page-navigator li span {
     border-color: var(--hj-line-night);
     background: rgba(24, 24, 24, 0.65);
 }
+

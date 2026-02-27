@@ -2737,6 +2737,7 @@
             var fullscreenBtn = form.querySelector("[data-hj-comment-fullscreen-toggle]");
             var loginBtn = form.querySelector("[data-hj-open-login]");
             var emojiBtn = form.querySelector(".hj-comment-emoji");
+            var attachBtn = form.querySelector(".hj-comment-attach");
 
             // Auto-grow the composer textarea with content (no manual resize).
             // Reply form is initially hidden; compute min height lazily on first focus.
@@ -2923,6 +2924,318 @@
                 saveDraft();
             }
 
+            var attachInput = null;
+            var attachPreview = null;
+            var attachSnippet = "";
+            var attachUploading = false;
+
+            function getCommentUploadEndpoint() {
+                var raw = "";
+                try {
+                    raw = (window && window.location && window.location.href) ? String(window.location.href) : "";
+                } catch (e) {
+                    raw = "";
+                }
+
+                if (!raw) {
+                    return "?hj_comment_upload=1";
+                }
+
+                try {
+                    var u = new URL(raw);
+                    u.searchParams.set("hj_comment_upload", "1");
+                    return u.toString();
+                } catch (e) {
+                    var clean = raw;
+                    var hashPos = clean.indexOf("#");
+                    if (hashPos >= 0) {
+                        clean = clean.slice(0, hashPos);
+                    }
+                    return clean + (clean.indexOf("?") === -1 ? "?" : "&") + "hj_comment_upload=1";
+                }
+            }
+
+            function getCommentUploadToken() {
+                var tokenInput = form.querySelector("input[name=\"_\"]");
+                if (!tokenInput && comments && comments.querySelector) {
+                    tokenInput = comments.querySelector("input[name=\"_\"]");
+                }
+                var token = tokenInput && tokenInput.value ? String(tokenInput.value).trim() : "";
+                return token;
+            }
+
+            function setAttachBusy(isBusy) {
+                attachUploading = !!isBusy;
+                if (!attachBtn) {
+                    return;
+                }
+                attachBtn.disabled = attachUploading;
+                attachBtn.setAttribute("aria-busy", attachUploading ? "true" : "false");
+            }
+
+            function normalizeAttachmentName(name) {
+                var safe = String(name || "附件")
+                    .replace(/[\r\n]+/g, " ")
+                    .replace(/[\[\]\(\)]+/g, " ")
+                    .replace(/\s+/g, " ")
+                    .trim();
+                return safe || "附件";
+            }
+
+            function buildAttachmentSnippet(data) {
+                var url = data && data.url ? String(data.url).trim() : "";
+                if (!url) {
+                    return "";
+                }
+                var name = normalizeAttachmentName(data && data.name ? data.name : "附件");
+                return data && data.isImage ? ("![" + name + "](" + url + ")") : ("[" + name + "](" + url + ")");
+            }
+
+            function insertAttachmentSnippet(snippet) {
+                if (!snippet) {
+                    return "";
+                }
+
+                var value = textarea.value || "";
+                var start;
+                var end;
+                try {
+                    start = typeof textarea.selectionStart === "number" ? textarea.selectionStart : value.length;
+                    end = typeof textarea.selectionEnd === "number" ? textarea.selectionEnd : value.length;
+                } catch (e) {
+                    start = value.length;
+                    end = value.length;
+                }
+
+                var beforeChar = start > 0 ? value.charAt(start - 1) : "";
+                var afterChar = end < value.length ? value.charAt(end) : "";
+                var insertText = snippet;
+                if (beforeChar && beforeChar !== "\n") {
+                    insertText = "\n" + insertText;
+                }
+                if (afterChar && afterChar !== "\n") {
+                    insertText += "\n";
+                }
+
+                try {
+                    textarea.focus();
+                } catch (e) {}
+
+                try {
+                    if (typeof textarea.setRangeText === "function" && typeof start === "number" && typeof end === "number") {
+                        textarea.setRangeText(insertText, start, end, "end");
+                    } else {
+                        var before = value.slice(0, start);
+                        var after = value.slice(end);
+                        textarea.value = before + insertText + after;
+                        var pos = before.length + insertText.length;
+                        textarea.selectionStart = pos;
+                        textarea.selectionEnd = pos;
+                    }
+                } catch (e) {
+                    textarea.value = value + insertText;
+                }
+
+                autoGrowTextarea();
+                saveDraft();
+                return insertText;
+            }
+
+            function removeAttachmentSnippetIfAny() {
+                if (!attachSnippet) {
+                    return;
+                }
+
+                var value = textarea.value || "";
+                var target = attachSnippet;
+                var idx = value.lastIndexOf(target);
+
+                if (idx === -1) {
+                    var trimmed = target.replace(/^\n+|\n+$/g, "");
+                    if (trimmed) {
+                        idx = value.lastIndexOf(trimmed);
+                        target = trimmed;
+                    }
+                }
+
+                if (idx !== -1) {
+                    textarea.value = value.slice(0, idx) + value.slice(idx + target.length);
+                    textarea.value = (textarea.value || "").replace(/\n{3,}/g, "\n\n");
+                    autoGrowTextarea();
+                    saveDraft();
+                }
+
+                attachSnippet = "";
+            }
+
+            function clearAttachmentPreview(removeSnippet) {
+                if (removeSnippet) {
+                    removeAttachmentSnippetIfAny();
+                }
+
+                if (attachPreview && attachPreview.parentNode) {
+                    attachPreview.parentNode.removeChild(attachPreview);
+                }
+                attachPreview = null;
+                box.classList.remove("has-attachment-preview");
+            }
+
+            function getAttachmentFileLabel(data) {
+                var name = data && data.name ? String(data.name) : "";
+                var m = name.match(/\.([A-Za-z0-9]{1,8})$/);
+                if (m && m[1]) {
+                    return m[1].toUpperCase();
+                }
+                return data && data.isImage ? "IMG" : "FILE";
+            }
+
+            function renderAttachmentPreview(data) {
+                clearAttachmentPreview(false);
+
+                if (!document || !box || !data || !data.url) {
+                    return;
+                }
+
+                var preview = document.createElement("div");
+                preview.className = "hj-comment-attachment-preview";
+                preview.setAttribute("data-hj-comment-attachment-preview", "");
+
+                var link = document.createElement("a");
+                link.className = "hj-comment-attachment-preview-link";
+                link.href = String(data.url);
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.setAttribute("aria-label", normalizeAttachmentName(data.name || "附件"));
+
+                if (data.isImage) {
+                    var img = document.createElement("img");
+                    img.className = "hj-comment-attachment-preview-img";
+                    img.src = String(data.url);
+                    img.alt = normalizeAttachmentName(data.name || "附件");
+                    img.loading = "lazy";
+                    link.appendChild(img);
+                } else {
+                    var fileTag = document.createElement("span");
+                    fileTag.className = "hj-comment-attachment-preview-file";
+                    fileTag.textContent = getAttachmentFileLabel(data);
+                    link.appendChild(fileTag);
+                }
+
+                var removeBtn = document.createElement("button");
+                removeBtn.type = "button";
+                removeBtn.className = "hj-comment-attachment-preview-remove";
+                removeBtn.setAttribute("aria-label", "删除附件");
+                removeBtn.textContent = "×";
+                removeBtn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    if (e && e.stopPropagation) {
+                        e.stopPropagation();
+                    }
+                    clearAttachmentPreview(true);
+                });
+
+                preview.appendChild(link);
+                preview.appendChild(removeBtn);
+                box.appendChild(preview);
+
+                attachPreview = preview;
+                box.classList.add("has-attachment-preview");
+            }
+
+            function ensureAttachInput() {
+                if (attachInput) {
+                    return attachInput;
+                }
+                if (!document || !form) {
+                    return null;
+                }
+
+                var input = document.createElement("input");
+                input.type = "file";
+                input.hidden = true;
+                input.tabIndex = -1;
+                input.setAttribute("aria-hidden", "true");
+                input.accept = "image/*,.pdf,.txt,.md,.zip,.rar,.7z,.tar,.gz,.mp3,.wav,.ogg,.mp4,.webm,.mov";
+                input.addEventListener("change", function () {
+                    var file = input.files && input.files[0] ? input.files[0] : null;
+                    if (!file) {
+                        return;
+                    }
+                    uploadAttachment(file);
+                });
+
+                form.appendChild(input);
+                attachInput = input;
+                return attachInput;
+            }
+
+            function parseUploadJson(text) {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function uploadAttachment(file) {
+                if (!file || attachUploading || !window.fetch || !window.FormData) {
+                    return;
+                }
+
+                var token = getCommentUploadToken();
+                if (!token) {
+                    try {
+                        window.alert("安全令牌缺失，请刷新页面后再试");
+                    } catch (e) {}
+                    return;
+                }
+
+                var endpoint = getCommentUploadEndpoint();
+                var formData = new FormData();
+                formData.append("file", file);
+                formData.append("_", token);
+
+                setAttachBusy(true);
+
+                window.fetch(endpoint, {
+                    method: "POST",
+                    body: formData,
+                    credentials: "same-origin",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                }).then(function (response) {
+                    return response.text().then(function (text) {
+                        var payload = parseUploadJson(text);
+                        if (!response.ok || !payload || !payload.ok) {
+                            var errMsg = payload && payload.message ? String(payload.message) : "附件上传失败，请重试";
+                            throw new Error(errMsg);
+                        }
+                        return payload;
+                    });
+                }).then(function (payload) {
+                    clearAttachmentPreview(true);
+                    var snippet = buildAttachmentSnippet(payload);
+                    if (!snippet) {
+                        throw new Error("附件地址无效");
+                    }
+                    attachSnippet = insertAttachmentSnippet(snippet);
+                    renderAttachmentPreview(payload);
+                }).catch(function (err) {
+                    var msg = err && err.message ? String(err.message) : "附件上传失败，请重试";
+                    try {
+                        window.alert(msg);
+                    } catch (e) {}
+                }).finally(function () {
+                    if (attachInput) {
+                        attachInput.value = "";
+                    }
+                    setAttachBusy(false);
+                });
+            }
+
             function onEmojiDocMouseDown(e) {
                 var t = e && e.target;
                 if (!t) {
@@ -3010,6 +3323,27 @@
                     var picker = ensureEmojiPicker();
                     var isOn = picker && !picker.hidden;
                     setEmojiPickerOpen(!isOn);
+                });
+            }
+
+            if (attachBtn) {
+                attachBtn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    if (!window.fetch || !window.FormData) {
+                        try {
+                            window.alert("当前浏览器不支持附件上传");
+                        } catch (err) {}
+                        return;
+                    }
+                    var input = ensureAttachInput();
+                    if (!input) {
+                        return;
+                    }
+                    try {
+                        input.click();
+                    } catch (err) {}
                 });
             }
 
@@ -3202,13 +3536,8 @@
     <script src="<?php $this->options->themeUrl('assets/vendor/highlight/highlight.min.js'); ?>"></script>
     <script>
         (function () {
-            var content = document.querySelector(".hj-article-content");
-            if (!content) {
-                return;
-            }
-
-            var blocks = content.querySelectorAll("pre code");
-            if (!blocks || blocks.length === 0) {
+            var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
+            if (!contents || contents.length === 0) {
                 return;
             }
 
@@ -3246,25 +3575,36 @@
                 }
             }
 
-            for (var i = 0; i < blocks.length; i++) {
-                var code = blocks[i];
-                if (!code) {
+            for (var c = 0; c < contents.length; c++) {
+                var content = contents[c];
+                if (!content || !content.querySelectorAll) {
                     continue;
                 }
-                if (code.dataset && code.dataset.highlighted) {
+                var blocks = content.querySelectorAll("pre code");
+                if (!blocks || blocks.length === 0) {
                     continue;
                 }
-                normalizeLang(code);
-                try {
-                    window.hljs.highlightElement(code);
-                } catch (e) {}
+
+                for (var i = 0; i < blocks.length; i++) {
+                    var code = blocks[i];
+                    if (!code) {
+                        continue;
+                    }
+                    if (code.dataset && code.dataset.highlighted) {
+                        continue;
+                    }
+                    normalizeLang(code);
+                    try {
+                        window.hljs.highlightElement(code);
+                    } catch (e) {}
+                }
             }
         })();
     </script>
     <script>
         (function () {
-            var content = document.querySelector(".hj-article-content");
-            if (!content) {
+            var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
+            if (!contents || contents.length === 0) {
                 return;
             }
 
@@ -3342,68 +3682,80 @@
                 img.addEventListener("error", markError, { once: true });
             }
 
-            var imgs = Array.prototype.slice.call(content.querySelectorAll("img"));
-            imgs.forEach(function (img) {
-                if (!img || !img.parentNode) {
-                    return;
+            for (var c = 0; c < contents.length; c++) {
+                var content = contents[c];
+                if (!content || !content.querySelectorAll) {
+                    continue;
                 }
 
-                bindLazyBlurUp(img);
+                var imgs = Array.prototype.slice.call(content.querySelectorAll("img"));
+                imgs.forEach(function (img) {
+                    if (!img || !img.parentNode) {
+                        return;
+                    }
 
-                if (img.closest && img.closest("figure")) {
-                    return;
-                }
+                    bindLazyBlurUp(img);
 
-                var carrier = img;
-                var p = img.parentNode;
-                if (p && p.tagName === "A") {
-                    carrier = p;
-                    p = p.parentNode;
-                }
+                    if (img.closest && img.closest("figure")) {
+                        return;
+                    }
 
-                if (!p || p.tagName !== "P") {
-                    return;
-                }
-                if (!hasOnlyImageParagraph(p, carrier)) {
-                    return;
-                }
+                    var carrier = img;
+                    var p = img.parentNode;
+                    if (p && p.tagName === "A") {
+                        carrier = p;
+                        p = p.parentNode;
+                    }
 
-                var caption = String(img.getAttribute("title") || "").trim();
-                if (!caption) {
-                    caption = String(img.getAttribute("alt") || "").trim();
-                }
+                    if (!p || p.tagName !== "P") {
+                        return;
+                    }
+                    if (!hasOnlyImageParagraph(p, carrier)) {
+                        return;
+                    }
 
-                img.setAttribute("tabindex", "0");
-                if (img.hasAttribute("title")) {
-                    img.removeAttribute("title");
-                }
+                    var caption = String(img.getAttribute("title") || "").trim();
+                    if (!caption) {
+                        caption = String(img.getAttribute("alt") || "").trim();
+                    }
 
-                if (carrier && carrier.tagName === "A") {
-                    carrier.setAttribute("target", "_blank");
-                    carrier.setAttribute("rel", "noopener noreferrer");
-                }
+                    img.setAttribute("tabindex", "0");
+                    if (img.hasAttribute("title")) {
+                        img.removeAttribute("title");
+                    }
 
-                var figure = document.createElement("figure");
-                figure.appendChild(carrier);
+                    if (carrier && carrier.tagName === "A") {
+                        carrier.setAttribute("target", "_blank");
+                        carrier.setAttribute("rel", "noopener noreferrer");
+                    }
 
-                if (caption) {
-                    var figcaption = document.createElement("figcaption");
-                    figcaption.textContent = caption;
-                    figure.appendChild(figcaption);
-                }
+                    var figure = document.createElement("figure");
+                    figure.appendChild(carrier);
 
-                try {
-                    p.parentNode.replaceChild(figure, p);
-                } catch (e) {}
-            });
+                    if (caption) {
+                        var figcaption = document.createElement("figcaption");
+                        figcaption.textContent = caption;
+                        figure.appendChild(figcaption);
+                    }
+
+                    try {
+                        p.parentNode.replaceChild(figure, p);
+                    } catch (e) {}
+                });
+            }
         })();
     </script>
     <script>
         (function () {
-            var content = document.querySelector(".hj-article-content");
-            if (!content) {
+            var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
+            if (!contents || contents.length === 0) {
                 return;
             }
+
+            contents.forEach(function (content) {
+                if (!content || !content.querySelectorAll) {
+                    return;
+                }
 
             function isBlockedParent(node) {
                 var p = node && node.parentNode ? node.parentNode : null;
@@ -4253,17 +4605,13 @@
                     closeAll();
                 }
             });
+            });
         })();
     </script>
     <script>
         (function () {
-            var content = document.querySelector(".hj-article-content");
-            if (!content) {
-                return;
-            }
-
-            var blocks = content.querySelectorAll("pre");
-            if (!blocks || blocks.length === 0) {
+            var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
+            if (!contents || contents.length === 0) {
                 return;
             }
 
@@ -4372,74 +4720,38 @@
                 } catch (e) {}
             }
 
-            for (var i = 0; i < blocks.length; i++) {
-                var pre = blocks[i];
-                if (!pre || !pre.querySelector) {
+            for (var c = 0; c < contents.length; c++) {
+                var content = contents[c];
+                if (!content || !content.querySelectorAll) {
                     continue;
                 }
 
-                var code = pre.querySelector("code");
-                if (!code) {
+                var blocks = content.querySelectorAll("pre");
+                if (!blocks || blocks.length === 0) {
                     continue;
                 }
 
-                var btn = pre.querySelector(".hj-code-copy-btn");
-                if (!btn) {
-                    btn = document.createElement("button");
-                    btn.type = "button";
-                    btn.className = "hj-code-copy-btn";
-                    btn.setAttribute("aria-label", "复制");
-                    btn.setAttribute("data-hj-code-tip", "复制");
-                    btn.innerHTML =
-                        '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy-icon lucide-copy" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
-                    btn.addEventListener("click", function (e) {
-                        if (e && e.preventDefault) {
-                            e.preventDefault();
-                        }
-                        if (e && e.stopPropagation) {
-                            e.stopPropagation();
-                        }
+                for (var i = 0; i < blocks.length; i++) {
+                    var pre = blocks[i];
+                    if (!pre || !pre.querySelector) {
+                        continue;
+                    }
 
-                        var button = e && e.currentTarget ? e.currentTarget : null;
-                        if (!button || !button.parentNode) {
-                            return;
-                        }
-                        var preEl = button.parentNode;
-                        if (!preEl || !preEl.querySelector) {
-                            return;
-                        }
-                        var codeEl = preEl.querySelector("code");
-                        var text = codeEl ? String(codeEl.textContent || "") : "";
-                        if (!text) {
-                            setTip(button, "无内容");
-                            return;
-                        }
+                    var code = pre.querySelector("code");
+                    if (!code) {
+                        continue;
+                    }
 
-                        copyText(text).then(function (ok) {
-                            setTip(button, ok ? "已复制" : "复制失败");
-                        });
-                    });
-
-                    pre.appendChild(btn);
-                }
-
-                var lineCount = countLines(code.textContent || "");
-                if (lineCount > maxLines) {
-                    try {
-                        pre.classList.add("hj-code-collapsed");
-                    } catch (e) {}
-
-                    if (!pre.querySelector(".hj-code-fold")) {
-                        var fold = document.createElement("div");
-                        fold.className = "hj-code-fold";
-
-                        var expand = document.createElement("button");
-                        expand.type = "button";
-                        expand.className = "hj-code-expand-btn";
-                        expand.setAttribute("aria-label", "展开");
-                        expand.innerHTML =
-                            '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down-to-line-icon lucide-arrow-down-to-line" aria-hidden="true"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg><span>展开</span>';
-                        expand.addEventListener("click", function (e) {
+                    var btn = pre.querySelector(".hj-code-copy-btn");
+                    if (!btn) {
+                        btn = document.createElement("button");
+                        btn.type = "button";
+                        btn.className = "hj-code-copy-btn";
+                        btn.setAttribute("aria-label", "复制");
+                        btn.setAttribute("data-hj-code-tip", "复制");
+                        btn.innerHTML =
+                            '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy-icon lucide-copy" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+                        btn.addEventListener("click", function (e) {
                             if (e && e.preventDefault) {
                                 e.preventDefault();
                             }
@@ -4448,43 +4760,91 @@
                             }
 
                             var button = e && e.currentTarget ? e.currentTarget : null;
-                            var foldEl = button && button.parentNode ? button.parentNode : null;
-                            var preEl = foldEl && foldEl.parentNode ? foldEl.parentNode : null;
-                        if (!preEl || !preEl.classList) {
-                            return;
-                        }
-                        try {
-                            preEl.classList.remove("hj-code-collapsed");
-                            preEl.classList.remove("hj-code-at-bottom");
-                        } catch (err) {}
-                        try {
-                            if (foldEl && foldEl.remove) {
-                                foldEl.remove();
-                                } else if (foldEl) {
-                                    foldEl.hidden = true;
-                                }
-                            } catch (err) {}
+                            if (!button || !button.parentNode) {
+                                return;
+                            }
+                            var preEl = button.parentNode;
+                            if (!preEl || !preEl.querySelector) {
+                                return;
+                            }
+                            var codeEl = preEl.querySelector("code");
+                            var text = codeEl ? String(codeEl.textContent || "") : "";
+                            if (!text) {
+                                setTip(button, "无内容");
+                                return;
+                            }
+
+                            copyText(text).then(function (ok) {
+                                setTip(button, ok ? "已复制" : "复制失败");
+                            });
                         });
 
-                        fold.appendChild(expand);
-                        pre.appendChild(fold);
+                        pre.appendChild(btn);
                     }
 
-                    if (!pre._hjFoldScrollBound && code.addEventListener) {
-                        pre._hjFoldScrollBound = true;
-                        var handler = (function (preEl, codeEl) {
-                            return function () {
-                                syncFoldState(preEl, codeEl);
-                            };
-                        })(pre, code);
+                    var lineCount = countLines(code.textContent || "");
+                    if (lineCount > maxLines) {
                         try {
-                            code.addEventListener("scroll", handler, { passive: true });
-                        } catch (err) {
-                            code.addEventListener("scroll", handler);
-                        }
-                    }
+                            pre.classList.add("hj-code-collapsed");
+                        } catch (e) {}
 
-                    syncFoldState(pre, code);
+                        if (!pre.querySelector(".hj-code-fold")) {
+                            var fold = document.createElement("div");
+                            fold.className = "hj-code-fold";
+
+                            var expand = document.createElement("button");
+                            expand.type = "button";
+                            expand.className = "hj-code-expand-btn";
+                            expand.setAttribute("aria-label", "展开");
+                            expand.innerHTML =
+                                '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down-to-line-icon lucide-arrow-down-to-line" aria-hidden="true"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg><span>展开</span>';
+                            expand.addEventListener("click", function (e) {
+                                if (e && e.preventDefault) {
+                                    e.preventDefault();
+                                }
+                                if (e && e.stopPropagation) {
+                                    e.stopPropagation();
+                                }
+
+                                var button = e && e.currentTarget ? e.currentTarget : null;
+                                var foldEl = button && button.parentNode ? button.parentNode : null;
+                                var preEl = foldEl && foldEl.parentNode ? foldEl.parentNode : null;
+                            if (!preEl || !preEl.classList) {
+                                return;
+                            }
+                            try {
+                                preEl.classList.remove("hj-code-collapsed");
+                                preEl.classList.remove("hj-code-at-bottom");
+                            } catch (err) {}
+                            try {
+                                if (foldEl && foldEl.remove) {
+                                    foldEl.remove();
+                                    } else if (foldEl) {
+                                        foldEl.hidden = true;
+                                    }
+                                } catch (err) {}
+                            });
+
+                            fold.appendChild(expand);
+                            pre.appendChild(fold);
+                        }
+
+                        if (!pre._hjFoldScrollBound && code.addEventListener) {
+                            pre._hjFoldScrollBound = true;
+                            var handler = (function (preEl, codeEl) {
+                                return function () {
+                                    syncFoldState(preEl, codeEl);
+                                };
+                            })(pre, code);
+                            try {
+                                code.addEventListener("scroll", handler, { passive: true });
+                            } catch (err) {
+                                code.addEventListener("scroll", handler);
+                            }
+                        }
+
+                        syncFoldState(pre, code);
+                    }
                 }
             }
         })();
@@ -4493,13 +4853,8 @@
 
 <script>
     (function () {
-        var content = document.querySelector(".hj-article-content");
-        if (!content) {
-            return;
-        }
-
-        var links = Array.prototype.slice.call(content.querySelectorAll("a[href]"));
-        if (links.length === 0) {
+        var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
+        if (!contents || contents.length === 0) {
             return;
         }
 
@@ -4540,19 +4895,30 @@
             } catch (e) {}
         }
 
-        links.forEach(function (a) {
-            if (!a) {
-                return;
+        for (var c = 0; c < contents.length; c++) {
+            var content = contents[c];
+            if (!content || !content.querySelectorAll) {
+                continue;
+            }
+            var links = Array.prototype.slice.call(content.querySelectorAll("a[href]"));
+            if (links.length === 0) {
+                continue;
             }
 
-            var text = ((a.textContent || "") + "").trim();
-            if (!text) {
-                return;
-            }
+            links.forEach(function (a) {
+                if (!a) {
+                    return;
+                }
 
-            var href = a.getAttribute("href") || "";
-            markLinkKind(a, href);
-        });
+                var text = ((a.textContent || "") + "").trim();
+                if (!text) {
+                    return;
+                }
+
+                var href = a.getAttribute("href") || "";
+                markLinkKind(a, href);
+            });
+        }
     })();
 </script>
 

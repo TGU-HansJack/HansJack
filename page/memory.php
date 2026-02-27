@@ -110,8 +110,22 @@ if ($hjComments && $hjComments->have()) {
             $rawText = hansJackStripPrivateCommentMarker($rawText);
         }
         $rawText = trim($rawText);
+
+        $renderedContent = '';
+        try {
+            $renderedContent = (string) ($hjComments->content ?? '');
+        } catch (\Throwable $e) {
+            $renderedContent = '';
+        }
+
         if ($rawText === '') {
             $rawText = _t('（无内容）');
+        }
+
+        $renderedTextOnly = trim((string) preg_replace('/\s+/u', '', strip_tags($renderedContent)));
+        $renderedHasMedia = preg_match('/<(img|video|audio|iframe|object|embed|svg)\b/i', $renderedContent) === 1;
+        if ($renderedTextOnly === '' && !$renderedHasMedia) {
+            $renderedContent = '<p>' . hansJackEscape($rawText) . '</p>';
         }
 
         $commentTagsMap = [];
@@ -176,6 +190,7 @@ if ($hjComments && $hjComments->have()) {
             'dateIso' => ($created > 0) ? date('c', $created) : '',
             'month' => $month,
             'text' => $rawText,
+            'content' => $renderedContent,
             'tags' => $commentTags,
             'tagKeys' => array_keys($commentTagsMap),
             'status' => $status,
@@ -312,8 +327,8 @@ $hjLatestText = ($hjLatestCreated > 0) ? date('Y/m/d H:i:s', $hjLatestCreated) :
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="comment-content" itemprop="commentText">
-                                        <p><?php echo nl2br(hansJackEscape((string) ($item['text'] ?? ''))); ?></p>
+                                    <div class="comment-content hj-comment-content" itemprop="commentText">
+                                        <?php echo (string) ($item['content'] ?? ''); ?>
                                         <?php if ($status !== '' && $status !== 'approved'): ?>
                                             <p class="comment-awaiting-moderation"><?php _e('审核中'); ?></p>
                                         <?php endif; ?>

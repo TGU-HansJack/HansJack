@@ -153,12 +153,267 @@ function themeConfig($form)
  */
 function themeInit(Archive $archive)
 {
+    hansJackHandleCommentUploadRequest($archive);
     hansJackHandleGithubOauthRequest($archive);
     hansJackEnableFeedStylesheet($archive);
 
     if ($archive->is('category', 'posts') || $archive->is('category', 'notes')) {
         $archive->parameter->pageSize = 15;
     }
+}
+
+function hansJackCommentUploadJson(array $payload, int $status = 200): void
+{
+    if (!headers_sent()) {
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('X-Robots-Tag: noindex');
+    }
+
+    if (function_exists('http_response_code')) {
+        http_response_code($status);
+    }
+
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($json)) {
+        $json = '{"ok":false,"message":"json_encode_failed"}';
+    }
+
+    echo $json;
+    exit;
+}
+
+function hansJackHandleCommentUploadRequest(Archive $archive): void
+{
+    $exists = false;
+    $uploadFlag = '';
+    try {
+        $uploadFlag = trim((string) $archive->request->get('hj_comment_upload', '', $exists));
+    } catch (\Throwable $e) {
+        $exists = false;
+        $uploadFlag = '';
+    }
+
+    if (!$exists) {
+        return;
+    }
+
+    if ($uploadFlag === '' || $uploadFlag === '0' || strtolower($uploadFlag) === 'false') {
+        return;
+    }
+
+    if (!$archive->request->isPost()) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('请求方式不支持'),
+        ], 405);
+    }
+
+    $user = null;
+    try {
+        $user = \Typecho\Widget::widget('Widget_User');
+    } catch (\Throwable $e) {
+        $user = null;
+    }
+
+    $isAdmin = false;
+    if ($user) {
+        try {
+            $isAdmin = $user->hasLogin() && $user->pass('administrator', true);
+        } catch (\Throwable $e) {
+            $isAdmin = false;
+        }
+    }
+
+    if (!$isAdmin) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('仅管理员可以上传附件'),
+        ], 403);
+    }
+
+    $token = '';
+    $referer = '';
+    try {
+        $token = trim((string) $archive->request->get('_', ''));
+    } catch (\Throwable $e) {
+        $token = '';
+    }
+    try {
+        $referer = trim((string) $archive->request->getReferer());
+    } catch (\Throwable $e) {
+        $referer = '';
+    }
+
+    $security = null;
+    try {
+        $security = \Typecho\Widget::widget('Widget_Security');
+    } catch (\Throwable $e) {
+        $security = null;
+    }
+
+    $expectedToken = '';
+    if ($security && method_exists($security, 'getToken') && $referer !== '') {
+        try {
+            $expectedToken = (string) $security->getToken($referer);
+        } catch (\Throwable $e) {
+            $expectedToken = '';
+        }
+    }
+
+    if ($token === '' || $expectedToken === '' || !hash_equals($expectedToken, $token)) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('安全校验失败，请刷新后重试'),
+        ], 403);
+    }
+
+    $file = $_FILES['file'] ?? null;
+    if (!is_array($file)) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('未检测到上传文件'),
+        ], 400);
+    }
+
+    $errorCode = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($errorCode !== UPLOAD_ERR_OK) {
+        $errorMap = [
+            UPLOAD_ERR_INI_SIZE => _t('文件超出服务器上传限制'),
+            UPLOAD_ERR_FORM_SIZE => _t('文件超出表单上传限制'),
+            UPLOAD_ERR_PARTIAL => _t('文件上传不完整，请重试'),
+            UPLOAD_ERR_NO_FILE => _t('请选择要上传的文件'),
+            UPLOAD_ERR_NO_TMP_DIR => _t('服务器临时目录不可用'),
+            UPLOAD_ERR_CANT_WRITE => _t('服务器无法写入上传文件'),
+            UPLOAD_ERR_EXTENSION => _t('上传被服务器扩展中断'),
+        ];
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => $errorMap[$errorCode] ?? _t('文件上传失败'),
+        ], 400);
+    }
+
+    $tmpPath = trim((string) ($file['tmp_name'] ?? ''));
+    if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('上传文件无效'),
+        ], 400);
+    }
+
+    $size = (int) ($file['size'] ?? 0);
+    if ($size <= 0) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('上传文件为空'),
+        ], 400);
+    }
+
+    $maxSize = 20 * 1024 * 1024;
+    if ($size > $maxSize) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('文件大小不能超过 20MB'),
+        ], 400);
+    }
+
+    $originalName = trim((string) ($file['name'] ?? ''));
+    $originalName = str_replace(["\r", "\n"], ' ', $originalName);
+    $originalName = trim((string) preg_replace('/\s+/u', ' ', $originalName));
+    $originalName = basename($originalName);
+    if ($originalName === '') {
+        $originalName = 'attachment';
+    }
+
+    $ext = strtolower((string) pathinfo($originalName, PATHINFO_EXTENSION));
+    $allowedExts = [
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg',
+        'pdf', 'txt', 'md',
+        'zip', 'rar', '7z', 'tar', 'gz',
+        'mp3', 'wav', 'ogg', 'mp4', 'webm', 'mov',
+    ];
+    if ($ext === '' || !in_array($ext, $allowedExts, true)) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('该文件类型不允许上传'),
+        ], 400);
+    }
+
+    $mime = '';
+    if (function_exists('finfo_open')) {
+        $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo) {
+            $detected = @finfo_file($finfo, $tmpPath);
+            if (is_string($detected)) {
+                $mime = strtolower(trim($detected));
+            }
+            @finfo_close($finfo);
+        }
+    }
+
+    if ($mime === '') {
+        $mime = strtolower(trim((string) ($file['type'] ?? '')));
+    }
+    if ($mime === '') {
+        $mime = 'application/octet-stream';
+    }
+
+    $blockedMimes = [
+        'application/x-php',
+        'text/x-php',
+        'text/php',
+        'application/x-httpd-php',
+    ];
+    if (in_array($mime, $blockedMimes, true)) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('不允许上传此文件'),
+        ], 400);
+    }
+
+    $relativeDir = 'usr/uploads/comment/' . date('Y/m');
+    $saveDir = rtrim((string) __TYPECHO_ROOT_DIR__, '/\\') . DIRECTORY_SEPARATOR
+        . str_replace('/', DIRECTORY_SEPARATOR, $relativeDir);
+    if (!is_dir($saveDir) && !@mkdir($saveDir, 0755, true)) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('服务器无法创建上传目录'),
+        ], 500);
+    }
+
+    $random = '';
+    try {
+        $random = bin2hex(random_bytes(8));
+    } catch (\Throwable $e) {
+        $random = substr(md5(uniqid((string) mt_rand(), true)), 0, 16);
+    }
+
+    $saveName = date('YmdHis') . '-' . $random . '.' . $ext;
+    $savePath = $saveDir . DIRECTORY_SEPARATOR . $saveName;
+    if (!@move_uploaded_file($tmpPath, $savePath)) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('文件保存失败，请重试'),
+        ], 500);
+    }
+    @chmod($savePath, 0644);
+
+    $options = Options::alloc();
+    $relativeFile = $relativeDir . '/' . $saveName;
+    $fileUrl = Common::url($relativeFile, (string) $options->siteUrl);
+
+    $imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg'];
+    $isImage = in_array($ext, $imageExts, true) || strpos($mime, 'image/') === 0;
+
+    hansJackCommentUploadJson([
+        'ok' => true,
+        'url' => $fileUrl,
+        'name' => $originalName,
+        'mime' => $mime,
+        'isImage' => $isImage,
+        'size' => $size,
+    ]);
 }
 
 /**
