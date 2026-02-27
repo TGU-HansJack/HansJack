@@ -1,8 +1,8 @@
 <?php
 /**
- * 回忆页（/memory）
+ * 回忆页（/memos）
  *
- * 说明：该模板会在你创建一个独立页面，且 slug 为 `memory` 时自动生效。
+ * 说明：该模板会在你创建一个独立页面，且 slug 为 `memos` 时自动生效。
  *
  * @package custom
  */

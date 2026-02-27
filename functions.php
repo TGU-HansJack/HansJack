@@ -650,7 +650,7 @@ function hansJackMemoryReactionIsMemoryComment(int $coid): bool
         $type = trim((string) ($row->type ?? ''));
     }
 
-    $ok = (strtolower($slug) === 'memory' && strtolower($type) === 'page');
+    $ok = (strtolower($slug) === 'memos' && strtolower($type) === 'page');
     $cache[$coid] = $ok;
     return $ok;
 }
@@ -2177,8 +2177,8 @@ function hansJackBuildThemeConfig(Options $options): array
         'blog'   => Common::url('posts', (string) $options->index),
         // Memo points to a dedicated notes list page (slug: "notes").
         'memo'   => Common::url('notes', (string) $options->index),
-        // Memory points to a dedicated stats page (slug: "memory").
-        'memory' => Common::url('memory', (string) $options->index),
+        // Memory points to a dedicated stats page (slug: "memos").
+        'memory' => Common::url('memos', (string) $options->index),
 
         // Landing social links.
         'cv'     => trim((string) $options->hjCvUrl),

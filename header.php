@@ -233,7 +233,7 @@ if ($this->is('page', 'posts')) {
 if ($this->is('page', 'notes')) {
     $hjBodyClasses[] = 'hj-page-notes';
 }
-if ($this->is('page', 'memory')) {
+if ($this->is('page', 'memos')) {
     $hjBodyClasses[] = 'hj-page-memory';
 }
 if ($this->is('category')) {
@@ -365,7 +365,7 @@ if ($this->is('tag')) {
                         $hasPageLink = false;
                         while ($pages->next()):
                             $slug = isset($pages->slug) ? (string) $pages->slug : '';
-                            if ($slug === 'posts' || $slug === 'notes' || $slug === 'memory') {
+                            if ($slug === 'posts' || $slug === 'notes' || $slug === 'memos') {
                                 continue;
                             }
                             $hasPageLink = true;
@@ -467,7 +467,7 @@ if ($this->is('tag')) {
                 $hjHasMobilePage = false;
                 while ($hjMobilePages->next()):
                     $slug = isset($hjMobilePages->slug) ? (string) $hjMobilePages->slug : '';
-                    if ($slug === 'posts' || $slug === 'notes' || $slug === 'memory') {
+                    if ($slug === 'posts' || $slug === 'notes' || $slug === 'memos') {
                         continue;
                     }
                     $hjHasMobilePage = true;
