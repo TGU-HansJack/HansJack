@@ -2399,7 +2399,7 @@ html.hj-theme-dark .hj-posts-pager.page-navigator li a:focus-visible {
     bottom: 100%;
     transform: translate(-50%, -0.12rem);
     padding: 0.12rem 0.35rem;
-    border-radius: 0;
+    border-radius: 4px;
     background: var(--hj-nav-block-bg);
     color: var(--hj-nav-block-fg);
     font-family: var(--hj-font-ui);
@@ -2737,7 +2737,12 @@ a.hj-links-feed-entry-title:focus-visible {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    overflow: visible;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
 }
 
 .hj-links-aside-favicon img {
@@ -2753,6 +2758,16 @@ a.hj-links-feed-entry-title:focus-visible {
     font-size: 1rem;
     font-weight: 700;
     line-height: 1;
+}
+
+.hj-links-aside-favicon:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.hj-links-aside-favicon.is-disabled,
+.hj-links-aside-favicon:disabled {
+    cursor: default;
 }
 
 .hj-links-aside-site-main {
@@ -2793,7 +2808,7 @@ a.hj-links-feed-entry-title:focus-visible {
     bottom: 100%;
     transform: translate(-50%, -0.12rem);
     padding: 0.12rem 0.35rem;
-    border-radius: 0;
+    border-radius: 4px;
     background: var(--hj-nav-block-bg);
     color: var(--hj-nav-block-fg);
     font-family: var(--hj-font-ui);

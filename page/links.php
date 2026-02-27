@@ -624,6 +624,7 @@ $siteCopyName = hansJackEscape($siteTitleText);
 $siteCopyDesc = hansJackEscape($siteDescRaw !== '' ? $siteDescRaw : '欢迎交换友情链接。');
 $siteCopyUrl = $siteUrlRaw !== '' ? hansJackEscape(rtrim($siteUrlRaw, '/')) : '';
 $siteCopyFeed = $siteFeedRaw !== '' ? hansJackEscape($siteFeedRaw) : '';
+$siteCopyAvatar = $siteFaviconRaw !== '' ? hansJackEscape($siteFaviconRaw) : '';
 
 $this->need('header.php');
 ?>
@@ -842,13 +843,20 @@ $this->need('header.php');
                             </p>
 
                             <div class="hj-links-aside-site">
-                                <div class="hj-links-aside-favicon" aria-hidden="true">
+                                <button
+                                    type="button"
+                                    class="hj-links-aside-favicon hj-links-copy-trigger<?php echo $siteCopyAvatar === '' ? ' is-disabled' : ''; ?>"
+                                    data-copy-text="<?php echo $siteCopyAvatar; ?>"
+                                    data-copy-tip="点击复制头像链接"
+                                    aria-label="<?php _e('复制头像链接'); ?>"
+                                    <?php echo $siteCopyAvatar === '' ? 'disabled aria-disabled="true"' : ''; ?>
+                                >
                                     <?php if ($siteFavicon !== ''): ?>
                                         <img src="<?php echo $siteFavicon; ?>" alt="" loading="lazy">
                                     <?php else: ?>
                                         <span><?php echo $siteInitial; ?></span>
                                     <?php endif; ?>
-                                </div>
+                                </button>
                                 <div class="hj-links-aside-site-main">
                                     <p class="hj-links-aside-site-title">
                                         <button
