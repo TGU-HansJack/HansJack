@@ -4423,7 +4423,8 @@ html.hj-theme-dark .hj-fab-reward-backdrop {
 }
 
 .hj-fab-reward-panel {
-    width: min(92vw, 220px);
+    position: relative;
+    width: min(92vw, 240px);
     border-radius: 4px;
     border: 2px solid var(--hj-day-black);
     background: var(--hj-day-bg);
@@ -4431,28 +4432,156 @@ html.hj-theme-dark .hj-fab-reward-backdrop {
     padding: 0.45rem;
 }
 
+.hj-fab-reward-head {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0 0 0.45rem;
+}
+
+.hj-fab-reward-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    padding-right: 0;
+}
+
+.hj-fab-reward-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 30px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.35rem;
+    border-radius: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-family: var(--hj-font-ui);
+    font-size: 0.78rem;
+    line-height: 1;
+    transition: color 0.13s ease-in;
+}
+
+.hj-fab-reward-tab::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: var(--hj-nav-block-bg);
+    opacity: 0;
+    transition: none;
+    pointer-events: none;
+}
+
+.hj-fab-reward-tab:hover,
+.hj-fab-reward-tab:focus-visible {
+    color: inherit;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+}
+
+.hj-fab-reward-tab.is-active,
+.hj-fab-reward-tab[aria-selected="true"] {
+    color: inherit;
+    background: transparent;
+}
+
+.hj-fab-reward-tab.is-active::after,
+.hj-fab-reward-tab[aria-selected="true"]::after {
+    opacity: 1;
+}
+
+.hj-fab-reward-tab.is-active:hover,
+.hj-fab-reward-tab.is-active:focus-visible,
+.hj-fab-reward-tab[aria-selected="true"]:hover,
+.hj-fab-reward-tab[aria-selected="true"]:focus-visible {
+    color: inherit;
+}
+
+.hj-fab-reward-panes {
+    position: relative;
+}
+
+.hj-fab-reward-pane {
+    opacity: 0;
+    transform: translateY(4px);
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.hj-fab-reward-pane.is-active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    position: relative;
+    inset: auto;
+}
+
 .hj-fab-reward-media {
     position: relative;
 }
 
-.hj-fab-reward-close {
-    position: absolute;
-    top: -0.42rem;
-    right: -0.42rem;
+.hj-fab-reward-link {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 100%;
+    min-height: 28px;
+    margin-top: 0.42rem;
+    padding: 0 0.35rem;
+    border-radius: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    cursor: pointer;
+    font-family: var(--hj-font-ui);
+    font-size: 0.78rem;
+    line-height: 1;
+    transition: color 0.13s ease-in;
+}
+
+.hj-fab-reward-link:hover,
+.hj-fab-reward-link:focus-visible {
+    color: inherit;
+    outline: none;
+    text-decoration-thickness: 2px;
+}
+
+.hj-fab-reward-close {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
     margin: 0;
-    border-radius: 4px;
+    margin-left: auto;
+    padding: 0;
+    border-radius: 0;
     border: none;
     background: transparent;
     appearance: none;
     -webkit-appearance: none;
     color: inherit;
     cursor: pointer;
-    z-index: 1;
+    flex: 0 0 auto;
+    z-index: 0;
 }
 
 .hj-fab-reward-close svg {

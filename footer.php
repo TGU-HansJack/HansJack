@@ -14,7 +14,28 @@
                 $hjMpsBeian = trim((string) $this->options->hjMpsBeian);
                 $hjFooterCustomCode = trim((string) $this->options->hjFooterCustomCode);
                 $hjRewardImageUrl = hansJackNormalizeAssetUrl($this->options, (string) ($this->options->hjRewardImageUrl ?? ''));
-                $hjShowRewardFab = $this->is('post') && $hjRewardImageUrl !== '';
+                $hjAfdianImageUrl = hansJackNormalizeAssetUrl($this->options, (string) ($this->options->hjAfdianImageUrl ?? ''));
+                $hjAfdianPageUrl = hansJackNormalizeAssetUrl($this->options, (string) ($this->options->hjAfdianPageUrl ?? ''));
+                $hjRewardMethods = [];
+                if ($hjRewardImageUrl !== '') {
+                    $hjRewardMethods[] = [
+                        'key' => 'reward',
+                        'label' => _t('赞赏码'),
+                        'image' => $hjRewardImageUrl,
+                        'alt' => _t('赞赏码'),
+                    ];
+                }
+                if ($hjAfdianImageUrl !== '') {
+                    $hjRewardMethods[] = [
+                        'key' => 'afdian',
+                        'label' => _t('爱发电'),
+                        'image' => $hjAfdianImageUrl,
+                        'alt' => _t('爱发电'),
+                        'link' => $hjAfdianPageUrl,
+                        'linkLabel' => _t('跳转爱发电页面'),
+                    ];
+                }
+                $hjShowRewardFab = $this->is('post') && !empty($hjRewardMethods);
                 ?>
                 <?php if ($hjIcpBeian !== ''): ?>
                     <span class="hj-footer-sep" aria-hidden="true">·</span>
@@ -140,14 +161,70 @@
     </div>
 </div>
 <?php if ($hjShowRewardFab): ?>
+    <?php $hjHasRewardTabs = count($hjRewardMethods) > 1; ?>
     <div class="hj-fab-reward-backdrop" data-hj-reward-backdrop aria-hidden="true" hidden></div>
     <div class="hj-fab-reward-popover" data-hj-reward-popover aria-hidden="true" hidden>
         <div class="hj-fab-reward-panel" role="dialog" aria-modal="true" aria-label="<?php _e('赞赏码'); ?>" data-hj-reward-panel>
-            <div class="hj-fab-reward-media">
-                <img src="<?php echo hansJackEscape($hjRewardImageUrl); ?>" alt="<?php _e('赞赏码'); ?>" loading="lazy" decoding="async">
+            <div class="hj-fab-reward-head">
+                <?php if ($hjHasRewardTabs): ?>
+                    <div class="hj-fab-reward-tabs" role="tablist" aria-label="<?php _e('赞赏方式'); ?>">
+                        <?php foreach ($hjRewardMethods as $idx => $hjMethod): ?>
+                            <?php
+                            $hjTabKey = (string) ($hjMethod['key'] ?? '');
+                            $hjTabLabel = (string) ($hjMethod['label'] ?? '');
+                            $hjTabId = 'hj-reward-tab-' . $hjTabKey;
+                            $hjPaneId = 'hj-reward-pane-' . $hjTabKey;
+                            $hjIsActiveTab = ($idx === 0);
+                            ?>
+                            <button
+                                class="hj-fab-reward-tab<?php echo $hjIsActiveTab ? ' is-active' : ''; ?>"
+                                type="button"
+                                role="tab"
+                                id="<?php echo hansJackEscape($hjTabId); ?>"
+                                aria-controls="<?php echo hansJackEscape($hjPaneId); ?>"
+                                aria-selected="<?php echo $hjIsActiveTab ? 'true' : 'false'; ?>"
+                                tabindex="<?php echo $hjIsActiveTab ? '0' : '-1'; ?>"
+                                data-hj-reward-tab="<?php echo hansJackEscape($hjTabKey); ?>"
+                            ><?php echo hansJackEscape($hjTabLabel); ?></button>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
                 <button class="hj-fab-reward-close" type="button" aria-label="<?php _e('关闭'); ?>" data-hj-reward-close>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
+            </div>
+            <div class="hj-fab-reward-panes">
+                <?php foreach ($hjRewardMethods as $idx => $hjMethod): ?>
+                    <?php
+                    $hjPaneKey = (string) ($hjMethod['key'] ?? '');
+                    $hjPaneAlt = (string) ($hjMethod['alt'] ?? '');
+                    $hjPaneImage = (string) ($hjMethod['image'] ?? '');
+                    $hjPaneLink = (string) ($hjMethod['link'] ?? '');
+                    $hjPaneLinkLabel = (string) ($hjMethod['linkLabel'] ?? '');
+                    $hjTabId = 'hj-reward-tab-' . $hjPaneKey;
+                    $hjPaneId = 'hj-reward-pane-' . $hjPaneKey;
+                    $hjIsActivePane = ($idx === 0);
+                    ?>
+                    <div
+                        class="hj-fab-reward-pane<?php echo $hjIsActivePane ? ' is-active' : ''; ?>"
+                        role="tabpanel"
+                        id="<?php echo hansJackEscape($hjPaneId); ?>"
+                        <?php if ($hjHasRewardTabs): ?>
+                            aria-labelledby="<?php echo hansJackEscape($hjTabId); ?>"
+                        <?php else: ?>
+                            aria-label="<?php echo hansJackEscape((string) ($hjMethod['label'] ?? '')); ?>"
+                        <?php endif; ?>
+                        data-hj-reward-pane="<?php echo hansJackEscape($hjPaneKey); ?>"
+                        aria-hidden="<?php echo $hjIsActivePane ? 'false' : 'true'; ?>"
+                    >
+                        <div class="hj-fab-reward-media">
+                            <img src="<?php echo hansJackEscape($hjPaneImage); ?>" alt="<?php echo hansJackEscape($hjPaneAlt); ?>" loading="lazy" decoding="async">
+                            <?php if ($hjPaneLink !== '' && $hjPaneLinkLabel !== ''): ?>
+                                <a class="hj-fab-reward-link" href="<?php echo hansJackEscape($hjPaneLink); ?>" target="_blank" rel="noopener noreferrer"><?php echo hansJackEscape($hjPaneLinkLabel); ?></a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>
@@ -286,6 +363,9 @@
         var rewardPopover = document.querySelector("[data-hj-reward-popover]");
         var rewardPanel = rewardPopover ? rewardPopover.querySelector("[data-hj-reward-panel]") : null;
         var rewardCloseBtn = rewardPopover ? rewardPopover.querySelector("[data-hj-reward-close]") : null;
+        var rewardTabButtons = rewardPopover ? Array.prototype.slice.call(rewardPopover.querySelectorAll("[data-hj-reward-tab]")) : [];
+        var rewardPanes = rewardPopover ? Array.prototype.slice.call(rewardPopover.querySelectorAll("[data-hj-reward-pane]")) : [];
+        var rewardImages = rewardPopover ? Array.prototype.slice.call(rewardPopover.querySelectorAll("[data-hj-reward-pane] img")) : [];
         var tocBackdrop = document.querySelector("[data-hj-mobile-toc-backdrop]");
         var tocCloseBtn = document.querySelector(".hj-article-toc-close");
         var tocOpenClass = "hj-mobile-toc-open";
@@ -826,6 +906,81 @@
             return !!(rewardPopover && rewardPopover.classList && rewardPopover.classList.contains("is-open"));
         }
 
+        function getRewardActiveKey() {
+            for (var i = 0; i < rewardTabButtons.length; i++) {
+                var btn = rewardTabButtons[i];
+                if (!btn) {
+                    continue;
+                }
+                var selected = (btn.getAttribute("aria-selected") || "").toLowerCase() === "true";
+                if (selected || (btn.classList && btn.classList.contains("is-active"))) {
+                    return String(btn.getAttribute("data-hj-reward-tab") || "");
+                }
+            }
+
+            for (var j = 0; j < rewardPanes.length; j++) {
+                var pane = rewardPanes[j];
+                if (!pane || !pane.classList) {
+                    continue;
+                }
+                if (pane.classList.contains("is-active")) {
+                    return String(pane.getAttribute("data-hj-reward-pane") || "");
+                }
+            }
+
+            if (rewardPanes.length > 0) {
+                return String((rewardPanes[0] && rewardPanes[0].getAttribute("data-hj-reward-pane")) || "");
+            }
+            return "";
+        }
+
+        function setRewardActiveKey(nextKey) {
+            var target = String(nextKey || "");
+            var availableKeys = [];
+            for (var i = 0; i < rewardPanes.length; i++) {
+                var pane = rewardPanes[i];
+                if (!pane) {
+                    continue;
+                }
+                var key = String(pane.getAttribute("data-hj-reward-pane") || "");
+                if (key !== "") {
+                    availableKeys.push(key);
+                }
+            }
+
+            if (availableKeys.length === 0) {
+                return;
+            }
+            if (target === "" || availableKeys.indexOf(target) === -1) {
+                target = availableKeys[0];
+            }
+
+            rewardTabButtons.forEach(function (btn) {
+                if (!btn) {
+                    return;
+                }
+                var key = String(btn.getAttribute("data-hj-reward-tab") || "");
+                var active = key === target;
+                if (btn.classList) {
+                    btn.classList.toggle("is-active", active);
+                }
+                btn.setAttribute("aria-selected", active ? "true" : "false");
+                btn.setAttribute("tabindex", active ? "0" : "-1");
+            });
+
+            rewardPanes.forEach(function (pane) {
+                if (!pane) {
+                    return;
+                }
+                var key = String(pane.getAttribute("data-hj-reward-pane") || "");
+                var active = key === target;
+                if (pane.classList) {
+                    pane.classList.toggle("is-active", active);
+                }
+                pane.setAttribute("aria-hidden", active ? "false" : "true");
+            });
+        }
+
         var rewardPopoverHideTimer = null;
 
         function clearRewardPopoverHideTimer() {
@@ -875,6 +1030,7 @@
                 return;
             }
             clearRewardPopoverHideTimer();
+            setRewardActiveKey(getRewardActiveKey());
             if (rewardBackdrop) {
                 rewardBackdrop.hidden = false;
                 rewardBackdrop.setAttribute("aria-hidden", "false");
@@ -957,6 +1113,37 @@
                 }
                 openRewardPopover();
             });
+
+            if (rewardTabButtons.length > 0) {
+                rewardTabButtons.forEach(function (btn) {
+                    if (!btn || !btn.addEventListener) {
+                        return;
+                    }
+                    btn.addEventListener("click", function (e) {
+                        if (e && e.preventDefault) {
+                            e.preventDefault();
+                        }
+                        var key = String(btn.getAttribute("data-hj-reward-tab") || "");
+                        setRewardActiveKey(key);
+                        if (isRewardPopoverOpen()) {
+                            positionRewardPopover();
+                        }
+                    });
+                });
+            }
+
+            if (rewardImages.length > 0) {
+                rewardImages.forEach(function (img) {
+                    if (!img || !img.addEventListener) {
+                        return;
+                    }
+                    img.addEventListener("load", function () {
+                        if (isRewardPopoverOpen()) {
+                            positionRewardPopover();
+                        }
+                    });
+                });
+            }
         }
 
         if (rewardCloseBtn) {

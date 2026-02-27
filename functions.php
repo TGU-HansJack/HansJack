@@ -53,6 +53,24 @@ function themeConfig($form)
     );
     $form->addInput($rewardImageUrl);
 
+    $afdianImageUrl = new \Typecho\Widget\Helper\Form\Element\Text(
+        'hjAfdianImageUrl',
+        null,
+        '',
+        _t('爱发电图片链接'),
+        _t('用于文章页 FAB 赞赏弹窗中的“爱发电”标签；支持完整 URL 或站内相对路径，留空则不显示该标签。')
+    );
+    $form->addInput($afdianImageUrl);
+
+    $afdianPageUrl = new \Typecho\Widget\Helper\Form\Element\Text(
+        'hjAfdianPageUrl',
+        null,
+        '',
+        _t('爱发电页面链接'),
+        _t('用于赞赏弹窗“爱发电”图片下方跳转按钮；支持完整 URL 或站内相对路径，留空则不显示按钮。')
+    );
+    $form->addInput($afdianPageUrl);
+
     $githubOauthEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
         'hjGithubOauthEnabled',
         [
