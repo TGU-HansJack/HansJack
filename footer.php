@@ -4219,6 +4219,9 @@
 </script>
 
 <?php if ($this->is('post') || $this->is('page')): ?>
+    <script src="<?php $this->options->themeUrl('assets/vendor/katex/katex.min.js'); ?>"></script>
+    <script src="<?php $this->options->themeUrl('assets/vendor/katex/contrib/mhchem.min.js'); ?>"></script>
+    <script src="<?php $this->options->themeUrl('assets/vendor/katex/contrib/auto-render.min.js'); ?>"></script>
     <script src="<?php $this->options->themeUrl('assets/vendor/highlight/highlight.min.js'); ?>"></script>
     <script>
         (function () {
@@ -5578,6 +5581,48 @@
                         syncFoldState(pre, code);
                     }
                 }
+            }
+        })();
+    </script>
+    <script>
+        (function () {
+            var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
+            if (!contents || contents.length === 0) {
+                return;
+            }
+
+            if (typeof window.renderMathInElement !== "function" || typeof window.katex === "undefined") {
+                return;
+            }
+
+            var options = {
+                delimiters: [
+                    { left: "$$", right: "$$", display: true },
+                    { left: "\\[", right: "\\]", display: true },
+                    { left: "\\(", right: "\\)", display: false },
+                    { left: "$", right: "$", display: false }
+                ],
+                throwOnError: false,
+                strict: "ignore",
+                ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "option"],
+                ignoredClasses: ["katex", "no-katex", "hljs"]
+            };
+
+            for (var i = 0; i < contents.length; i++) {
+                var content = contents[i];
+                if (!content || !content.querySelectorAll) {
+                    continue;
+                }
+                if (content.dataset && content.dataset.hjKatexRendered === "1") {
+                    continue;
+                }
+
+                try {
+                    window.renderMathInElement(content, options);
+                    if (content.dataset) {
+                        content.dataset.hjKatexRendered = "1";
+                    }
+                } catch (e) {}
             }
         })();
     </script>

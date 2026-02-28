@@ -181,6 +181,9 @@ if ($hjThemeCookie === 'dark') {
     </style>
     <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/vendor/highlight/github.min.css'); ?>" data-hj-hljs-theme="light" disabled>
     <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/vendor/highlight/github-dark.min.css'); ?>" data-hj-hljs-theme="dark" disabled>
+    <?php if ($this->is('post') || $this->is('page')): ?>
+        <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/vendor/katex/katex.min.css'); ?>">
+    <?php endif; ?>
     <script>
         (function () {
             var root = document.documentElement;
