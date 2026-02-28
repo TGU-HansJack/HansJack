@@ -892,7 +892,7 @@ $this->need('header.php');
                                                 data-hj-link-health-id="<?php echo $linkId; ?>"
                                                 data-hj-health-state="pending"
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rss-icon lucide-rss hj-links-feed-icon" aria-hidden="true">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rss-icon lucide-rss hj-links-feed-icon" aria-hidden="true">
                                                     <path class="hj-links-feed-wave hj-links-feed-wave-1" pathLength="1" d="M4 11a9 9 0 0 1 9 9"/>
                                                     <path class="hj-links-feed-wave hj-links-feed-wave-2" pathLength="1" d="M4 4a16 16 0 0 1 16 16"/>
                                                     <circle class="hj-links-feed-dot" cx="5" cy="19" r="1"/>
