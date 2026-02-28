@@ -147,7 +147,8 @@ if (!function_exists('hansJackAboutTimelineRows')) {
             ];
         }
 
-        return $rows;
+        // Time line is rendered from newest to oldest.
+        return array_reverse($rows);
     }
 }
 
