@@ -17,33 +17,6 @@ function themeConfig($form)
 {
     $options = Options::alloc();
 
-    $cvUrl = new \Typecho\Widget\Helper\Form\Element\Text(
-        'hjCvUrl',
-        null,
-        '',
-        _t('CV 链接'),
-        _t('留空则不显示；示例：https://example.com/cv 或 /cv。')
-    );
-    $form->addInput($cvUrl);
-
-    $githubUrl = new \Typecho\Widget\Helper\Form\Element\Text(
-        'hjGithubUrl',
-        null,
-        '',
-        _t('GitHub 链接'),
-        _t('留空则不显示；示例：https://github.com/username。')
-    );
-    $form->addInput($githubUrl);
-
-    $creativeUrl = new \Typecho\Widget\Helper\Form\Element\Text(
-        'hjCreativeUrl',
-        null,
-        '',
-        _t('创意链接'),
-        _t('留空则不显示；示例：https://example.com/creative。')
-    );
-    $form->addInput($creativeUrl);
-
     $rewardImageUrl = new \Typecho\Widget\Helper\Form\Element\Text(
         'hjRewardImageUrl',
         null,
@@ -2197,11 +2170,6 @@ function hansJackBuildThemeConfig(Options $options): array
         'memo'   => Common::url('notes', (string) $options->index),
         // Memory points to a dedicated stats page (slug: "memos").
         'memory' => Common::url('memos', (string) $options->index),
-
-        // Landing social links.
-        'cv'     => trim((string) $options->hjCvUrl),
-        'github' => trim((string) $options->hjGithubUrl),
-        'creative' => trim((string) $options->hjCreativeUrl),
     ];
 
     return [

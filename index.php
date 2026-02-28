@@ -21,13 +21,11 @@ $welcomeText = '';
 $faviconUrl = '';
 $blogUrl = '';
 $memoUrl = '';
-$cvUrl = '';
-$githubUrl = '';
-$creativeUrl = '';
 $blogSlug = 'posts';
 $memoSlug = 'notes';
 $landingHeatmapDays = 140;
 $landingHeatmapSeries = [];
+$landingHeatmapColumns = 20;
 $landingLatestContent = null;
 if ($this->is('index')) {
     $brandName = trim((string) ($themeConfig['brandName'] ?? ''));
@@ -48,9 +46,6 @@ if ($this->is('index')) {
 
     $blogUrl = (string) (($themeConfig['links']['blog'] ?? '') ?: '');
     $memoUrl = (string) (($themeConfig['links']['memo'] ?? '') ?: '');
-    $cvUrl = trim((string) (($themeConfig['links']['cv'] ?? '') ?: ''));
-    $githubUrl = trim((string) (($themeConfig['links']['github'] ?? '') ?: ''));
-    $creativeUrl = trim((string) (($themeConfig['links']['creative'] ?? '') ?: ''));
 
     $heatmapDayCount = max(1, (int) $landingHeatmapDays);
     $todayStartTs = strtotime(date('Y-m-d 00:00:00'));
@@ -281,6 +276,10 @@ if ($this->is('index')) {
     }
 
     $landingHeatmapSeries = array_values($landingHeatmapSeries);
+    $landingHeatmapColumns = (int) ceil(max(1, count($landingHeatmapSeries)) / 7);
+    if ($landingHeatmapColumns < 1) {
+        $landingHeatmapColumns = 1;
+    }
 }
 ?>
 
@@ -296,25 +295,6 @@ if ($this->is('index')) {
                             <span class="hj-landing-cursor" aria-hidden="true"></span>
                         </div>
                     </div>
-                    <?php if ($cvUrl !== '' || $githubUrl !== '' || $creativeUrl !== ''): ?>
-                        <div class="hj-landing-actions" role="group" aria-label="<?php _e('链接'); ?>">
-                            <?php if ($cvUrl !== ''): ?>
-                                <a class="hj-landing-icon-btn" href="<?php echo hansJackEscape($cvUrl); ?>" target="_blank" rel="noreferrer" aria-label="CV" title="CV">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-user-icon lucide-file-user" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M16 22a4 4 0 0 0-8 0"/><circle cx="12" cy="15" r="3"/></svg>
-                                </a>
-                            <?php endif; ?>
-                            <?php if ($githubUrl !== ''): ?>
-                                <a class="hj-landing-icon-btn" href="<?php echo hansJackEscape($githubUrl); ?>" target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-github-icon lucide-github" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
-                                </a>
-                            <?php endif; ?>
-                            <?php if ($creativeUrl !== ''): ?>
-                                <a class="hj-landing-icon-btn" href="<?php echo hansJackEscape($creativeUrl); ?>" target="_blank" rel="noreferrer" aria-label="<?php _e('创意'); ?>" title="<?php _e('创意'); ?>">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pickaxe-icon lucide-pickaxe" aria-hidden="true"><path d="m14 13-8.381 8.38a1 1 0 0 1-3.001-3L11 9.999"/><path d="M15.973 4.027A13 13 0 0 0 5.902 2.373c-1.398.342-1.092 2.158.277 2.601a19.9 19.9 0 0 1 5.822 3.024"/><path d="M16.001 11.999a19.9 19.9 0 0 1 3.024 5.824c.444 1.369 2.26 1.676 2.603.278A13 13 0 0 0 20 8.069"/><path d="M18.352 3.352a1.205 1.205 0 0 0-1.704 0l-5.296 5.296a1.205 1.205 0 0 0 0 1.704l2.296 2.296a1.205 1.205 0 0 0 1.704 0l5.296-5.296a1.205 1.205 0 0 0 0-1.704z"/></svg>
-                                </a>
-                            <?php endif; ?>
-                        </div>
-                    <?php endif; ?>
                 </div>
                 <div class="hj-landing-right">
                     <div class="hj-landing-avatar" aria-hidden="true">
@@ -324,7 +304,7 @@ if ($this->is('index')) {
             </div>
 
             <div class="hj-landing-insights" role="region" aria-label="<?php _e('热力图与最新内容'); ?>">
-                <footer class="hj-landing-insights-footer">
+                <footer class="hj-landing-insights-footer" style="--hj-landing-heatmap-cols: <?php echo (int) $landingHeatmapColumns; ?>;">
                     <section class="hj-landing-heatmap-grid" aria-label="<?php echo hansJackEscape(sprintf(_t('最近 %d 天内容热力图'), (int) $landingHeatmapDays)); ?>">
                         <?php foreach ($landingHeatmapSeries as $day): ?>
                             <?php
