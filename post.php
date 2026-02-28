@@ -143,7 +143,7 @@ $this->need('header.php');
         </header>
         <div class="hj-article-layout" data-hj-article-layout>
             <div class="hj-article-content">
-                <?php $this->content(); ?>
+                <?php hansJackEchoArchiveContent($this); ?>
             </div>
             <aside class="hj-article-aside" aria-label="<?php _e('目录'); ?>">
                 <div class="hj-article-toc">

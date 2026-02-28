@@ -227,7 +227,7 @@ $metaRows = [
         </div>
 
         <div class="hj-article-content hj-cv-content">
-            <?php $this->content(); ?>
+            <?php hansJackEchoArchiveContent($this); ?>
         </div>
     </section>
 </main>

@@ -807,7 +807,7 @@ $this->need('header.php');
 <main class="hj-main" role="main">
     <article class="hj-page hj-links-page" aria-label="<?php _e('友情链接'); ?>">
         <div class="hj-article-content">
-            <?php $this->content(); ?>
+            <?php hansJackEchoArchiveContent($this); ?>
         </div>
 
         <section class="hj-links" aria-label="<?php _e('友链'); ?>">

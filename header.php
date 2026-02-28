@@ -21,6 +21,17 @@ if ($hjThemeCookie === 'dark') {
     $hjHtmlThemeClass = 'hj-theme-light';
     $hjHtmlThemeStyle = 'background-color:#fffffd;color-scheme:light;';
 }
+
+$hjNeedsContentEnhance = false;
+try {
+    $hjNeedsContentEnhance = $this->is('post') || $this->is('page');
+} catch (\Throwable $e) {
+    $hjNeedsContentEnhance = false;
+}
+
+if ($hjNeedsContentEnhance) {
+    $hjHtmlThemeClass = trim($hjHtmlThemeClass . ' hj-content-enhance-pending');
+}
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN"<?php if ($hjHtmlThemeClass !== '') {
@@ -178,7 +189,20 @@ if ($hjThemeCookie === 'dark') {
             color: #2a2a28;
             color-scheme: light;
         }
+
+        html.hj-content-enhance-pending :is(.hj-article-content, .hj-comment-content) {
+            visibility: hidden;
+        }
     </style>
+    <?php if ($hjNeedsContentEnhance): ?>
+        <noscript>
+            <style>
+                html.hj-content-enhance-pending :is(.hj-article-content, .hj-comment-content) {
+                    visibility: visible !important;
+                }
+            </style>
+        </noscript>
+    <?php endif; ?>
     <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/vendor/highlight/github.min.css'); ?>" data-hj-hljs-theme="light" disabled>
     <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/vendor/highlight/github-dark.min.css'); ?>" data-hj-hljs-theme="dark" disabled>
     <?php if ($this->is('post') || $this->is('page')): ?>

@@ -2435,6 +2435,401 @@ function hansJackEscape(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+function hansJackRemoveHtmlTagAttr(string $tag, string $name): string
+{
+    $name = trim($name);
+    if ($name === '' || $tag === '') {
+        return $tag;
+    }
+
+    $pattern = '/\s+' . preg_quote($name, '/') . '\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/iu';
+    $replaced = preg_replace($pattern, '', $tag, 1);
+    return is_string($replaced) ? $replaced : $tag;
+}
+
+function hansJackSetHtmlTagAttr(string $tag, string $name, string $value): string
+{
+    $name = trim($name);
+    if ($name === '' || $tag === '') {
+        return $tag;
+    }
+
+    $cleaned = hansJackRemoveHtmlTagAttr($tag, $name);
+    $attr = ' ' . $name . '="' . hansJackEscape($value) . '"';
+
+    if (preg_match('/\s*\/>$/u', $cleaned, $match, PREG_OFFSET_CAPTURE)) {
+        $pos = (int) $match[0][1];
+        return substr($cleaned, 0, $pos) . $attr . substr($cleaned, $pos);
+    }
+
+    if (preg_match('/>$/u', $cleaned, $match, PREG_OFFSET_CAPTURE)) {
+        $pos = (int) $match[0][1];
+        return substr($cleaned, 0, $pos) . $attr . substr($cleaned, $pos);
+    }
+
+    return $cleaned . $attr;
+}
+
+function hansJackApplyImageSizeSyntaxToHtml(string $html): string
+{
+    if ($html === '' || strpos($html, '<img') === false || strpos($html, '|') === false) {
+        return $html;
+    }
+
+    $pattern = '/<img\b[^>]*>/iu';
+    $result = preg_replace_callback($pattern, static function (array $matches): string {
+        $tag = (string) ($matches[0] ?? '');
+        if ($tag === '') {
+            return $tag;
+        }
+
+        if (!preg_match('/\balt\s*=\s*(["\'])(.*?)\1/isu', $tag, $altMatch)) {
+            return $tag;
+        }
+
+        $quote = (string) ($altMatch[1] ?? '"');
+        $altRaw = html_entity_decode((string) ($altMatch[2] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if (!preg_match('/^(.*)\|\s*(\d+)\s*x\s*(\d+)\s*$/u', $altRaw, $sizeMatch)) {
+            return $tag;
+        }
+
+        $altText = trim((string) ($sizeMatch[1] ?? ''));
+        $width = (int) ($sizeMatch[2] ?? 0);
+        $height = (int) ($sizeMatch[3] ?? 0);
+
+        $altValue = 'alt=' . $quote . hansJackEscape($altText) . $quote;
+        $altAttrPattern = '/\balt\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/iu';
+        $updated = preg_replace($altAttrPattern, $altValue, $tag, 1);
+        if (!is_string($updated) || $updated === '') {
+            return $tag;
+        }
+
+        if ($width > 0) {
+            $updated = hansJackSetHtmlTagAttr($updated, 'width', (string) $width);
+        } else {
+            $updated = hansJackRemoveHtmlTagAttr($updated, 'width');
+        }
+
+        if ($height > 0) {
+            $updated = hansJackSetHtmlTagAttr($updated, 'height', (string) $height);
+        } else {
+            $updated = hansJackRemoveHtmlTagAttr($updated, 'height');
+        }
+
+        return $updated;
+    }, $html);
+
+    return is_string($result) ? $result : $html;
+}
+
+function hansJackContainsInlineSyntaxMarker(string $text): bool
+{
+    return strpos($text, '!!') !== false
+        || strpos($text, '++') !== false
+        || strpos($text, '==') !== false
+        || strpos($text, '{') !== false;
+}
+
+function hansJackParseRubySyntaxPayload(string $raw): ?array
+{
+    $inner = trim($raw);
+    if ($inner === '') {
+        return null;
+    }
+
+    $splitAt = strpos($inner, ':');
+    if ($splitAt === false || $splitAt <= 0 || $splitAt >= strlen($inner) - 1) {
+        return null;
+    }
+
+    $base = trim((string) substr($inner, 0, $splitAt));
+    $right = trim((string) substr($inner, $splitAt + 1));
+    if ($base === '' || $right === '') {
+        return null;
+    }
+
+    $annotationsRaw = explode('|', $right);
+    $annotations = [];
+    foreach ($annotationsRaw as $item) {
+        $value = trim((string) $item);
+        if ($value !== '') {
+            $annotations[] = $value;
+        }
+    }
+
+    if (empty($annotations)) {
+        return null;
+    }
+
+    return [
+        'base' => $base,
+        'annotations' => $annotations,
+    ];
+}
+
+function hansJackIsInlineSyntaxBlockedNode(\DOMNode $node, \DOMElement $root): bool
+{
+    $blockedTags = [
+        'code', 'pre', 'a', 'script', 'style', 'textarea',
+        'ruby', 'rt', 'ins', 'mark', 'option',
+    ];
+
+    $parent = $node->parentNode;
+    while ($parent instanceof \DOMElement && $parent !== $root) {
+        $tag = strtolower((string) $parent->tagName);
+        if (in_array($tag, $blockedTags, true)) {
+            return true;
+        }
+        $parent = $parent->parentNode;
+    }
+
+    return false;
+}
+
+function hansJackBuildInlineSyntaxFragment(\DOMDocument $dom, string $text): ?\DOMDocumentFragment
+{
+    if ($text === '' || !hansJackContainsInlineSyntaxMarker($text)) {
+        return null;
+    }
+
+    $fragment = $dom->createDocumentFragment();
+    $length = strlen($text);
+    $pos = 0;
+    $hasChange = false;
+
+    while ($pos < $length) {
+        $markers = [
+            'spoiler' => strpos($text, '!!', $pos),
+            'ins' => strpos($text, '++', $pos),
+            'mark' => strpos($text, '==', $pos),
+            'ruby' => strpos($text, '{', $pos),
+        ];
+
+        $nextType = '';
+        $nextPos = false;
+        foreach ($markers as $type => $candidate) {
+            if ($candidate === false) {
+                continue;
+            }
+            if ($nextPos === false || $candidate < $nextPos) {
+                $nextPos = $candidate;
+                $nextType = $type;
+            }
+        }
+
+        if ($nextPos === false) {
+            $fragment->appendChild($dom->createTextNode((string) substr($text, $pos)));
+            break;
+        }
+
+        if ($nextPos > $pos) {
+            $fragment->appendChild($dom->createTextNode((string) substr($text, $pos, $nextPos - $pos)));
+        }
+
+        if ($nextType === 'ruby') {
+            $rubyClose = strpos($text, '}', $nextPos + 1);
+            if ($rubyClose === false) {
+                $fragment->appendChild($dom->createTextNode((string) substr($text, $nextPos)));
+                break;
+            }
+
+            $rubyRaw = (string) substr($text, $nextPos + 1, $rubyClose - ($nextPos + 1));
+            $parsed = hansJackParseRubySyntaxPayload($rubyRaw);
+            if (!is_array($parsed)) {
+                $fragment->appendChild($dom->createTextNode('{'));
+                $pos = $nextPos + 1;
+                continue;
+            }
+
+            $ruby = $dom->createElement('ruby');
+            $ruby->appendChild($dom->createTextNode((string) ($parsed['base'] ?? '')));
+
+            $annotations = is_array($parsed['annotations'] ?? null) ? $parsed['annotations'] : [];
+            foreach ($annotations as $annotation) {
+                $rt = $dom->createElement('rt');
+                $rt->appendChild($dom->createTextNode((string) $annotation));
+                $ruby->appendChild($rt);
+            }
+
+            $fragment->appendChild($ruby);
+            $pos = $rubyClose + 1;
+            $hasChange = true;
+            continue;
+        }
+
+        $delimiter = $nextType === 'spoiler'
+            ? '!!'
+            : ($nextType === 'ins' ? '++' : '==');
+        $closePos = strpos($text, $delimiter, $nextPos + 2);
+        if ($closePos === false) {
+            $fragment->appendChild($dom->createTextNode((string) substr($text, $nextPos)));
+            break;
+        }
+
+        $innerText = (string) substr($text, $nextPos + 2, $closePos - ($nextPos + 2));
+        if ($nextType === 'spoiler') {
+            $span = $dom->createElement('span');
+            $span->setAttribute('class', 'hj-term hj-term-spoiler spoiler');
+            $span->setAttribute('tabindex', '0');
+            $span->appendChild($dom->createTextNode($innerText));
+            $fragment->appendChild($span);
+        } elseif ($nextType === 'ins') {
+            $ins = $dom->createElement('ins');
+            $ins->appendChild($dom->createTextNode($innerText));
+            $fragment->appendChild($ins);
+        } else {
+            $mark = $dom->createElement('mark');
+            $mark->appendChild($dom->createTextNode($innerText));
+            $fragment->appendChild($mark);
+        }
+
+        $pos = $closePos + 2;
+        $hasChange = true;
+    }
+
+    return $hasChange ? $fragment : null;
+}
+
+function hansJackApplyInlineSyntaxToHtml(string $html): string
+{
+    if ($html === '' || !hansJackContainsInlineSyntaxMarker($html) || !class_exists('DOMDocument')) {
+        return $html;
+    }
+
+    $dom = new \DOMDocument('1.0', 'UTF-8');
+    $flags = 0;
+    if (defined('LIBXML_HTML_NODEFDTD')) {
+        $flags |= LIBXML_HTML_NODEFDTD;
+    }
+    if (defined('LIBXML_HTML_NOIMPLIED')) {
+        $flags |= LIBXML_HTML_NOIMPLIED;
+    }
+    if (defined('LIBXML_NOERROR')) {
+        $flags |= LIBXML_NOERROR;
+    }
+    if (defined('LIBXML_NOWARNING')) {
+        $flags |= LIBXML_NOWARNING;
+    }
+
+    $wrapped = '<div id="hj-inline-syntax-root">' . $html . '</div>';
+    $useErrors = libxml_use_internal_errors(true);
+    $loaded = $flags > 0
+        ? $dom->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped, $flags)
+        : $dom->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped);
+    libxml_clear_errors();
+    libxml_use_internal_errors($useErrors);
+
+    if (!$loaded) {
+        return $html;
+    }
+
+    $xpath = new \DOMXPath($dom);
+    $rootNodes = $xpath->query('//div[@id="hj-inline-syntax-root"]');
+    if (!$rootNodes instanceof \DOMNodeList || $rootNodes->length === 0) {
+        return $html;
+    }
+
+    $root = $rootNodes->item(0);
+    if (!$root instanceof \DOMElement) {
+        return $html;
+    }
+
+    $textNodes = $xpath->query('.//text()', $root);
+    if (!$textNodes instanceof \DOMNodeList || $textNodes->length === 0) {
+        return $html;
+    }
+
+    $targets = [];
+    foreach ($textNodes as $textNode) {
+        if ($textNode instanceof \DOMText) {
+            $targets[] = $textNode;
+        }
+    }
+
+    foreach ($targets as $textNode) {
+        $value = (string) $textNode->nodeValue;
+        if ($value === '' || !hansJackContainsInlineSyntaxMarker($value)) {
+            continue;
+        }
+        if (hansJackIsInlineSyntaxBlockedNode($textNode, $root)) {
+            continue;
+        }
+
+        $fragment = hansJackBuildInlineSyntaxFragment($dom, $value);
+        if (!$fragment instanceof \DOMDocumentFragment) {
+            continue;
+        }
+
+        $parent = $textNode->parentNode;
+        if (!$parent) {
+            continue;
+        }
+
+        try {
+            $parent->replaceChild($fragment, $textNode);
+        } catch (\Throwable $e) {
+            // Ignore replacement failures and keep original text.
+        }
+    }
+
+    $output = '';
+    foreach ($root->childNodes as $child) {
+        $output .= (string) $dom->saveHTML($child);
+    }
+
+    return $output !== '' ? $output : $html;
+}
+
+function hansJackRenderArchiveContent($archive): string
+{
+    if (!is_object($archive) || !method_exists($archive, 'content')) {
+        return '';
+    }
+
+    ob_start();
+    try {
+        $archive->content();
+    } catch (\Throwable $e) {
+        ob_end_clean();
+        return '';
+    }
+
+    $html = (string) ob_get_clean();
+    $html = hansJackApplyImageSizeSyntaxToHtml($html);
+    $html = hansJackApplyInlineSyntaxToHtml($html);
+    return $html;
+}
+
+function hansJackEchoArchiveContent($archive): void
+{
+    echo hansJackRenderArchiveContent($archive);
+}
+
+function hansJackRenderCommentContent($comments): string
+{
+    if (!is_object($comments) || !method_exists($comments, 'content')) {
+        return '';
+    }
+
+    ob_start();
+    try {
+        $comments->content();
+    } catch (\Throwable $e) {
+        ob_end_clean();
+        return '';
+    }
+
+    $html = (string) ob_get_clean();
+    $html = hansJackApplyImageSizeSyntaxToHtml($html);
+    $html = hansJackApplyInlineSyntaxToHtml($html);
+    return $html;
+}
+
+function hansJackEchoCommentContent($comments): void
+{
+    echo hansJackRenderCommentContent($comments);
+}
+
 function hansJackBuildMpsBeianUrl(string $value): string
 {
     $value = trim($value);
@@ -3035,7 +3430,7 @@ function threadedComments($comments, $singleCommentOptions): void
             <?php if ($isPrivate && !$canViewPrivate): ?>
                 <div class="hj-private-mask" aria-hidden="true"></div>
             <?php else: ?>
-                <?php $comments->content(); ?>
+                <?php hansJackEchoCommentContent($comments); ?>
             <?php endif; ?>
         </div> 
         <?php if ($comments->children) { ?>

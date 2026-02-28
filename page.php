@@ -12,7 +12,7 @@ $this->need('header.php');
             <h1 class="hj-article-title"><?php $this->title(); ?></h1>
         </header>
         <div class="hj-article-content">
-            <?php $this->content(); ?>
+            <?php hansJackEchoArchiveContent($this); ?>
         </div>
     </article>
 </main>

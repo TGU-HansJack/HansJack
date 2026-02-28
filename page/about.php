@@ -161,7 +161,7 @@ $this->need('header.php');
         <div class="hj-about-layout">
             <article class="hj-about-article">
                 <div class="hj-article-content hj-about-content">
-                    <?php $this->content(); ?>
+                    <?php hansJackEchoArchiveContent($this); ?>
                 </div>
             </article>
 
