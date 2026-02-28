@@ -2522,6 +2522,507 @@ function hansJackApplyImageSizeSyntaxToHtml(string $html): string
     return is_string($result) ? $result : $html;
 }
 
+function hansJackDomElementHasClass(\DOMElement $element, string $class): bool
+{
+    $class = trim($class);
+    if ($class === '') {
+        return false;
+    }
+
+    $raw = (string) $element->getAttribute('class');
+    if ($raw === '') {
+        return false;
+    }
+
+    $parts = preg_split('/\s+/u', $raw) ?: [];
+    return in_array($class, $parts, true);
+}
+
+function hansJackDomElementAddClass(\DOMElement $element, string $class): void
+{
+    $class = trim($class);
+    if ($class === '' || hansJackDomElementHasClass($element, $class)) {
+        return;
+    }
+
+    $raw = trim((string) $element->getAttribute('class'));
+    if ($raw === '') {
+        $element->setAttribute('class', $class);
+        return;
+    }
+
+    $element->setAttribute('class', $raw . ' ' . $class);
+}
+
+function hansJackTaskListNodeHasVisibleContent(\DOMNode $node): bool
+{
+    if ($node instanceof \DOMText) {
+        return trim((string) $node->nodeValue) !== '';
+    }
+
+    if (!$node instanceof \DOMElement) {
+        return false;
+    }
+
+    $tag = strtolower((string) $node->tagName);
+    if (in_array($tag, ['img', 'video', 'audio', 'iframe'], true)) {
+        return true;
+    }
+
+    foreach ($node->childNodes as $child) {
+        if (hansJackTaskListNodeHasVisibleContent($child)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function hansJackFindTaskListCheckboxElement(\DOMNode $node): ?\DOMElement
+{
+    foreach ($node->childNodes as $child) {
+        if (!$child instanceof \DOMElement) {
+            continue;
+        }
+
+        $tag = strtolower((string) $child->tagName);
+        if (in_array($tag, ['ul', 'ol'], true)) {
+            continue;
+        }
+
+        if ($tag === 'input') {
+            $type = strtolower(trim((string) $child->getAttribute('type')));
+            if ($type === 'checkbox') {
+                return $child;
+            }
+        }
+
+        $hit = hansJackFindTaskListCheckboxElement($child);
+        if ($hit instanceof \DOMElement) {
+            return $hit;
+        }
+    }
+
+    return null;
+}
+
+function hansJackStripTaskListCheckboxFromItem(\DOMElement $item): ?bool
+{
+    $checkbox = hansJackFindTaskListCheckboxElement($item);
+    if (!$checkbox instanceof \DOMElement) {
+        return null;
+    }
+
+    $checked = $checkbox->hasAttribute('checked');
+    $parent = $checkbox->parentNode;
+    if ($parent) {
+        try {
+            $parent->removeChild($checkbox);
+        } catch (\Throwable $e) {
+            // Keep original markup if the checkbox cannot be removed.
+        }
+    }
+
+    return $checked;
+}
+
+function hansJackFindTaskListMarkerTextNode(\DOMNode $node): ?\DOMText
+{
+    foreach ($node->childNodes as $child) {
+        if ($child instanceof \DOMText) {
+            if (trim((string) $child->nodeValue) === '') {
+                continue;
+            }
+            return $child;
+        }
+
+        if (!$child instanceof \DOMElement) {
+            continue;
+        }
+
+        $tag = strtolower((string) $child->tagName);
+        if (in_array($tag, ['ul', 'ol', 'code', 'pre', 'script', 'style', 'textarea'], true)) {
+            continue;
+        }
+
+        $hit = hansJackFindTaskListMarkerTextNode($child);
+        if ($hit instanceof \DOMText) {
+            return $hit;
+        }
+    }
+
+    return null;
+}
+
+function hansJackStripTaskListMarkerFromItem(\DOMElement $item): ?bool
+{
+    $textNode = hansJackFindTaskListMarkerTextNode($item);
+    if (!$textNode instanceof \DOMText) {
+        return null;
+    }
+
+    $text = (string) $textNode->nodeValue;
+    if (!preg_match('/^\s*\[([ xX])\]\s*/u', $text, $match)) {
+        return null;
+    }
+
+    $checked = strtolower((string) ($match[1] ?? '')) === 'x';
+    $cleaned = preg_replace('/^\s*\[[ xX]\]\s*/u', '', $text, 1);
+    if (is_string($cleaned)) {
+        $textNode->nodeValue = $cleaned;
+    }
+
+    return $checked;
+}
+
+function hansJackBuildTaskListIconElement(\DOMDocument $dom): \DOMElement
+{
+    $icon = $dom->createElement('span');
+    $icon->setAttribute('class', 'hj-task-icon');
+    $icon->setAttribute('aria-hidden', 'true');
+
+    $square = $dom->createElement('svg');
+    $square->setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    $square->setAttribute('width', '24');
+    $square->setAttribute('height', '24');
+    $square->setAttribute('viewBox', '0 0 24 24');
+    $square->setAttribute('fill', 'none');
+    $square->setAttribute('stroke', 'currentColor');
+    $square->setAttribute('stroke-width', '2');
+    $square->setAttribute('stroke-linecap', 'round');
+    $square->setAttribute('stroke-linejoin', 'round');
+    $square->setAttribute('class', 'lucide lucide-square-icon lucide-square hj-task-square');
+
+    $squareRect = $dom->createElement('rect');
+    $squareRect->setAttribute('width', '18');
+    $squareRect->setAttribute('height', '18');
+    $squareRect->setAttribute('x', '3');
+    $squareRect->setAttribute('y', '3');
+    $squareRect->setAttribute('rx', '2');
+    $square->appendChild($squareRect);
+    $icon->appendChild($square);
+
+    $check = $dom->createElement('svg');
+    $check->setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    $check->setAttribute('width', '24');
+    $check->setAttribute('height', '24');
+    $check->setAttribute('viewBox', '0 0 24 24');
+    $check->setAttribute('fill', 'none');
+    $check->setAttribute('stroke', 'currentColor');
+    $check->setAttribute('stroke-width', '2');
+    $check->setAttribute('stroke-linecap', 'round');
+    $check->setAttribute('stroke-linejoin', 'round');
+    $check->setAttribute('class', 'lucide lucide-check-icon lucide-check hj-task-check');
+
+    $checkPath = $dom->createElement('path');
+    $checkPath->setAttribute('d', 'M20 6 9 17l-5-5');
+    $check->appendChild($checkPath);
+    $icon->appendChild($check);
+
+    return $icon;
+}
+
+function hansJackTaskLinePayload(string $line): ?array
+{
+    if (!preg_match('/^\s*-\s*\[([ xX])\]\s*(.*?)\s*$/u', $line, $match)) {
+        return null;
+    }
+
+    $text = trim((string) ($match[2] ?? ''));
+    if ($text === '') {
+        return null;
+    }
+
+    return [
+        'checked' => strtolower((string) ($match[1] ?? '')) === 'x',
+        'text' => $text,
+    ];
+}
+
+function hansJackTaskElementHasOnlyTextAndBr(\DOMElement $element): bool
+{
+    foreach ($element->childNodes as $child) {
+        if ($child instanceof \DOMText) {
+            continue;
+        }
+        if ($child instanceof \DOMElement && strtolower((string) $child->tagName) === 'br') {
+            continue;
+        }
+        return false;
+    }
+    return true;
+}
+
+function hansJackTaskElementToLineText(\DOMElement $element): string
+{
+    $buffer = '';
+    foreach ($element->childNodes as $child) {
+        if ($child instanceof \DOMText) {
+            $buffer .= (string) $child->nodeValue;
+            continue;
+        }
+        if ($child instanceof \DOMElement && strtolower((string) $child->tagName) === 'br') {
+            $buffer .= "\n";
+        }
+    }
+
+    $buffer = str_replace(["\r\n", "\r"], "\n", $buffer);
+    return trim($buffer);
+}
+
+function hansJackIsTaskElementBlockedByAncestor(\DOMElement $element, \DOMElement $root): bool
+{
+    $blockedTags = ['pre', 'code', 'script', 'style', 'textarea', 'option'];
+    $parent = $element->parentNode;
+    while ($parent instanceof \DOMElement && $parent !== $root) {
+        $tag = strtolower((string) $parent->tagName);
+        if (in_array($tag, $blockedTags, true)) {
+            return true;
+        }
+        $parent = $parent->parentNode;
+    }
+    return false;
+}
+
+function hansJackConvertPlainTaskBlocksToLists(\DOMDocument $dom, \DOMElement $root): void
+{
+    $xpath = new \DOMXPath($dom);
+    $blocks = $xpath->query('.//p|.//div', $root);
+    if (!$blocks instanceof \DOMNodeList || $blocks->length === 0) {
+        return;
+    }
+
+    $targets = [];
+    foreach ($blocks as $block) {
+        if ($block instanceof \DOMElement) {
+            $targets[] = $block;
+        }
+    }
+
+    foreach ($targets as $block) {
+        if (hansJackDomElementHasClass($block, 'hj-task-main')) {
+            continue;
+        }
+        if (hansJackIsTaskElementBlockedByAncestor($block, $root)) {
+            continue;
+        }
+        if (!hansJackTaskElementHasOnlyTextAndBr($block)) {
+            continue;
+        }
+
+        $text = hansJackTaskElementToLineText($block);
+        if ($text === '') {
+            continue;
+        }
+
+        $lines = preg_split('/\n+/u', $text) ?: [];
+        $payloads = [];
+        foreach ($lines as $lineRaw) {
+            $line = trim((string) $lineRaw);
+            if ($line === '') {
+                continue;
+            }
+            $payload = hansJackTaskLinePayload($line);
+            if (!is_array($payload)) {
+                $payloads = [];
+                break;
+            }
+            $payloads[] = $payload;
+        }
+
+        if (empty($payloads)) {
+            continue;
+        }
+
+        $list = $dom->createElement('ul');
+        foreach ($payloads as $payload) {
+            $checked = !empty($payload['checked']);
+            $item = $dom->createElement('li');
+            $prefix = $checked ? '[x] ' : '[ ] ';
+            $item->appendChild($dom->createTextNode($prefix . (string) ($payload['text'] ?? '')));
+            $list->appendChild($item);
+        }
+
+        $parent = $block->parentNode;
+        if (!$parent) {
+            continue;
+        }
+
+        try {
+            $parent->replaceChild($list, $block);
+        } catch (\Throwable $e) {
+            // Keep original content if replacement fails.
+        }
+    }
+}
+
+function hansJackNormalizeTaskListItem(\DOMElement $item): ?bool
+{
+    if (hansJackDomElementHasClass($item, 'hj-task-item')) {
+        return hansJackDomElementHasClass($item, 'is-checked');
+    }
+
+    $checked = hansJackStripTaskListCheckboxFromItem($item);
+    if (!is_bool($checked)) {
+        $checked = hansJackStripTaskListMarkerFromItem($item);
+    }
+    if (!is_bool($checked)) {
+        return null;
+    }
+
+    $dom = $item->ownerDocument;
+    if (!$dom instanceof \DOMDocument) {
+        return $checked;
+    }
+
+    hansJackDomElementAddClass($item, 'hj-task-item');
+    if ($checked) {
+        hansJackDomElementAddClass($item, 'is-checked');
+    }
+
+    $children = [];
+    foreach ($item->childNodes as $child) {
+        $children[] = $child;
+    }
+
+    while ($item->firstChild) {
+        $item->removeChild($item->firstChild);
+    }
+
+    $main = $dom->createElement('div');
+    $main->setAttribute('class', 'hj-task-main');
+    $nestedLists = [];
+
+    foreach ($children as $child) {
+        if ($child instanceof \DOMElement) {
+            $tag = strtolower((string) $child->tagName);
+            if ($tag === 'input' && strtolower(trim((string) $child->getAttribute('type'))) === 'checkbox') {
+                continue;
+            }
+            if ($tag === 'ul' || $tag === 'ol') {
+                $nestedLists[] = $child;
+                continue;
+            }
+        }
+
+        $main->appendChild($child);
+    }
+
+    $item->appendChild(hansJackBuildTaskListIconElement($dom));
+
+    if (hansJackTaskListNodeHasVisibleContent($main)) {
+        $item->appendChild($main);
+    }
+
+    foreach ($nestedLists as $nestedList) {
+        $item->appendChild($nestedList);
+    }
+
+    return $checked;
+}
+
+function hansJackApplyTaskListSyntaxToHtml(string $html): string
+{
+    if ($html === '' || !class_exists('DOMDocument')) {
+        return $html;
+    }
+
+    $hasTaskMarker = preg_match('/(?:^|[\r\n])\s*-\s*\[[ xX]\]\s+/u', $html) === 1
+        || strpos($html, '[ ]') !== false
+        || stripos($html, '[x]') !== false;
+    $hasCheckboxInput = preg_match('/\btype\s*=\s*(?:"checkbox"|\'checkbox\'|checkbox)\b/iu', $html) === 1;
+    if (!$hasTaskMarker && !$hasCheckboxInput) {
+        return $html;
+    }
+
+    $dom = new \DOMDocument('1.0', 'UTF-8');
+    $flags = 0;
+    if (defined('LIBXML_HTML_NODEFDTD')) {
+        $flags |= LIBXML_HTML_NODEFDTD;
+    }
+    if (defined('LIBXML_HTML_NOIMPLIED')) {
+        $flags |= LIBXML_HTML_NOIMPLIED;
+    }
+    if (defined('LIBXML_NOERROR')) {
+        $flags |= LIBXML_NOERROR;
+    }
+    if (defined('LIBXML_NOWARNING')) {
+        $flags |= LIBXML_NOWARNING;
+    }
+
+    $wrapped = '<div id="hj-task-list-root">' . $html . '</div>';
+    $useErrors = libxml_use_internal_errors(true);
+    $loaded = $flags > 0
+        ? $dom->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped, $flags)
+        : $dom->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped);
+    libxml_clear_errors();
+    libxml_use_internal_errors($useErrors);
+
+    if (!$loaded) {
+        return $html;
+    }
+
+    $xpath = new \DOMXPath($dom);
+    $rootNodes = $xpath->query('//div[@id="hj-task-list-root"]');
+    if (!$rootNodes instanceof \DOMNodeList || $rootNodes->length === 0) {
+        return $html;
+    }
+
+    $root = $rootNodes->item(0);
+    if (!$root instanceof \DOMElement) {
+        return $html;
+    }
+
+    if ($hasTaskMarker) {
+        hansJackConvertPlainTaskBlocksToLists($dom, $root);
+    }
+
+    $listItems = $xpath->query('.//li', $root);
+    if (!$listItems instanceof \DOMNodeList || $listItems->length === 0) {
+        return $html;
+    }
+
+    $items = [];
+    foreach ($listItems as $itemNode) {
+        if ($itemNode instanceof \DOMElement) {
+            $items[] = $itemNode;
+        }
+    }
+
+    $lists = [];
+    foreach ($items as $item) {
+        $checked = hansJackNormalizeTaskListItem($item);
+        if (!is_bool($checked)) {
+            continue;
+        }
+
+        $parent = $item->parentNode;
+        if (!$parent instanceof \DOMElement) {
+            continue;
+        }
+
+        $tag = strtolower((string) $parent->tagName);
+        if ($tag !== 'ul' && $tag !== 'ol') {
+            continue;
+        }
+
+        $lists[spl_object_hash($parent)] = $parent;
+    }
+
+    foreach ($lists as $list) {
+        if ($list instanceof \DOMElement) {
+            hansJackDomElementAddClass($list, 'hj-task-list');
+        }
+    }
+
+    $output = '';
+    foreach ($root->childNodes as $child) {
+        $output .= (string) $dom->saveHTML($child);
+    }
+
+    return $output !== '' ? $output : $html;
+}
+
 function hansJackContainsInlineSyntaxMarker(string $text): bool
 {
     return strpos($text, '!!') !== false
@@ -2796,6 +3297,7 @@ function hansJackRenderArchiveContent($archive): string
 
     $html = (string) ob_get_clean();
     $html = hansJackApplyImageSizeSyntaxToHtml($html);
+    $html = hansJackApplyTaskListSyntaxToHtml($html);
     $html = hansJackApplyInlineSyntaxToHtml($html);
     return $html;
 }
@@ -2805,22 +3307,62 @@ function hansJackEchoArchiveContent($archive): void
     echo hansJackRenderArchiveContent($archive);
 }
 
+function hansJackReadCommentContentHtml($comments): string
+{
+    if (!is_object($comments)) {
+        return '';
+    }
+
+    $html = '';
+
+    if (method_exists($comments, 'content')) {
+        ob_start();
+        try {
+            $comments->content();
+        } catch (\Throwable $e) {
+            // Ignore and try property/text fallback below.
+        }
+        $html = (string) ob_get_clean();
+    }
+
+    if (trim($html) === '') {
+        try {
+            $fallback = $comments->content ?? '';
+            if (is_string($fallback)) {
+                $html = $fallback;
+            }
+        } catch (\Throwable $e) {
+            // Ignore property read failure.
+        }
+    }
+
+    if (trim($html) === '') {
+        try {
+            $rawText = trim((string) ($comments->text ?? ''));
+            if ($rawText !== '') {
+                $html = '<p>' . nl2br(hansJackEscape($rawText)) . '</p>';
+            }
+        } catch (\Throwable $e) {
+            // Keep empty output when all fallbacks fail.
+        }
+    }
+
+    return (string) $html;
+}
+
 function hansJackRenderCommentContent($comments): string
 {
-    if (!is_object($comments) || !method_exists($comments, 'content')) {
+    if (!is_object($comments)) {
         return '';
     }
 
-    ob_start();
-    try {
-        $comments->content();
-    } catch (\Throwable $e) {
-        ob_end_clean();
+    $html = hansJackReadCommentContentHtml($comments);
+    if ($html === '') {
         return '';
     }
 
-    $html = (string) ob_get_clean();
     $html = hansJackApplyImageSizeSyntaxToHtml($html);
+    $html = hansJackApplyTaskListSyntaxToHtml($html);
     $html = hansJackApplyInlineSyntaxToHtml($html);
     return $html;
 }

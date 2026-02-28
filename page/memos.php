@@ -135,9 +135,18 @@ if ($hjComments && $hjComments->have()) {
 
         $renderedContent = '';
         try {
-            $renderedContent = (string) ($hjComments->content ?? '');
+            if (function_exists('hansJackRenderCommentContent')) {
+                $renderedContent = (string) hansJackRenderCommentContent($hjComments);
+            }
         } catch (\Throwable $e) {
             $renderedContent = '';
+        }
+        if ($renderedContent === '') {
+            try {
+                $renderedContent = (string) ($hjComments->content ?? '');
+            } catch (\Throwable $e) {
+                $renderedContent = '';
+            }
         }
 
         if ($rawText === '') {

@@ -4327,37 +4327,6 @@
                 return true;
             }
 
-            function parseSizedAlt(rawAlt) {
-                var altText = String(rawAlt || "");
-                var match = altText.match(/^(.*)\|\s*(\d+)\s*x\s*(\d+)\s*$/i);
-                if (!match) {
-                    return {
-                        hasSize: false,
-                        alt: altText,
-                        width: 0,
-                        height: 0
-                    };
-                }
-
-                var width = parseInt(match[2], 10);
-                var height = parseInt(match[3], 10);
-                if (isNaN(width) || isNaN(height)) {
-                    return {
-                        hasSize: false,
-                        alt: altText,
-                        width: 0,
-                        height: 0
-                    };
-                }
-
-                return {
-                    hasSize: true,
-                    alt: String(match[1] || "").trim(),
-                    width: width > 0 ? width : 0,
-                    height: height > 0 ? height : 0
-                };
-            }
-
             function bindLazyBlurUp(img) {
                 if (!img || !img.classList) {
                     return;
@@ -4412,21 +4381,6 @@
                 imgs.forEach(function (img) {
                     if (!img || !img.parentNode) {
                         return;
-                    }
-
-                    var sized = parseSizedAlt(img.getAttribute("alt"));
-                    if (sized.hasSize) {
-                        img.setAttribute("alt", sized.alt);
-                        if (sized.width > 0) {
-                            img.setAttribute("width", String(sized.width));
-                        } else {
-                            img.removeAttribute("width");
-                        }
-                        if (sized.height > 0) {
-                            img.setAttribute("height", String(sized.height));
-                        } else {
-                            img.removeAttribute("height");
-                        }
                     }
 
                     bindLazyBlurUp(img);
