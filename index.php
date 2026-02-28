@@ -27,6 +27,7 @@ $landingHeatmapDays = 140;
 $landingHeatmapSeries = [];
 $landingHeatmapColumns = 20;
 $landingLatestContent = null;
+$landingHitokotoEnabled = true;
 if ($this->is('index')) {
     $brandName = trim((string) ($themeConfig['brandName'] ?? ''));
     if ($brandName === '') {
@@ -46,6 +47,7 @@ if ($this->is('index')) {
 
     $blogUrl = (string) (($themeConfig['links']['blog'] ?? '') ?: '');
     $memoUrl = (string) (($themeConfig['links']['memo'] ?? '') ?: '');
+    $landingHitokotoEnabled = (bool) ($themeConfig['landingHitokotoEnabled'] ?? true);
 
     $heatmapDayCount = max(1, (int) $landingHeatmapDays);
     $todayStartTs = strtotime(date('Y-m-d 00:00:00'));
@@ -418,7 +420,9 @@ if ($this->is('index')) {
             </div>
 
             <div class="hj-landing-bottom" role="group" aria-label="<?php _e('名言'); ?>">
-                <p class="hj-hitokoto-text" aria-live="polite"><?php _e('正在获取名言...'); ?></p>
+                <?php if ($landingHitokotoEnabled): ?>
+                    <p class="hj-hitokoto-text" aria-live="polite"><?php _e('既然选择了远方，便只顾风雨兼程。'); ?></p>
+                <?php endif; ?>
                 <button class="hj-scroll-down" type="button" aria-label="<?php _e('向下滚动'); ?>" title="<?php _e('向下滚动'); ?>">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down-icon lucide-chevron-down" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                 </button>

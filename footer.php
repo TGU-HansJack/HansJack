@@ -290,6 +290,7 @@
         var quoteNode = document.querySelector(".hj-hitokoto-text");
         if (quoteNode && window.fetch) {
             var endpoint = "https://hitokoto.mayx.eu.org/";
+            var fallbackQuote = (quoteNode.textContent || "").trim();
             var controller = null;
             var timeout = null;
             if (window.AbortController) {
@@ -314,10 +315,10 @@
                 })
                 .then(function (data) {
                     var text = data && data.hitokoto ? String(data.hitokoto) : "";
-                    quoteNode.textContent = text || "\u2026";
+                    quoteNode.textContent = text || fallbackQuote || "\u2026";
                 })
                 .catch(function () {
-                    quoteNode.textContent = "\u2026";
+                    quoteNode.textContent = fallbackQuote || "\u2026";
                 })
                 .finally(function () {
                     if (timeout) {

@@ -44,6 +44,18 @@ function themeConfig($form)
     );
     $form->addInput($afdianPageUrl);
 
+    $landingHitokotoEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'hjLandingHitokotoEnabled',
+        [
+            '1' => _t('开启'),
+            '0' => _t('关闭'),
+        ],
+        '1',
+        _t('首页名言文本'),
+        _t('控制首页底部名言文本是否显示并加载。')
+    );
+    $form->addInput($landingHitokotoEnabled);
+
     $githubOauthEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
         'hjGithubOauthEnabled',
         [
@@ -1539,6 +1551,12 @@ function hansJackGithubOauthEnabled(Options $options): bool
     return in_array($raw, ['1', 'on', 'true', 'yes'], true);
 }
 
+function hansJackLandingHitokotoEnabled(Options $options): bool
+{
+    $raw = strtolower(trim((string) ($options->hjLandingHitokotoEnabled ?? '1')));
+    return in_array($raw, ['1', 'on', 'true', 'yes'], true);
+}
+
 function hansJackGithubCurrentAdminUid(&$uid = 0): bool
 {
     $uid = 0;
@@ -2344,6 +2362,7 @@ function hansJackBuildThemeConfig(Options $options): array
 
     return [
         'brandName' => $brandName,
+        'landingHitokotoEnabled' => hansJackLandingHitokotoEnabled($options),
         'links' => $links,
         'navItems' => [
             ['key' => 'home', 'label' => '首页', 'url' => $links['home']],
