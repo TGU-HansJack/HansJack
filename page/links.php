@@ -318,6 +318,134 @@ if (!function_exists('hansJackLinksFeedParseItems')) {
     }
 }
 
+if (!function_exists('hansJackLinksHealthCheck')) {
+    /**
+     * @return array{state:string,httpCode:int,latencyMs:int,message:string}
+     */
+    function hansJackLinksHealthCheck(string $url): array
+    {
+        $url = trim($url);
+        if ($url === '' || filter_var($url, FILTER_VALIDATE_URL) === false) {
+            return [
+                'state' => 'red',
+                'httpCode' => 0,
+                'latencyMs' => 0,
+                'message' => '链接无效',
+            ];
+        }
+
+        $scheme = strtolower((string) (parse_url($url, PHP_URL_SCHEME) ?? ''));
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            return [
+                'state' => 'red',
+                'httpCode' => 0,
+                'latencyMs' => 0,
+                'message' => '协议不支持',
+            ];
+        }
+
+        $httpCode = 0;
+        $latencyMs = 0;
+        $message = '';
+
+        if (function_exists('curl_init')) {
+            $runCurl = static function (string $targetUrl, bool $headOnly) use (&$httpCode, &$latencyMs, &$message): bool {
+                $ch = curl_init($targetUrl);
+                if ($ch === false) {
+                    return false;
+                }
+
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 4);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'HansJackLinkHealth/1.0');
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                ]);
+
+                if ($headOnly) {
+                    curl_setopt($ch, CURLOPT_NOBODY, true);
+                } else {
+                    curl_setopt($ch, CURLOPT_HTTPGET, true);
+                    // Only fetch a tiny payload for health check.
+                    curl_setopt($ch, CURLOPT_RANGE, '0-0');
+                }
+
+                $ret = curl_exec($ch);
+                $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $time = (float) curl_getinfo($ch, CURLINFO_TOTAL_TIME);
+                $errno = (int) curl_errno($ch);
+                $err = (string) curl_error($ch);
+                curl_close($ch);
+
+                $httpCode = $code > 0 ? $code : $httpCode;
+                $latencyMs = max(1, (int) round($time * 1000));
+                if ($errno !== 0 && $err !== '') {
+                    $message = $err;
+                }
+
+                if ($errno !== 0) {
+                    return false;
+                }
+
+                return is_string($ret) || $headOnly;
+            };
+
+            $ok = $runCurl($url, true);
+            if (!$ok || $httpCode === 0 || $httpCode >= 400) {
+                $runCurl($url, false);
+            }
+        } else {
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'GET',
+                    'timeout' => 10,
+                    'follow_location' => 1,
+                    'max_redirects' => 3,
+                    'header' => "User-Agent: HansJackLinkHealth/1.0\r\nRange: bytes=0-0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n",
+                    'ignore_errors' => true,
+                ],
+                'ssl' => [
+                    'verify_peer' => true,
+                    'verify_peer_name' => true,
+                ],
+            ]);
+
+            $start = microtime(true);
+            @file_get_contents($url, false, $context);
+            $latencyMs = max(1, (int) round((microtime(true) - $start) * 1000));
+
+            $headers = [];
+            if (isset($http_response_header) && is_array($http_response_header)) {
+                $headers = $http_response_header;
+            }
+            foreach ($headers as $line) {
+                if (preg_match('/^HTTP\\/\\d(?:\\.\\d)?\\s+(\\d{3})/i', (string) $line, $m)) {
+                    $httpCode = (int) ($m[1] ?? 0);
+                }
+            }
+        }
+
+        $state = 'red';
+        if ($httpCode >= 200 && $httpCode < 400) {
+            // Slow but reachable links are marked as warning.
+            $state = ($latencyMs >= 1800) ? 'yellow' : 'green';
+        } elseif (in_array($httpCode, [401, 403, 405, 429], true)) {
+            // Restricted but alive endpoints.
+            $state = 'yellow';
+        }
+
+        return [
+            'state' => $state,
+            'httpCode' => max(0, $httpCode),
+            'latencyMs' => max(0, $latencyMs),
+            'message' => $message,
+        ];
+    }
+}
+
 $applySettings = [
     'allowTypeSelect' => 0,
     'defaultType' => 'friend',
@@ -335,6 +463,8 @@ $applySettings = [
 
 $isFeedPreviewRequest = (string) ($request->get('hj_links_feed_preview') ?? '') === '1';
 $feedPreviewLinkId = (int) ($request->get('link_id') ?? 0);
+$isHealthCheckRequest = (string) ($request->get('hj_links_health_check') ?? '') === '1';
+$healthCheckLinkId = (int) ($request->get('link_id') ?? 0);
 
 try {
     $raw = (string) ($this->options->v3a_friend_apply_settings ?? '');
@@ -428,6 +558,38 @@ try {
                 'ok' => true,
                 'title' => trim((string) ($row['name'] ?? '')),
                 'items' => $items,
+            ]);
+        }
+
+        if ($isHealthCheckRequest) {
+            if ($healthCheckLinkId <= 0) {
+                hansJackLinksJsonExit([
+                    'ok' => false,
+                    'message' => '参数错误。',
+                ], 400);
+            }
+
+            $stmt = $pdo->prepare('SELECT id,url FROM v3a_friend_link WHERE id = :id AND status = :status LIMIT 1');
+            $stmt->execute([
+                ':id' => $healthCheckLinkId,
+                ':status' => 1,
+            ]);
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!is_array($row)) {
+                hansJackLinksJsonExit([
+                    'ok' => false,
+                    'message' => '未找到链接信息。',
+                ], 404);
+            }
+
+            $urlRaw = trim((string) ($row['url'] ?? ''));
+            $health = hansJackLinksHealthCheck($urlRaw);
+            hansJackLinksJsonExit([
+                'ok' => true,
+                'linkId' => (int) ($row['id'] ?? 0),
+                'state' => (string) ($health['state'] ?? 'red'),
+                'httpCode' => (int) ($health['httpCode'] ?? 0),
+                'latencyMs' => (int) ($health['latencyMs'] ?? 0),
             ]);
         }
 
@@ -582,12 +744,25 @@ try {
             'message' => $noticeMessage,
         ], 500);
     }
+    if ($isHealthCheckRequest) {
+        hansJackLinksJsonExit([
+            'ok' => false,
+            'message' => $noticeMessage,
+        ], 500);
+    }
 }
 
 if ($isFeedPreviewRequest) {
     hansJackLinksJsonExit([
         'ok' => false,
         'message' => $v3aEnabled ? '暂时无法加载订阅信息。' : '未启用 Vue3Admin 插件，无法加载订阅信息。',
+    ], 400);
+}
+
+if ($isHealthCheckRequest) {
+    hansJackLinksJsonExit([
+        'ok' => false,
+        'message' => $v3aEnabled ? '暂时无法检查链接状态。' : '未启用 Vue3Admin 插件，无法检查链接状态。',
     ], 400);
 }
 
@@ -706,9 +881,24 @@ $this->need('header.php');
                                     <div class="hj-links-name-row">
                                         <a class="hj-links-name" href="<?php echo $url; ?>" target="_blank" rel="noreferrer"><?php echo $name !== '' ? $name : '—'; ?></a>
                                         <?php if ($feed !== ''): ?>
-                                            <a class="hj-links-feed" href="<?php echo $feed; ?>" target="_blank" rel="noreferrer">RSS</a>
+                                            <a
+                                                class="hj-links-feed is-health-pending"
+                                                href="<?php echo $feed; ?>"
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                aria-label="订阅链接"
+                                                title="订阅链接"
+                                                data-hj-feed-tip="订阅链接"
+                                                data-hj-link-health-id="<?php echo $linkId; ?>"
+                                                data-hj-health-state="pending"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rss-icon lucide-rss hj-links-feed-icon" aria-hidden="true">
+                                                    <path class="hj-links-feed-wave hj-links-feed-wave-1" pathLength="1" d="M4 11a9 9 0 0 1 9 9"/>
+                                                    <path class="hj-links-feed-wave hj-links-feed-wave-2" pathLength="1" d="M4 4a16 16 0 0 1 16 16"/>
+                                                    <circle class="hj-links-feed-dot" cx="5" cy="19" r="1"/>
+                                                </svg>
+                                            </a>
                                         <?php endif; ?>
-                                        <span class="hj-links-type" aria-hidden="true"><?php echo $typeLabel; ?></span>
                                     </div>
                                     <?php if ($desc !== ''): ?>
                                         <div class="hj-links-desc"><?php echo $desc; ?></div>
@@ -1352,6 +1542,92 @@ $this->need('header.php');
                 positionPopover();
             }
         }, true);
+    })();
+</script>
+
+<script>
+    (function () {
+        var page = document.querySelector('.hj-links-page');
+        if (!page || !window.fetch) {
+            return;
+        }
+
+        var targets = Array.prototype.slice.call(
+            page.querySelectorAll('.hj-links-feed[data-hj-link-health-id]')
+        );
+        if (!targets || targets.length === 0) {
+            return;
+        }
+
+        function buildUrl(linkId) {
+            var base = window.location.href.split('#')[0];
+            var join = base.indexOf('?') === -1 ? '?' : '&';
+            return base + join + 'hj_links_health_check=1&link_id=' + encodeURIComponent(linkId);
+        }
+
+        function setState(node, state) {
+            var next = String(state || 'red').toLowerCase();
+            if (next !== 'green' && next !== 'yellow' && next !== 'red' && next !== 'pending') {
+                next = 'red';
+            }
+
+            node.classList.remove('is-health-pending', 'is-health-green', 'is-health-yellow', 'is-health-red');
+            node.classList.add('is-health-' + next);
+            node.setAttribute('data-hj-health-state', next);
+        }
+
+        function fetchStatus(node) {
+            var idText = String(node.getAttribute('data-hj-link-health-id') || '').trim();
+            var linkId = parseInt(idText, 10);
+            if (!isFinite(linkId) || linkId <= 0) {
+                setState(node, 'red');
+                return Promise.resolve();
+            }
+
+            return window.fetch(buildUrl(linkId), {
+                method: 'GET',
+                cache: 'no-store',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(function (response) {
+                    if (!response || !response.ok) {
+                        throw new Error('request_failed');
+                    }
+                    return response.json();
+                })
+                .then(function (payload) {
+                    if (!payload || payload.ok !== true) {
+                        throw new Error('invalid_payload');
+                    }
+                    setState(node, payload.state || 'red');
+                })
+                .catch(function () {
+                    setState(node, 'red');
+                });
+        }
+
+        targets.forEach(function (node) {
+            setState(node, 'pending');
+        });
+
+        var index = 0;
+        function runQueue() {
+            if (index >= targets.length) {
+                return;
+            }
+            var current = targets[index];
+            index += 1;
+
+            fetchStatus(current).then(function () {
+                window.setTimeout(runQueue, 280);
+            });
+        }
+
+        // Delay first check to avoid competing with initial render.
+        window.setTimeout(runQueue, 450);
     })();
 </script>
 
