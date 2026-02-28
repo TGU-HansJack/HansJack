@@ -212,50 +212,9 @@ if ($hjNeedsContentEnhance) {
             </style>
         </noscript>
     <?php endif; ?>
-    <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/vendor/highlight/github.min.css'); ?>" data-hj-hljs-theme="light" disabled>
-    <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/vendor/highlight/github-dark.min.css'); ?>" data-hj-hljs-theme="dark" disabled>
     <?php if ($hjNeedsKatexAssets): ?>
         <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/vendor/katex/katex.min.css'); ?>">
     <?php endif; ?>
-    <script>
-        (function () {
-            var root = document.documentElement;
-            if (!root) {
-                return;
-            }
-
-            function applyHighlightTheme() {
-                var isDark = root.classList.contains("hj-theme-dark") && !root.classList.contains("hj-theme-light");
-                var links = document.querySelectorAll("link[data-hj-hljs-theme]");
-                for (var i = 0; i < links.length; i++) {
-                    var link = links[i];
-                    if (!link) {
-                        continue;
-                    }
-                    var theme = link.getAttribute("data-hj-hljs-theme") || "";
-                    link.disabled = isDark ? theme !== "dark" : theme !== "light";
-                }
-            }
-
-            applyHighlightTheme();
-
-            if (!window.MutationObserver) {
-                return;
-            }
-
-            try {
-                var obs = new MutationObserver(function (records) {
-                    for (var i = 0; i < records.length; i++) {
-                        if (records[i] && records[i].attributeName === "class") {
-                            applyHighlightTheme();
-                            break;
-                        }
-                    }
-                });
-                obs.observe(root, { attributes: true, attributeFilter: ["class"] });
-            } catch (e) {}
-        })();
-    </script>
     <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/fonts/SourceHanSerifCN/result.css'); ?>">
     <link rel="stylesheet" href="<?php $this->options->themeUrl('style.css'); ?>">
     <?php $this->header(); ?>

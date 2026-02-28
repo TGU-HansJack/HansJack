@@ -4233,7 +4233,6 @@ try {
         <script src="<?php $this->options->themeUrl('assets/vendor/katex/contrib/mhchem.min.js'); ?>"></script>
         <script src="<?php $this->options->themeUrl('assets/vendor/katex/contrib/auto-render.min.js'); ?>"></script>
     <?php endif; ?>
-    <script src="<?php $this->options->themeUrl('assets/vendor/highlight/highlight.min.js'); ?>"></script>
     <script>
         (function () {
             var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
@@ -4241,13 +4240,128 @@ try {
                 return;
             }
 
-            if (typeof window.hljs === "undefined" || !window.hljs) {
+            var codeBlocks = [];
+            for (var c = 0; c < contents.length; c++) {
+                var content = contents[c];
+                if (!content || !content.querySelectorAll) {
+                    continue;
+                }
+                var blocks = content.querySelectorAll("pre code");
+                if (!blocks || blocks.length === 0) {
+                    continue;
+                }
+                for (var i = 0; i < blocks.length; i++) {
+                    if (blocks[i]) {
+                        codeBlocks.push(blocks[i]);
+                    }
+                }
+            }
+
+            if (codeBlocks.length === 0) {
                 return;
             }
 
-            try {
-                window.hljs.configure({ ignoreUnescapedHTML: true });
-            } catch (e) {}
+            function applyHighlightTheme() {
+                var root = document.documentElement;
+                if (!root || !root.classList) {
+                    return;
+                }
+                var isDark = root.classList.contains("hj-theme-dark") && !root.classList.contains("hj-theme-light");
+                var links = document.querySelectorAll("link[data-hj-hljs-theme]");
+                for (var i = 0; i < links.length; i++) {
+                    var link = links[i];
+                    if (!link) {
+                        continue;
+                    }
+                    var theme = link.getAttribute("data-hj-hljs-theme") || "";
+                    link.disabled = isDark ? theme !== "dark" : theme !== "light";
+                }
+            }
+
+            function ensureHighlightThemeObserver() {
+                if (!window.MutationObserver) {
+                    return;
+                }
+
+                var root = document.documentElement;
+                if (!root || !root.dataset) {
+                    return;
+                }
+                if (root.dataset.hjHljsThemeObserver === "1") {
+                    return;
+                }
+
+                try {
+                    var obs = new MutationObserver(function (records) {
+                        for (var i = 0; i < records.length; i++) {
+                            if (records[i] && records[i].attributeName === "class") {
+                                applyHighlightTheme();
+                                break;
+                            }
+                        }
+                    });
+                    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+                    root.dataset.hjHljsThemeObserver = "1";
+                } catch (e) {}
+            }
+
+            function appendHighlightThemeLink(theme, href) {
+                if (!theme || !href) {
+                    return;
+                }
+                var existing = document.querySelector('link[data-hj-hljs-theme="' + theme + '"]');
+                if (existing) {
+                    return;
+                }
+
+                try {
+                    var link = document.createElement("link");
+                    link.rel = "stylesheet";
+                    link.href = href;
+                    link.disabled = true;
+                    link.setAttribute("data-hj-hljs-theme", theme);
+                    document.head.appendChild(link);
+                } catch (e) {}
+            }
+
+            function ensureHighlightCss() {
+                appendHighlightThemeLink("light", "<?php $this->options->themeUrl('assets/vendor/highlight/github.min.css'); ?>");
+                appendHighlightThemeLink("dark", "<?php $this->options->themeUrl('assets/vendor/highlight/github-dark.min.css'); ?>");
+                applyHighlightTheme();
+                ensureHighlightThemeObserver();
+            }
+
+            function loadScriptOnce(src, done) {
+                if (!src) {
+                    done();
+                    return;
+                }
+
+                var key = src.replace(/[^a-z0-9]/gi, "_");
+                var selector = 'script[data-hj-hljs-js="' + key + '"]';
+                var existing = document.querySelector(selector);
+                if (existing) {
+                    if (existing.getAttribute("data-hj-hljs-loaded") === "1") {
+                        done();
+                        return;
+                    }
+
+                    existing.addEventListener("load", done);
+                    existing.addEventListener("error", done);
+                    return;
+                }
+
+                var script = document.createElement("script");
+                script.src = src;
+                script.async = false;
+                script.setAttribute("data-hj-hljs-js", key);
+                script.onload = function () {
+                    script.setAttribute("data-hj-hljs-loaded", "1");
+                    done();
+                };
+                script.onerror = done;
+                document.head.appendChild(script);
+            }
 
             function normalizeLang(code) {
                 if (!code || !code.classList) {
@@ -4275,18 +4389,17 @@ try {
                 }
             }
 
-            for (var c = 0; c < contents.length; c++) {
-                var content = contents[c];
-                if (!content || !content.querySelectorAll) {
-                    continue;
-                }
-                var blocks = content.querySelectorAll("pre code");
-                if (!blocks || blocks.length === 0) {
-                    continue;
+            function runHighlight() {
+                if (typeof window.hljs === "undefined" || !window.hljs) {
+                    return;
                 }
 
-                for (var i = 0; i < blocks.length; i++) {
-                    var code = blocks[i];
+                try {
+                    window.hljs.configure({ ignoreUnescapedHTML: true });
+                } catch (e) {}
+
+                for (var i = 0; i < codeBlocks.length; i++) {
+                    var code = codeBlocks[i];
                     if (!code) {
                         continue;
                     }
@@ -4299,6 +4412,9 @@ try {
                     } catch (e) {}
                 }
             }
+
+            ensureHighlightCss();
+            loadScriptOnce("<?php $this->options->themeUrl('assets/vendor/highlight/highlight.min.js'); ?>", runHighlight);
         })();
     </script>
     <script>
@@ -5585,17 +5701,46 @@ try {
             }
 
             function shouldRenderKatex(nodes) {
+                function readNodeTextWithoutCode(node) {
+                    if (!node) {
+                        return "";
+                    }
+
+                    var sourceNode = node;
+                    if (node.cloneNode) {
+                        try {
+                            sourceNode = node.cloneNode(true);
+                        } catch (e) {
+                            sourceNode = node;
+                        }
+                    }
+
+                    if (sourceNode && sourceNode.querySelectorAll) {
+                        var ignored = sourceNode.querySelectorAll("pre, code");
+                        for (var i = 0; i < ignored.length; i++) {
+                            var ignoredNode = ignored[i];
+                            if (!ignoredNode || !ignoredNode.parentNode) {
+                                continue;
+                            }
+                            try {
+                                ignoredNode.parentNode.removeChild(ignoredNode);
+                            } catch (e) {}
+                        }
+                    }
+
+                    try {
+                        return String((sourceNode && sourceNode.textContent) || "");
+                    } catch (e) {
+                        return "";
+                    }
+                }
+
                 for (var i = 0; i < nodes.length; i++) {
                     var node = nodes[i];
                     if (!node) {
                         continue;
                     }
-                    var source = "";
-                    try {
-                        source = String(node.textContent || "");
-                    } catch (e) {
-                        source = "";
-                    }
+                    var source = readNodeTextWithoutCode(node);
                     if (hasKatexSyntax(source)) {
                         return true;
                     }

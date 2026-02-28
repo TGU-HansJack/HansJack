@@ -2445,25 +2445,42 @@ function hansJackArchiveContentContainsKatexSyntax(string $content): bool
         return false;
     }
 
-    if (strpos($content, '$') !== false) {
-        if (preg_match('/\\$\\$[\\s\\S]+?\\$\\$/u', $content) === 1) {
-            return true;
+    $scanContent = $content;
+    if (strpos($scanContent, '<') !== false) {
+        $withoutPre = preg_replace('/<pre\b[^>]*>[\s\S]*?<\/pre>/iu', ' ', $scanContent);
+        if (is_string($withoutPre)) {
+            $scanContent = $withoutPre;
         }
 
-        if (preg_match('/(?<!\\\\)\\$(?!\\s)(?:[^$\\\\\\r\\n]|\\\\.)+?(?<!\\s)(?<!\\\\)\\$/u', $content) === 1) {
-            return true;
+        $withoutCode = preg_replace('/<code\b[^>]*>[\s\S]*?<\/code>/iu', ' ', $scanContent);
+        if (is_string($withoutCode)) {
+            $scanContent = $withoutCode;
         }
     }
 
-    if (strpos($content, '\\') === false) {
+    if ($scanContent === '') {
         return false;
     }
 
-    if (preg_match('/\\\\\\([\\s\\S]+?\\\\\\)|\\\\\\[[\\s\\S]+?\\\\\\]/u', $content) === 1) {
+    if (strpos($scanContent, '$') !== false) {
+        if (preg_match('/\\$\\$[\\s\\S]+?\\$\\$/u', $scanContent) === 1) {
+            return true;
+        }
+
+        if (preg_match('/(?<!\\\\)\\$(?!\\s)(?:[^$\\\\\\r\\n]|\\\\.)+?(?<!\\s)(?<!\\\\)\\$/u', $scanContent) === 1) {
+            return true;
+        }
+    }
+
+    if (strpos($scanContent, '\\') === false) {
+        return false;
+    }
+
+    if (preg_match('/\\\\\\([\\s\\S]+?\\\\\\)|\\\\\\[[\\s\\S]+?\\\\\\]/u', $scanContent) === 1) {
         return true;
     }
 
-    if (preg_match('/\\\\begin\\{(?:equation|align|alignat|gather|CD)\\}/u', $content) === 1) {
+    if (preg_match('/\\\\begin\\{(?:equation|align|alignat|gather|CD)\\}/u', $scanContent) === 1) {
         return true;
     }
 
