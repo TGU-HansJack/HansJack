@@ -7835,7 +7835,7 @@ html.hj-login-modal-open .hj-login-modal {
     }
 
     html:not(.hj-theme-light) .hj-links-item::after {
-        border-top-color: var(--hj-day-black);
+        border-top-color: var(--hj-line-night);
     }
 
     html:not(.hj-theme-light) .hj-links-avatar {
@@ -8500,7 +8500,7 @@ html.hj-theme-dark .hj-fab-settings-select {
 }
 
 html.hj-theme-dark .hj-links-item::after {
-    border-top-color: var(--hj-day-black);
+    border-top-color: var(--hj-line-night);
 }
 
 html.hj-theme-dark .hj-links-avatar {
