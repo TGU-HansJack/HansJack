@@ -32,6 +32,15 @@ try {
 if ($hjNeedsContentEnhance) {
     $hjHtmlThemeClass = trim($hjHtmlThemeClass . ' hj-content-enhance-pending');
 }
+
+$hjNeedsKatexAssets = false;
+if ($hjNeedsContentEnhance) {
+    try {
+        $hjNeedsKatexAssets = hansJackShouldLoadKatexAssets($this);
+    } catch (\Throwable $e) {
+        $hjNeedsKatexAssets = false;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN"<?php if ($hjHtmlThemeClass !== '') {
@@ -205,7 +214,7 @@ if ($hjNeedsContentEnhance) {
     <?php endif; ?>
     <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/vendor/highlight/github.min.css'); ?>" data-hj-hljs-theme="light" disabled>
     <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/vendor/highlight/github-dark.min.css'); ?>" data-hj-hljs-theme="dark" disabled>
-    <?php if ($this->is('post') || $this->is('page')): ?>
+    <?php if ($hjNeedsKatexAssets): ?>
         <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/vendor/katex/katex.min.css'); ?>">
     <?php endif; ?>
     <script>

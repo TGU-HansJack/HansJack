@@ -1,6 +1,14 @@
 <?php if (!defined('__TYPECHO_ROOT_DIR__')) {
     exit;
 } ?>
+<?php
+$hjNeedsKatexAssets = false;
+try {
+    $hjNeedsKatexAssets = hansJackShouldLoadKatexAssets($this);
+} catch (\Throwable $e) {
+    $hjNeedsKatexAssets = false;
+}
+?>
 </div>
 
 <footer class="hj-footer" id="hj-footer">
@@ -4220,9 +4228,11 @@
 </script>
 
 <?php if ($this->is('post') || $this->is('page')): ?>
-    <script src="<?php $this->options->themeUrl('assets/vendor/katex/katex.min.js'); ?>"></script>
-    <script src="<?php $this->options->themeUrl('assets/vendor/katex/contrib/mhchem.min.js'); ?>"></script>
-    <script src="<?php $this->options->themeUrl('assets/vendor/katex/contrib/auto-render.min.js'); ?>"></script>
+    <?php if ($hjNeedsKatexAssets): ?>
+        <script src="<?php $this->options->themeUrl('assets/vendor/katex/katex.min.js'); ?>"></script>
+        <script src="<?php $this->options->themeUrl('assets/vendor/katex/contrib/mhchem.min.js'); ?>"></script>
+        <script src="<?php $this->options->themeUrl('assets/vendor/katex/contrib/auto-render.min.js'); ?>"></script>
+    <?php endif; ?>
     <script src="<?php $this->options->themeUrl('assets/vendor/highlight/highlight.min.js'); ?>"></script>
     <script>
         (function () {
@@ -5546,39 +5556,158 @@
                 return;
             }
 
-            if (typeof window.renderMathInElement !== "function" || typeof window.katex === "undefined") {
-                return;
+            function hasKatexSyntax(text) {
+                if (!text) {
+                    return false;
+                }
+
+                if (text.indexOf("$$") !== -1 && /\$\$[\s\S]+?\$\$/.test(text)) {
+                    return true;
+                }
+
+                if (text.indexOf("\\(") !== -1 && /\\\([\s\S]+?\\\)/.test(text)) {
+                    return true;
+                }
+
+                if (text.indexOf("\\[") !== -1 && /\\\[[\s\S]+?\\\]/.test(text)) {
+                    return true;
+                }
+
+                if (text.indexOf("\\begin{") !== -1 && /\\begin\{(?:equation|align|alignat|gather|CD)\}/.test(text)) {
+                    return true;
+                }
+
+                if (text.indexOf("$") !== -1 && /(^|[^\\])\$(?![\s$])(?:[^$\\\r\n]|\\.)+?\$(?!\$)/.test(text)) {
+                    return true;
+                }
+
+                return false;
             }
 
-            var options = {
-                delimiters: [
-                    { left: "$$", right: "$$", display: true },
-                    { left: "\\[", right: "\\]", display: true },
-                    { left: "\\(", right: "\\)", display: false },
-                    { left: "$", right: "$", display: false }
-                ],
-                throwOnError: false,
-                strict: "ignore",
-                ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "option"],
-                ignoredClasses: ["katex", "no-katex", "hljs"]
-            };
-
-            for (var i = 0; i < contents.length; i++) {
-                var content = contents[i];
-                if (!content || !content.querySelectorAll) {
-                    continue;
+            function shouldRenderKatex(nodes) {
+                for (var i = 0; i < nodes.length; i++) {
+                    var node = nodes[i];
+                    if (!node) {
+                        continue;
+                    }
+                    var source = "";
+                    try {
+                        source = String(node.textContent || "");
+                    } catch (e) {
+                        source = "";
+                    }
+                    if (hasKatexSyntax(source)) {
+                        return true;
+                    }
                 }
-                if (content.dataset && content.dataset.hjKatexRendered === "1") {
-                    continue;
+                return false;
+            }
+
+            function renderAllKatex() {
+                if (typeof window.renderMathInElement !== "function" || typeof window.katex === "undefined") {
+                    return;
+                }
+
+                var options = {
+                    delimiters: [
+                        { left: "$$", right: "$$", display: true },
+                        { left: "\\[", right: "\\]", display: true },
+                        { left: "\\(", right: "\\)", display: false },
+                        { left: "$", right: "$", display: false }
+                    ],
+                    throwOnError: false,
+                    strict: "ignore",
+                    ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "option"],
+                    ignoredClasses: ["katex", "no-katex", "hljs"]
+                };
+
+                for (var i = 0; i < contents.length; i++) {
+                    var content = contents[i];
+                    if (!content || !content.querySelectorAll) {
+                        continue;
+                    }
+                    if (content.dataset && content.dataset.hjKatexRendered === "1") {
+                        continue;
+                    }
+
+                    try {
+                        window.renderMathInElement(content, options);
+                        if (content.dataset) {
+                            content.dataset.hjKatexRendered = "1";
+                        }
+                    } catch (e) {}
+                }
+            }
+
+            function appendKatexCss(href) {
+                if (!href) {
+                    return;
+                }
+                var cssNode = document.querySelector("link[data-hj-katex-css]");
+                if (cssNode) {
+                    return;
                 }
 
                 try {
-                    window.renderMathInElement(content, options);
-                    if (content.dataset) {
-                        content.dataset.hjKatexRendered = "1";
-                    }
+                    var link = document.createElement("link");
+                    link.rel = "stylesheet";
+                    link.href = href;
+                    link.setAttribute("data-hj-katex-css", "1");
+                    document.head.appendChild(link);
                 } catch (e) {}
             }
+
+            function loadScriptOnce(src, done) {
+                if (!src) {
+                    done();
+                    return;
+                }
+
+                var key = src.replace(/[^a-z0-9]/gi, "_");
+                var selector = 'script[data-hj-katex-js="' + key + '"]';
+                var existing = document.querySelector(selector);
+                if (existing) {
+                    if (existing.getAttribute("data-hj-katex-loaded") === "1") {
+                        done();
+                        return;
+                    }
+
+                    existing.addEventListener("load", done);
+                    existing.addEventListener("error", done);
+                    return;
+                }
+
+                var script = document.createElement("script");
+                script.src = src;
+                script.async = false;
+                script.setAttribute("data-hj-katex-js", key);
+                script.onload = function () {
+                    script.setAttribute("data-hj-katex-loaded", "1");
+                    done();
+                };
+                script.onerror = done;
+                document.head.appendChild(script);
+            }
+
+            function ensureKatexAssets(done) {
+                if (typeof window.renderMathInElement === "function" && typeof window.katex !== "undefined") {
+                    done();
+                    return;
+                }
+
+                appendKatexCss("<?php $this->options->themeUrl('assets/vendor/katex/katex.min.css'); ?>");
+                loadScriptOnce("<?php $this->options->themeUrl('assets/vendor/katex/katex.min.js'); ?>", function () {
+                    loadScriptOnce("<?php $this->options->themeUrl('assets/vendor/katex/contrib/mhchem.min.js'); ?>", function () {
+                        loadScriptOnce("<?php $this->options->themeUrl('assets/vendor/katex/contrib/auto-render.min.js'); ?>", done);
+                    });
+                });
+            }
+
+            if (!shouldRenderKatex(contents)) {
+                return;
+            }
+
+            ensureKatexAssets(renderAllKatex);
         })();
     </script>
     <script>

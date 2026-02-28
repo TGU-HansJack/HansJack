@@ -2439,6 +2439,67 @@ function hansJackNormalizeAssetUrl(Options $options, string $value): string
     return Common::url(ltrim($value, '/'), $options->siteUrl);
 }
 
+function hansJackArchiveContentContainsKatexSyntax(string $content): bool
+{
+    if ($content === '') {
+        return false;
+    }
+
+    if (strpos($content, '$') !== false) {
+        if (preg_match('/\\$\\$[\\s\\S]+?\\$\\$/u', $content) === 1) {
+            return true;
+        }
+
+        if (preg_match('/(?<!\\\\)\\$(?!\\s)(?:[^$\\\\\\r\\n]|\\\\.)+?(?<!\\s)(?<!\\\\)\\$/u', $content) === 1) {
+            return true;
+        }
+    }
+
+    if (strpos($content, '\\') === false) {
+        return false;
+    }
+
+    if (preg_match('/\\\\\\([\\s\\S]+?\\\\\\)|\\\\\\[[\\s\\S]+?\\\\\\]/u', $content) === 1) {
+        return true;
+    }
+
+    if (preg_match('/\\\\begin\\{(?:equation|align|alignat|gather|CD)\\}/u', $content) === 1) {
+        return true;
+    }
+
+    return false;
+}
+
+function hansJackArchiveContentForKatex(Archive $archive): string
+{
+    try {
+        return trim((string) ($archive->content ?? ''));
+    } catch (\Throwable $e) {
+        return '';
+    }
+}
+
+function hansJackShouldLoadKatexAssets(Archive $archive): bool
+{
+    $isRenderable = false;
+    try {
+        $isRenderable = $archive->is('post') || $archive->is('page');
+    } catch (\Throwable $e) {
+        $isRenderable = false;
+    }
+
+    if (!$isRenderable) {
+        return false;
+    }
+
+    $content = hansJackArchiveContentForKatex($archive);
+    if ($content === '') {
+        return false;
+    }
+
+    return hansJackArchiveContentContainsKatexSyntax($content);
+}
+
 function hansJackCssBackground(string $url): string
 {
     if ($url === '') {
