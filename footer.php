@@ -2759,6 +2759,281 @@
         var commentsUserLogged = comments.getAttribute("data-hj-user-logged") === "1";
         var commentsRequireMail = comments.getAttribute("data-hj-comments-require-mail") === "1";
         var commentsRequireUrl = comments.getAttribute("data-hj-comments-require-url") === "1";
+        var commentEditBusy = false;
+        var isMemoryComments = comments.classList.contains("hj-memory-comments-shell");
+        var topCommentForm = comments.querySelector("[data-hj-comment-form][data-hj-comment-role=\"top\"]");
+        var topCommentFormHomeParent = topCommentForm ? topCommentForm.parentNode : null;
+        var topCommentFormHomeNext = topCommentForm ? topCommentForm.nextSibling : null;
+
+        function getCommentEditForm() {
+            var reply = comments.querySelector("[data-hj-comment-form][data-hj-comment-role=\"reply\"]");
+            if (reply) {
+                return reply;
+            }
+            if (isMemoryComments) {
+                return null;
+            }
+            var top = comments.querySelector("[data-hj-comment-form][data-hj-comment-role=\"top\"]");
+            if (top) {
+                return top;
+            }
+            return forms[0] || null;
+        }
+
+        function getCommentEditToken(form) {
+            var tokenInput = form ? form.querySelector("input[name=\"_\"]") : null;
+            if (!tokenInput && comments && comments.querySelector) {
+                tokenInput = comments.querySelector("input[name=\"_\"]");
+            }
+            return tokenInput && tokenInput.value ? String(tokenInput.value).trim() : "";
+        }
+
+        function getCommentEditEndpoint() {
+            var raw = "";
+            try {
+                raw = (window && window.location && window.location.href) ? String(window.location.href) : "";
+            } catch (e) {
+                raw = "";
+            }
+
+            if (!raw) {
+                return "?hj_comment_edit=1";
+            }
+
+            try {
+                var u = new URL(raw);
+                u.searchParams.set("hj_comment_edit", "1");
+                return u.toString();
+            } catch (e) {
+                var clean = raw;
+                var hashPos = clean.indexOf("#");
+                if (hashPos >= 0) {
+                    clean = clean.slice(0, hashPos);
+                }
+                return clean + (clean.indexOf("?") === -1 ? "?" : "&") + "hj_comment_edit=1";
+            }
+        }
+
+        function parseCommentEditJson(text) {
+            try {
+                return JSON.parse(String(text || ""));
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function extractCommentEditErrorMessage(raw, response) {
+            var text = String(raw || "").trim();
+            if (text) {
+                var jsonMsg = text.match(/"message"\s*:\s*"([^"]+)"/i);
+                if (jsonMsg && jsonMsg[1]) {
+                    return jsonMsg[1];
+                }
+                var title = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+                if (title && title[1]) {
+                    var titleText = String(title[1]).replace(/\s+/g, " ").trim();
+                    if (titleText) {
+                        return titleText;
+                    }
+                }
+            }
+            if (response) {
+                var status = parseInt(response.status || "0", 10);
+                if (status === 401 || status === 403) {
+                    return "权限或安全校验失败，请重新登录管理员并刷新后重试";
+                }
+                if (status === 404) {
+                    return "评论编辑接口不可用（404）";
+                }
+                if (status >= 500) {
+                    return "服务器错误（" + String(status) + "），请稍后重试";
+                }
+            }
+            return "评论编辑失败，请重试";
+        }
+
+        function clearCommentEditState() {
+            forms.forEach(function (f) {
+                if (!f) {
+                    return;
+                }
+                f.removeAttribute("data-hj-comment-edit-coid");
+                f.removeAttribute("data-hj-comment-editing");
+                var box = f.querySelector("[data-hj-comment-box]");
+                if (box && box.classList) {
+                    box.classList.remove("is-editing");
+                }
+                if (f.classList) {
+                    f.classList.remove("hj-comment-edit-inline");
+                }
+            });
+
+            if (isMemoryComments && topCommentForm && topCommentFormHomeParent) {
+                if (topCommentForm.parentNode !== topCommentFormHomeParent) {
+                    if (topCommentFormHomeNext && topCommentFormHomeNext.parentNode === topCommentFormHomeParent) {
+                        topCommentFormHomeParent.insertBefore(topCommentForm, topCommentFormHomeNext);
+                    } else {
+                        topCommentFormHomeParent.appendChild(topCommentForm);
+                    }
+                }
+            }
+        }
+
+        function setCommentPrivateState(form, isPrivate) {
+            if (!form) {
+                return;
+            }
+            var privateBtn = form.querySelector("[data-hj-comment-private-toggle]");
+            var box = form.querySelector("[data-hj-comment-box]");
+            if (privateBtn) {
+                privateBtn.setAttribute("aria-pressed", isPrivate ? "true" : "false");
+            }
+            if (box && box.classList) {
+                box.classList.toggle("is-private", !!isPrivate);
+            }
+        }
+
+        function openCommentEdit(btn) {
+            if (!btn || !btn.closest) {
+                return;
+            }
+
+            var coid = parseInt(btn.getAttribute("data-hj-comment-coid") || "0", 10);
+            if (!isFinite(coid) || coid <= 0) {
+                return;
+            }
+
+            var row = btn.closest(".comment-reply");
+            var source = row ? row.querySelector("[data-hj-comment-edit-source]") : null;
+            var text = "";
+            if (source) {
+                if (typeof source.value === "string") {
+                    text = source.value;
+                } else {
+                    text = source.textContent || "";
+                }
+            }
+            text = String(text || "").replace(/\r\n?/g, "\n");
+            var isPrivate = btn.getAttribute("data-hj-comment-edit-private") === "1";
+
+            var form = getCommentEditForm();
+            if (!form || !form.querySelector) {
+                return;
+            }
+
+            var textarea = form.querySelector("textarea[name=\"text\"]");
+            if (!textarea) {
+                return;
+            }
+
+            clearCommentEditState();
+
+            var role = form.getAttribute("data-hj-comment-role") || "";
+            var item = btn.closest(".comment-body");
+            if (item) {
+                if (role === "reply") {
+                    var respondWrap = form.closest("[data-hj-comment-respond]") || form.closest(".hj-respond") || form.closest("#respond");
+                    if (respondWrap && respondWrap.parentNode !== item) {
+                        item.appendChild(respondWrap);
+                    }
+                } else if (isMemoryComments) {
+                    if (form.parentNode !== item) {
+                        item.appendChild(form);
+                    }
+                    if (form.classList) {
+                        form.classList.add("hj-comment-edit-inline");
+                    }
+                }
+            }
+
+            form.setAttribute("data-hj-comment-edit-coid", String(coid));
+            form.setAttribute("data-hj-comment-editing", "1");
+            var box = form.querySelector("[data-hj-comment-box]");
+            if (box && box.classList) {
+                box.classList.add("is-editing");
+            }
+
+            setCommentPrivateState(form, isPrivate);
+
+            textarea.value = text;
+            try {
+                textarea.dispatchEvent(new Event("input", { bubbles: true }));
+            } catch (e) {}
+
+            if (role !== "reply" && window && window.TypechoComment && typeof window.TypechoComment.cancelReply === "function") {
+                try {
+                    window.TypechoComment.cancelReply();
+                } catch (e) {}
+            }
+
+            try {
+                form.scrollIntoView({ behavior: "smooth", block: "center" });
+            } catch (e) {}
+            window.setTimeout(function () {
+                try {
+                    textarea.focus();
+                    var len = (textarea.value || "").length;
+                    textarea.setSelectionRange(len, len);
+                } catch (e) {}
+            }, 80);
+        }
+
+        function submitCommentEdit(form, coid, text, done) {
+            if (commentEditBusy) {
+                return;
+            }
+            var token = getCommentEditToken(form);
+            if (!token) {
+                try {
+                    window.alert("安全令牌缺失，请刷新页面后再试");
+                } catch (e) {}
+                return;
+            }
+
+            var endpoint = getCommentEditEndpoint();
+            var formData = new FormData();
+            formData.append("coid", String(coid));
+            formData.append("text", String(text || ""));
+            formData.append("_", token);
+
+            commentEditBusy = true;
+
+            window.fetch(endpoint, {
+                method: "POST",
+                body: formData,
+                credentials: "same-origin",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            }).then(function (response) {
+                return response.text().then(function (raw) {
+                    var payload = parseCommentEditJson(raw);
+                    if (!response.ok || !payload || !payload.ok) {
+                        var msg = payload && payload.message ? String(payload.message) : extractCommentEditErrorMessage(raw, response);
+                        throw new Error(msg);
+                    }
+                    return payload;
+                });
+            }).then(function () {
+                clearCommentEditState();
+                try {
+                    window.location.hash = "comment-" + String(coid);
+                } catch (e) {}
+                try {
+                    window.location.reload();
+                } catch (e) {}
+            }).catch(function (err) {
+                var msg = err && err.message ? String(err.message) : "评论编辑失败，请重试";
+                try {
+                    window.alert(msg);
+                } catch (e) {}
+            }).finally(function () {
+                commentEditBusy = false;
+                if (typeof done === "function") {
+                    done();
+                }
+            });
+        }
 
         var identityKey = "hj_comment_identity_" + (location && location.pathname ? location.pathname : "page");
         var loginFocusTarget = null;
@@ -2766,6 +3041,36 @@
         var privateMarker = "<!--hj-private-->";
         var fullscreenRootClass = "hj-comment-fullscreen-open";
         var activeEmojiClose = null;
+
+        (function setupCommentEditButtons() {
+            var buttons = Array.prototype.slice.call(comments.querySelectorAll("[data-hj-comment-edit][data-hj-comment-coid]"));
+            if (!buttons || buttons.length === 0) {
+                return;
+            }
+
+            buttons.forEach(function (btn) {
+                btn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    openCommentEdit(btn);
+                });
+            });
+
+            comments.addEventListener("click", function (e) {
+                var t = e && e.target;
+                if (!t || !t.closest) {
+                    return;
+                }
+                var replyLink = t.closest(".comment-reply a");
+                if (!replyLink) {
+                    return;
+                }
+                window.setTimeout(function () {
+                    clearCommentEditState();
+                }, 0);
+            });
+        })();
 
         var EMOJIS = [
             "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙", "😋", "😛", "😜", "🤪", "😝", "🤑",
@@ -3771,6 +4076,22 @@
 
             form.addEventListener("submit", function (e) {
                 var isPrivate = privateBtn && privateBtn.getAttribute("aria-pressed") === "true";
+                var editCoid = parseInt(form.getAttribute("data-hj-comment-edit-coid") || "0", 10);
+                if (isFinite(editCoid) && editCoid > 0) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    var editText = textarea.value || "";
+                    if (isPrivate) {
+                        var editTrimmed = editText.replace(/^\s+/, "");
+                        if (editTrimmed.indexOf(privateMarker) !== 0) {
+                            editText = privateMarker + "\n" + editText;
+                        }
+                    }
+                    clearDraft();
+                    submitCommentEdit(form, editCoid, editText);
+                    return;
+                }
 
                 if (!isUserLogged) {
                     var author = readInputValue(authorInput);

@@ -5111,6 +5111,13 @@ html.hj-theme-dark .hj-fab-reward-backdrop {
     padding-left: calc(var(--hj-comment-avatar-size) + var(--hj-comment-avatar-gap));
 }
 
+.hj-comments .comment-body > .hj-comment-form.hj-comment-edit-inline {
+    flex: 1 1 100%;
+    width: 100%;
+    margin-top: 0.6rem;
+    padding-left: calc(var(--hj-comment-avatar-size) + var(--hj-comment-avatar-gap));
+}
+
 .hj-comments .comment-body {    
     border: 0;    
     border-radius: 4px;    

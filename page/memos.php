@@ -118,16 +118,20 @@ if ($hjComments && $hjComments->have()) {
         }
         $avatar = 'https://cdn.sep.cc/avatar/' . md5($mail) . '?s=64&d=mp&r=g';
 
-        $rawText = '';
+        $rawSourceText = '';
         try {
-            $rawText = (string) ($hjComments->text ?? '');
+            $rawSourceText = (string) ($hjComments->text ?? '');
         } catch (\Throwable $e) {
-            $rawText = '';
+            $rawSourceText = '';
         }
-        if (function_exists('hansJackStripPrivateCommentMarker')) {
-            $rawText = hansJackStripPrivateCommentMarker($rawText);
-        }
-        $rawText = trim($rawText);
+        $isPrivateComment = function_exists('hansJackIsPrivateCommentText')
+            ? hansJackIsPrivateCommentText($rawSourceText)
+            : false;
+        $editText = function_exists('hansJackStripPrivateCommentMarker')
+            ? hansJackStripPrivateCommentMarker($rawSourceText)
+            : $rawSourceText;
+        $editText = str_replace(["\r\n", "\r"], "\n", (string) $editText);
+        $rawText = trim($editText);
 
         $renderedContent = '';
         try {
@@ -208,6 +212,8 @@ if ($hjComments && $hjComments->have()) {
             'dateIso' => $hjFormatDate($created, 'c'),
             'month' => $month,
             'text' => $rawText,
+            'editText' => $editText,
+            'isPrivate' => $isPrivateComment ? 1 : 0,
             'content' => $renderedContent,
             'tags' => $commentTags,
             'tagKeys' => array_keys($commentTagsMap),
@@ -317,6 +323,48 @@ if ($hjPagePermalink === '') {
                                 </div>
                             </div>
                         </form>
+                        <div id="hj-memory-respond" class="respond hj-respond" data-hj-comment-respond data-hj-user-logged="<?php echo $hjUserLoggedIn ? '1' : '0'; ?>">
+                            <form method="post" action="<?php $this->commentUrl(); ?>" class="hj-comment-form hj-comment-composer-form hj-memory-form hj-memory-reply-form" id="hj-memory-form-reply"
+                                  data-hj-comment-form data-hj-comment-role="reply" data-hj-user-logged="<?php echo $hjUserLoggedIn ? '1' : '0'; ?>">
+                                <div class="hj-comment-box" data-hj-comment-box>
+                                    <textarea
+                                        rows="6"
+                                        cols="50"
+                                        name="text"
+                                        id="hj-memory-text-reply"
+                                        class="hj-comment-textarea hj-memory-textarea"
+                                        required></textarea>
+                                    <input type="hidden" name="author" value="<?php $this->remember('author'); ?>">
+                                    <input type="hidden" name="url" value="<?php $this->remember('url'); ?>">
+                                    <input type="hidden" name="mail" value="<?php $this->remember('mail'); ?>">
+                                    <?php if ($hjCommentToken !== ''): ?>
+                                        <input type="hidden" name="_" value="<?php echo hansJackEscape($hjCommentToken); ?>">
+                                    <?php endif; ?>
+                                    <div class="hj-comment-composer-actions" aria-label="<?php _e('评论操作'); ?>">
+                                        <div class="hj-comment-actions-left" aria-label="<?php _e('工具'); ?>">
+                                            <button class="hj-comment-icon-btn hj-comment-emoji" type="button" aria-label="<?php _e('表情'); ?>">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-smile-icon lucide-smile" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
+                                            </button>
+                                            <button class="hj-comment-icon-btn hj-comment-attach" type="button" aria-label="<?php _e('附件'); ?>">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip" aria-hidden="true"><path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"/></svg>
+                                            </button>
+                                            <button class="hj-comment-icon-btn hj-comment-private" type="button" aria-label="<?php _e('私信'); ?>" aria-pressed="false" data-hj-comment-private-toggle>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-line-dot-right-horizontal-icon lucide-line-dot-right-horizontal" aria-hidden="true"><path class="hj-private-line" d="M 3 12 L 15 12"/><circle class="hj-private-dot" cx="18" cy="12" r="3"/></svg>
+                                            </button>
+                                            <button class="hj-comment-icon-btn hj-comment-fullscreen-toggle" type="button" aria-label="<?php _e('展开全屏'); ?>" aria-pressed="false" data-hj-comment-fullscreen-toggle>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize-icon lucide-maximize hj-comment-fullscreen-icon hj-comment-fullscreen-icon-max" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-minimize-icon lucide-minimize hj-comment-fullscreen-icon hj-comment-fullscreen-icon-min" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+                                            </button>
+                                        </div>
+                                        <div class="hj-comment-actions-right" aria-label="<?php _e('提交'); ?>">
+                                            <button class="hj-comment-icon-btn hj-comment-send" type="submit" aria-label="<?php _e('提交评论'); ?>">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send-icon lucide-send" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
                     <?php elseif (!$hjAllowComment): ?>
                         <h2 class="hj-comments-closed"><?php _e('当前页面评论已关闭'); ?></h2>
                     <?php endif; ?>
@@ -398,6 +446,19 @@ if ($hjPagePermalink === '') {
                                         <button class="hj-comment-share-btn" type="button" aria-label="<?php _e('分享'); ?>" title="<?php _e('分享'); ?>" data-hj-comment-share="<?php echo hansJackEscape($commentShareUrl); ?>">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-share2-icon lucide-share-2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
                                         </button>
+                                        <?php if ($hjUserIsAdmin && $commentId > 0): ?>
+                                            <button
+                                                class="hj-comment-edit-btn"
+                                                type="button"
+                                                aria-label="<?php _e('编辑'); ?>"
+                                                title="<?php _e('编辑'); ?>"
+                                                data-hj-comment-edit
+                                                data-hj-comment-coid="<?php echo $commentId; ?>"
+                                                data-hj-comment-edit-private="<?php echo !empty($item['isPrivate']) ? '1' : '0'; ?>">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil-line-icon lucide-pencil-line" aria-hidden="true"><path d="M13 21h8"/><path d="m15 5 4 4"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>
+                                            </button>
+                                            <textarea class="hj-comment-edit-source" data-hj-comment-edit-source hidden><?php echo hansJackEscape((string) ($item['editText'] ?? '')); ?></textarea>
+                                        <?php endif; ?>
                                         <span class="hj-memory-reaction-list" data-hj-memory-reactions hidden></span>
                                     </div>
                                 </li>

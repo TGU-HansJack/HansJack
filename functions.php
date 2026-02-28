@@ -154,6 +154,7 @@ function themeConfig($form)
 function themeInit(Archive $archive)
 {
     hansJackHandleCommentUploadRequest($archive);
+    hansJackHandleCommentEditRequest($archive);
     hansJackHandleMemoryReactionRequest($archive);
     hansJackHandleGithubOauthRequest($archive);
     hansJackEnableFeedStylesheet($archive);
@@ -183,6 +184,34 @@ function hansJackCommentUploadJson(array $payload, int $status = 200): void
 
     echo $json;
     exit;
+}
+
+function hansJackCurrentUserIsAdmin(): bool
+{
+    static $cached = null;
+    if (is_bool($cached)) {
+        return $cached;
+    }
+
+    $cached = false;
+    $user = null;
+    try {
+        $user = \Typecho\Widget::widget('Widget_User');
+    } catch (\Throwable $e) {
+        $user = null;
+    }
+
+    if (!$user) {
+        return false;
+    }
+
+    try {
+        $cached = $user->hasLogin() && $user->pass('administrator', true);
+    } catch (\Throwable $e) {
+        $cached = false;
+    }
+
+    return $cached;
 }
 
 function hansJackHandleCommentUploadRequest(Archive $archive): void
@@ -414,6 +443,147 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
         'mime' => $mime,
         'isImage' => $isImage,
         'size' => $size,
+    ]);
+}
+
+function hansJackHandleCommentEditRequest(Archive $archive): void
+{
+    $exists = false;
+    $editFlag = '';
+    try {
+        $editFlag = trim((string) $archive->request->get('hj_comment_edit', '', $exists));
+    } catch (\Throwable $e) {
+        $exists = false;
+        $editFlag = '';
+    }
+
+    if (!$exists) {
+        return;
+    }
+    if ($editFlag === '' || $editFlag === '0' || strtolower($editFlag) === 'false') {
+        return;
+    }
+
+    if (!$archive->request->isPost()) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('请求方式不支持'),
+        ], 405);
+    }
+
+    if (!hansJackCurrentUserIsAdmin()) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('仅管理员可以编辑评论'),
+        ], 403);
+    }
+
+    $token = '';
+    $referer = '';
+    try {
+        $token = trim((string) $archive->request->get('_', ''));
+    } catch (\Throwable $e) {
+        $token = '';
+    }
+    try {
+        $referer = trim((string) $archive->request->getReferer());
+    } catch (\Throwable $e) {
+        $referer = '';
+    }
+
+    $security = null;
+    try {
+        $security = \Typecho\Widget::widget('Widget_Security');
+    } catch (\Throwable $e) {
+        $security = null;
+    }
+
+    $expectedToken = '';
+    if ($security && method_exists($security, 'getToken') && $referer !== '') {
+        try {
+            $expectedToken = (string) $security->getToken($referer);
+        } catch (\Throwable $e) {
+            $expectedToken = '';
+        }
+    }
+
+    if ($token === '' || $expectedToken === '' || !hash_equals($expectedToken, $token)) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('安全校验失败，请刷新后重试'),
+        ], 403);
+    }
+
+    $coid = 0;
+    $text = '';
+    try {
+        $coid = (int) $archive->request->get('coid', 0);
+    } catch (\Throwable $e) {
+        $coid = 0;
+    }
+    try {
+        $text = (string) $archive->request->get('text', '');
+    } catch (\Throwable $e) {
+        $text = '';
+    }
+
+    if ($coid <= 0) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('评论编号无效'),
+        ], 400);
+    }
+
+    $text = str_replace(["\r\n", "\r"], "\n", $text);
+    if (trim($text) === '') {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('评论内容不能为空'),
+        ], 400);
+    }
+
+    $db = hansJackGithubDb();
+    if (!is_object($db)) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('数据库不可用'),
+        ], 500);
+    }
+
+    try {
+        $existsRow = $db->fetchObject(
+            $db->select('coid')
+                ->from('table.comments')
+                ->where('coid = ?', $coid)
+                ->limit(1)
+        );
+    } catch (\Throwable $e) {
+        $existsRow = null;
+    }
+
+    if (!is_object($existsRow)) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('评论不存在或已删除'),
+        ], 404);
+    }
+
+    try {
+        $db->query(
+            $db->update('table.comments')
+                ->rows(['text' => $text])
+                ->where('coid = ?', $coid)
+        );
+    } catch (\Throwable $e) {
+        hansJackCommentUploadJson([
+            'ok' => false,
+            'message' => _t('评论更新失败，请稍后重试'),
+        ], 500);
+    }
+
+    hansJackCommentUploadJson([
+        'ok' => true,
+        'coid' => $coid,
     ]);
 }
 
@@ -2724,6 +2894,14 @@ function threadedComments($comments, $singleCommentOptions): void
     }
 
     $isPrivate = hansJackIsPrivateCommentText($rawText);
+    $hjEditText = hansJackStripPrivateCommentMarker($rawText);
+    $hjCanEditComment = hansJackCurrentUserIsAdmin();
+    $hjCommentCoid = 0;
+    try {
+        $hjCommentCoid = (int) ($comments->coid ?? 0);
+    } catch (\Throwable $e) {
+        $hjCommentCoid = 0;
+    }
     $canViewPrivate = true;
     if ($isPrivate) {
         $ownerId = 0;
@@ -2939,6 +3117,19 @@ function threadedComments($comments, $singleCommentOptions): void
             <button class="hj-comment-share-btn" type="button" aria-label="<?php _e('分享'); ?>" title="<?php _e('分享'); ?>" data-hj-comment-share="<?php $comments->permalink(); ?>"> 
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-share2-icon lucide-share-2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg> 
             </button> 
+            <?php if ($hjCanEditComment && $hjCommentCoid > 0): ?>
+                <button
+                    class="hj-comment-edit-btn"
+                    type="button"
+                    aria-label="<?php _e('编辑'); ?>"
+                    title="<?php _e('编辑'); ?>"
+                    data-hj-comment-edit
+                    data-hj-comment-coid="<?php echo (int) $hjCommentCoid; ?>"
+                    data-hj-comment-edit-private="<?php echo $isPrivate ? '1' : '0'; ?>">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil-line-icon lucide-pencil-line" aria-hidden="true"><path d="M13 21h8"/><path d="m15 5 4 4"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>
+                </button>
+                <textarea class="hj-comment-edit-source" data-hj-comment-edit-source hidden><?php echo hansJackEscape((string) $hjEditText); ?></textarea>
+            <?php endif; ?>
         </div> 
     </li>
     <?php
