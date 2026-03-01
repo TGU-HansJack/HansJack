@@ -183,6 +183,7 @@ function themeConfig($form)
  */
 function themeInit(Archive $archive)
 {
+    hansJackHandleLiveVersionRequest($archive);
     hansJackHandleCommentUploadRequest($archive);
     hansJackHandleCommentEditRequest($archive);
     hansJackHandleMemoryReactionRequest($archive);
@@ -194,7 +195,7 @@ function themeInit(Archive $archive)
     }
 }
 
-function hansJackCommentUploadJson(array $payload, int $status = 200): void
+function hansJackEmitJson(array $payload, int $status = 200): void
 {
     if (!headers_sent()) {
         header('Content-Type: application/json; charset=UTF-8');
@@ -214,6 +215,165 @@ function hansJackCommentUploadJson(array $payload, int $status = 200): void
 
     echo $json;
     exit;
+}
+
+function hansJackCommentUploadJson(array $payload, int $status = 200): void
+{
+    hansJackEmitJson($payload, $status);
+}
+
+function hansJackHandleLiveVersionRequest(Archive $archive): void
+{
+    $exists = false;
+    $flag = '';
+    try {
+        $flag = trim((string) $archive->request->get('hj_live_version', '', $exists));
+    } catch (\Throwable $e) {
+        $exists = false;
+        $flag = '';
+    }
+
+    if (!$exists) {
+        return;
+    }
+    if ($flag === '' || $flag === '0' || strtolower($flag) === 'false') {
+        return;
+    }
+
+    if ($archive->request->isPost()) {
+        hansJackEmitJson([
+            'ok' => false,
+            'message' => _t('请求方式不支持'),
+        ], 405);
+    }
+
+    $scope = 'list';
+    try {
+        $scope = strtolower(trim((string) $archive->request->get('scope', 'list')));
+    } catch (\Throwable $e) {
+        $scope = 'list';
+    }
+    if ($scope !== 'post') {
+        $scope = 'list';
+    }
+
+    $db = hansJackGithubDb();
+    if (!is_object($db)) {
+        hansJackEmitJson([
+            'ok' => false,
+            'message' => _t('数据库不可用'),
+        ], 500);
+    }
+
+    $serverTime = time();
+
+    if ($scope === 'post') {
+        $cid = 0;
+        try {
+            $cid = (int) $archive->request->get('cid', 0);
+        } catch (\Throwable $e) {
+            $cid = 0;
+        }
+
+        if ($cid <= 0) {
+            hansJackEmitJson([
+                'ok' => false,
+                'message' => _t('文章编号无效'),
+            ], 400);
+        }
+
+        $row = null;
+        try {
+            $row = $db->fetchObject(
+                $db->select('cid', 'type', 'status', 'created', 'modified')
+                    ->from('table.contents')
+                    ->where('cid = ?', $cid)
+                    ->limit(1)
+            );
+        } catch (\Throwable $e) {
+            $row = null;
+        }
+
+        if (!is_object($row)) {
+            hansJackEmitJson([
+                'ok' => true,
+                'scope' => 'post',
+                'cid' => $cid,
+                'exists' => false,
+                'updated' => 0,
+                'version' => sha1('post|' . $cid . '|missing'),
+                'serverTime' => $serverTime,
+            ]);
+        }
+
+        $type = strtolower(trim((string) ($row->type ?? '')));
+        $status = strtolower(trim((string) ($row->status ?? '')));
+        $created = (int) ($row->created ?? 0);
+        $modified = (int) ($row->modified ?? 0);
+        $updated = max(0, $created, $modified);
+        $isPublishedPost = ($type === 'post' && $status === 'publish');
+        $version = sha1('post|' . $cid . '|' . ($isPublishedPost ? 'publish' : 'hidden') . '|' . $updated);
+
+        hansJackEmitJson([
+            'ok' => true,
+            'scope' => 'post',
+            'cid' => $cid,
+            'exists' => $isPublishedPost,
+            'updated' => $updated,
+            'version' => $version,
+            'serverTime' => $serverTime,
+        ]);
+    }
+
+    $maxCreated = 0;
+    $total = 0;
+    $latestTitle = '';
+
+    try {
+        $stats = $db->fetchObject(
+            $db->select('MAX(created) AS maxCreated', 'COUNT(cid) AS total')
+                ->from('table.contents')
+                ->where('type = ?', 'post')
+                ->where('status = ?', 'publish')
+                ->limit(1)
+        );
+        if (is_object($stats)) {
+            $maxCreated = (int) ($stats->maxCreated ?? 0);
+            $total = (int) ($stats->total ?? 0);
+        }
+    } catch (\Throwable $e) {
+        $maxCreated = 0;
+        $total = 0;
+    }
+
+    try {
+        $latest = $db->fetchObject(
+            $db->select('title')
+                ->from('table.contents')
+                ->where('type = ?', 'post')
+                ->where('status = ?', 'publish')
+                ->order('created', Db::SORT_DESC)
+                ->limit(1)
+        );
+        if (is_object($latest)) {
+            $latestTitle = trim((string) ($latest->title ?? ''));
+        }
+    } catch (\Throwable $e) {
+        $latestTitle = '';
+    }
+
+    $updated = max(0, $maxCreated);
+    $version = sha1('list|' . $updated . '|' . $total);
+
+    hansJackEmitJson([
+        'ok' => true,
+        'scope' => 'list',
+        'total' => $total,
+        'updated' => $updated,
+        'latestTitle' => $latestTitle,
+        'version' => $version,
+        'serverTime' => $serverTime,
+    ]);
 }
 
 function hansJackCurrentUserIsAdmin(): bool

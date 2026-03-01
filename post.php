@@ -7,7 +7,7 @@ $this->need('header.php');
 ?>
 
 <main class="hj-main" role="main">
-    <article class="hj-article">
+    <article class="hj-article" data-hj-post-cid="<?php echo (int) ($this->cid ?? 0); ?>">
         <header class="hj-article-header">
             <h1 class="hj-article-title"><?php $this->title(); ?></h1>
             <?php

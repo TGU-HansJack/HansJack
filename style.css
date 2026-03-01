@@ -8748,3 +8748,78 @@ html.hj-theme-dark .page-navigator li span {
     background: rgba(24, 24, 24, 0.65);
 }
 
+.hj-live-toast-area {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 2140;
+    pointer-events: none;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.hj-live-toast {
+    pointer-events: auto;
+    margin: 0;
+    padding: 0.62rem 0.78rem;
+    border-radius: 4px;
+    border: 2px solid #111;
+    background: rgba(255, 255, 253, 0.98);
+    color: var(--hj-day-black);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+    backdrop-filter: blur(3px);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.46rem;
+    width: auto;
+    max-width: calc(100vw - 24px);
+}
+
+.hj-live-toast-text {
+    margin: 0;
+    font-family: var(--hj-font-ui);
+    font-size: 0.9rem;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hj-live-toast-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 1px;
+}
+
+.hj-live-toast-link:hover,
+.hj-live-toast-link:focus-visible {
+    opacity: 0.86;
+}
+
+.hj-live-toast-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.hj-live-toast-icon svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+}
+
+@media (max-width: 768px) {
+    .hj-live-toast-area {
+        right: 12px;
+        bottom: 12px;
+    }
+}
+
+html.hj-theme-dark .hj-live-toast {
+    border-color: var(--hj-night-white);
+    background: rgba(16, 16, 14, 0.96);
+    color: var(--hj-night-white);
+}
+

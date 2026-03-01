@@ -247,6 +247,9 @@ if ($this->is('category')) {
 if ($this->is('tag')) {
     $hjBodyClasses[] = 'hj-page-tag';
 }
+if ($this->is('post')) {
+    $hjBodyClasses[] = 'hj-page-post';
+}
 ?>
 <body class="<?php echo implode(' ', $hjBodyClasses); ?>">
 <header class="hj-header" role="banner">
