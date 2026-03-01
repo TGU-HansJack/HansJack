@@ -933,15 +933,6 @@ if ($hjCustomJavaScript !== '') {
             ensureKatexAssets(renderAllKatex);
         })();
     </script>
-    <script>
-        (function () {
-            var root = document.documentElement;
-            if (!root || !root.classList) {
-                return;
-            }
-            root.classList.remove("hj-content-enhance-pending");
-        })();
-    </script>
 <?php endif; ?>
 
 <script src="<?php echo hansJackEscape(hansJackAssetUrl($this->options, 'assets/js/hj-footer-global-tail.js')); ?>"></script>

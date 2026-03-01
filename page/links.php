@@ -862,7 +862,7 @@ $this->need('header.php');
                                         aria-expanded="false"
                                     >
                                         <?php if ($avatar !== ''): ?>
-                                            <img src="<?php echo $avatar; ?>" alt="" loading="lazy">
+                                            <img src="<?php echo $avatar; ?>" alt="" width="42" height="42" loading="lazy" decoding="async">
                                         <?php else: ?>
                                             <span><?php echo $initial; ?></span>
                                         <?php endif; ?>
@@ -870,7 +870,7 @@ $this->need('header.php');
                                 <?php else: ?>
                                     <div class="hj-links-avatar is-no-feed" data-hj-feed-tip="<?php echo $noFeedTip; ?>" title="<?php echo $noFeedTip; ?>" tabindex="0" aria-label="<?php echo $noFeedTip; ?>">
                                         <?php if ($avatar !== ''): ?>
-                                            <img src="<?php echo $avatar; ?>" alt="" loading="lazy">
+                                            <img src="<?php echo $avatar; ?>" alt="" width="42" height="42" loading="lazy" decoding="async">
                                         <?php else: ?>
                                             <span><?php echo $initial; ?></span>
                                         <?php endif; ?>
@@ -1042,7 +1042,7 @@ $this->need('header.php');
                                     <?php echo $siteCopyAvatar === '' ? 'disabled aria-disabled="true"' : ''; ?>
                                 >
                                     <?php if ($siteFavicon !== ''): ?>
-                                        <img src="<?php echo $siteFavicon; ?>" alt="" loading="lazy">
+                                        <img src="<?php echo $siteFavicon; ?>" alt="" width="46" height="46" loading="lazy" decoding="async">
                                     <?php else: ?>
                                         <span><?php echo $siteInitial; ?></span>
                                     <?php endif; ?>

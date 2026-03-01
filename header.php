@@ -30,16 +30,13 @@ try {
 }
 
 if ($hjNeedsContentEnhance) {
-    $hjHtmlThemeClass = trim($hjHtmlThemeClass . ' hj-content-enhance-pending');
-}
-
-$hjNeedsKatexAssets = false;
-if ($hjNeedsContentEnhance) {
     try {
         $hjNeedsKatexAssets = hansJackShouldLoadKatexAssets($this);
     } catch (\Throwable $e) {
         $hjNeedsKatexAssets = false;
     }
+} else {
+    $hjNeedsKatexAssets = false;
 }
 
 $hjNeedsSerifFontAssets = false;
@@ -215,19 +212,7 @@ if ($hjCustomCss !== '') {
             color-scheme: light;
         }
 
-        html.hj-content-enhance-pending :is(.hj-article-content, .hj-comment-content) {
-            visibility: hidden;
-        }
     </style>
-    <?php if ($hjNeedsContentEnhance): ?>
-        <noscript>
-            <style>
-                html.hj-content-enhance-pending :is(.hj-article-content, .hj-comment-content) {
-                    visibility: visible !important;
-                }
-            </style>
-        </noscript>
-    <?php endif; ?>
     <?php if ($hjNeedsKatexAssets): ?>
         <link rel="stylesheet" href="<?php echo hansJackEscape($hjKatexCssHref); ?>">
     <?php endif; ?>

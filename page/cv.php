@@ -171,10 +171,10 @@ $metaRows = [
             <div class="hj-cv-avatar" aria-label="<?php _e('头像'); ?>">
                 <?php if ($avatarLinkHref !== ''): ?>
                     <a href="<?php echo hansJackEscape($avatarLinkHref); ?>" target="_blank" rel="noreferrer">
-                        <img src="<?php echo hansJackEscape($avatarUrl); ?>" alt="" loading="lazy">
+                        <img src="<?php echo hansJackEscape($avatarUrl); ?>" alt="" width="112" height="112" loading="eager" decoding="async" fetchpriority="high">
                     </a>
                 <?php else: ?>
-                    <img src="<?php echo hansJackEscape($avatarUrl); ?>" alt="" loading="lazy">
+                    <img src="<?php echo hansJackEscape($avatarUrl); ?>" alt="" width="112" height="112" loading="eager" decoding="async" fetchpriority="high">
                 <?php endif; ?>
             </div>
 

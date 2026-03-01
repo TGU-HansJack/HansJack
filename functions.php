@@ -2837,6 +2837,50 @@ function hansJackApplyImageSizeSyntaxToHtml(string $html): string
     return is_string($result) ? $result : $html;
 }
 
+function hansJackApplyImagePerformanceAttrsToHtml(string $html, bool $prioritizeFirst = false): string
+{
+    if ($html === '' || strpos($html, '<img') === false) {
+        return $html;
+    }
+
+    $hasPrioritizedFirst = false;
+    $pattern = '/<img\b[^>]*>/iu';
+    $result = preg_replace_callback($pattern, static function (array $matches) use ($prioritizeFirst, &$hasPrioritizedFirst): string {
+        $tag = (string) ($matches[0] ?? '');
+        if ($tag === '') {
+            return $tag;
+        }
+
+        $src = '';
+        if (preg_match('/\bsrc\s*=\s*(["\'])(.*?)\1/isu', $tag, $srcMatch)) {
+            $src = trim(html_entity_decode((string) ($srcMatch[2] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        }
+        $isDataUri = ($src !== '') && (stripos($src, 'data:') === 0);
+
+        $isFirstPrioritized = false;
+        if ($prioritizeFirst && !$hasPrioritizedFirst && !$isDataUri) {
+            $isFirstPrioritized = true;
+            $hasPrioritizedFirst = true;
+        }
+
+        if (!preg_match('/\bloading\s*=/iu', $tag) && !$isDataUri) {
+            $tag = hansJackSetHtmlTagAttr($tag, 'loading', $isFirstPrioritized ? 'eager' : 'lazy');
+        }
+
+        if (!preg_match('/\bdecoding\s*=/iu', $tag)) {
+            $tag = hansJackSetHtmlTagAttr($tag, 'decoding', 'async');
+        }
+
+        if ($isFirstPrioritized && !preg_match('/\bfetchpriority\s*=/iu', $tag)) {
+            $tag = hansJackSetHtmlTagAttr($tag, 'fetchpriority', 'high');
+        }
+
+        return $tag;
+    }, $html);
+
+    return is_string($result) ? $result : $html;
+}
+
 function hansJackDomElementHasClass(\DOMElement $element, string $class): bool
 {
     $class = trim($class);
@@ -3612,6 +3656,7 @@ function hansJackRenderArchiveContent($archive): string
 
     $html = (string) ob_get_clean();
     $html = hansJackApplyImageSizeSyntaxToHtml($html);
+    $html = hansJackApplyImagePerformanceAttrsToHtml($html, true);
     $html = hansJackApplyTaskListSyntaxToHtml($html);
     $html = hansJackApplyInlineSyntaxToHtml($html);
     return $html;
@@ -3677,6 +3722,7 @@ function hansJackRenderCommentContent($comments): string
     }
 
     $html = hansJackApplyImageSizeSyntaxToHtml($html);
+    $html = hansJackApplyImagePerformanceAttrsToHtml($html, false);
     $html = hansJackApplyTaskListSyntaxToHtml($html);
     $html = hansJackApplyInlineSyntaxToHtml($html);
     return $html;

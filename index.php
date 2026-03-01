@@ -300,7 +300,15 @@ if ($this->is('index')) {
                 </div>
                 <div class="hj-landing-right">
                     <div class="hj-landing-avatar" aria-hidden="true">
-                        <img src="<?php echo hansJackEscape($faviconUrl); ?>" alt="">
+                        <img
+                            src="<?php echo hansJackEscape($faviconUrl); ?>"
+                            alt=""
+                            width="256"
+                            height="256"
+                            loading="eager"
+                            decoding="async"
+                            fetchpriority="high"
+                        >
                     </div>
                 </div>
             </div>
