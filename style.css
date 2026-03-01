@@ -4553,6 +4553,54 @@ html.hj-theme-dark .hj-activity-bubble.is-private {
     min-width: 0;
 }
 
+.hj-article-meta-wordcount {
+    position: relative;
+}
+
+.hj-article-meta-wordcount[data-hj-meta-tip] {
+    cursor: help;
+}
+
+.hj-article-meta-wordcount[data-hj-meta-tip]::after {
+    content: attr(data-hj-meta-tip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 0.28rem);
+    transform: translate(-50%, 0.16rem);
+    box-sizing: border-box;
+    width: max-content;
+    max-width: min(320px, 80vw);
+    padding: 0.32rem 0.52rem;
+    border-radius: 8px;
+    background: var(--hj-nav-block-bg);
+    color: var(--hj-nav-block-fg);
+    font-family: var(--hj-font-ui);
+    font-size: 0.75rem;
+    line-height: 1.38;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    box-shadow: 0 8px 20px rgba(16, 20, 24, 0.16);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 40;
+    transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
+}
+
+.hj-article-meta-wordcount[data-hj-meta-tip]:hover::after,
+.hj-article-meta-wordcount[data-hj-meta-tip]:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+}
+
+.hj-article-meta-wordcount[data-hj-meta-tip]:focus-visible {
+    outline: 2px solid color-mix(in oklab, currentColor 42%, transparent);
+    outline-offset: 3px;
+    border-radius: 6px;
+}
+
 .hj-article-meta-icon {
     display: inline-flex;
     align-items: center;
@@ -4600,6 +4648,16 @@ html.hj-theme-dark .hj-activity-bubble.is-private {
 
     .hj-article-meta-item {
         width: 100%;
+    }
+
+    .hj-article-meta-wordcount[data-hj-meta-tip]::after {
+        left: 0;
+        transform: translate(0, 0.16rem);
+    }
+
+    .hj-article-meta-wordcount[data-hj-meta-tip]:hover::after,
+    .hj-article-meta-wordcount[data-hj-meta-tip]:focus-visible::after {
+        transform: translate(0, 0);
     }
 }
 

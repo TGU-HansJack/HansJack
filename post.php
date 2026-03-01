@@ -13,13 +13,39 @@ $this->need('header.php');
             <?php
             // Word count (approx): strip HTML and whitespace, then count UTF-8 characters.
             $hjWordCount = 0;
+            $hjTokenWordCount = 0;
+            $hjCharCount = 0;
+            $hjReadMinutes = 1;
+            $hjWordCountTip = '';
             try {
                 $hjContentHtml = (string) ($this->content ?? '');
                 $hjPlain = html_entity_decode(strip_tags($hjContentHtml), ENT_QUOTES, 'UTF-8');
-                $hjPlain = (string) preg_replace('/\\s+/u', '', $hjPlain);
-                $hjWordCount = function_exists('mb_strlen') ? mb_strlen($hjPlain, 'UTF-8') : strlen($hjPlain);
+                $hjPlainNoSpace = (string) preg_replace('/\\s+/u', '', $hjPlain);
+                $hjCharCount = function_exists('mb_strlen') ? mb_strlen($hjPlainNoSpace, 'UTF-8') : strlen($hjPlainNoSpace);
+                $hjWordCount = (int) $hjCharCount;
+
+                $hjWordMatches = [];
+                $hjMatched = preg_match_all('/[\x{4E00}-\x{9FFF}]|[A-Za-z0-9]+(?:[\'’\\-][A-Za-z0-9]+)*/u', $hjPlain, $hjWordMatches);
+                $hjTokenWordCount = $hjMatched === false ? 0 : (int) $hjMatched;
+                if ($hjTokenWordCount <= 0 && $hjCharCount > 0) {
+                    $hjTokenWordCount = (int) $hjCharCount;
+                }
+
+                $hjReadByWord = $hjTokenWordCount > 0 ? ((float) $hjTokenWordCount / 220.0) : 0.0;
+                $hjReadByChar = $hjCharCount > 0 ? ((float) $hjCharCount / 300.0) : 0.0;
+                $hjReadMinutes = max(1, (int) ceil(max($hjReadByWord, $hjReadByChar)));
+                $hjWordCountTip = sprintf(
+                    _t('%1$d个词 %2$d个字符 阅读预计 %3$d分钟'),
+                    (int) $hjTokenWordCount,
+                    (int) $hjCharCount,
+                    (int) $hjReadMinutes
+                );
             } catch (\Throwable $e) {
                 $hjWordCount = 0;
+                $hjTokenWordCount = 0;
+                $hjCharCount = 0;
+                $hjReadMinutes = 1;
+                $hjWordCountTip = sprintf(_t('%1$d个词 %2$d个字符 阅读预计 %3$d分钟'), 0, 0, 1);
             }
 
             $hjTags = [];
@@ -133,7 +159,13 @@ $this->need('header.php');
                         <span class="hj-article-meta-empty"><?php _e('无标签'); ?></span>
                     <?php endif; ?>
                 </span>
-                <span class="hj-article-meta-item">
+                <span
+                    class="hj-article-meta-item hj-article-meta-wordcount"
+                    data-hj-meta-tip="<?php echo hansJackEscape($hjWordCountTip); ?>"
+                    title="<?php echo hansJackEscape($hjWordCountTip); ?>"
+                    tabindex="0"
+                    aria-label="<?php echo hansJackEscape($hjWordCountTip); ?>"
+                >
                     <span class="hj-article-meta-icon" aria-hidden="true">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v16"/><path d="M17 4v16"/><path d="M19 4H9.5a4.5 4.5 0 0 0 0 9H13"/></svg>
                     </span>
