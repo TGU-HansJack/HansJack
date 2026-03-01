@@ -8,6 +8,11 @@ try {
 } catch (\Throwable $e) {
     $hjNeedsKatexAssets = false;
 }
+
+$hjCustomJavaScript = trim((string) ($this->options->hjCustomJavaScript ?? ''));
+if ($hjCustomJavaScript !== '') {
+    $hjCustomJavaScript = str_ireplace('</script>', '<\/script>', $hjCustomJavaScript);
+}
 ?>
 </div>
 
@@ -5950,5 +5955,10 @@ try {
 </script>
 
 <?php $this->footer(); ?>
+<?php if ($hjCustomJavaScript !== ''): ?>
+<script id="hj-custom-javascript">
+<?php echo $hjCustomJavaScript; ?>
+</script>
+<?php endif; ?>
 </body>
 </html>

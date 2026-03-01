@@ -41,6 +41,11 @@ if ($hjNeedsContentEnhance) {
         $hjNeedsKatexAssets = false;
     }
 }
+
+$hjCustomCss = trim((string) ($this->options->hjCustomCss ?? ''));
+if ($hjCustomCss !== '') {
+    $hjCustomCss = str_ireplace('</style>', '<\/style>', $hjCustomCss);
+}
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN"<?php if ($hjHtmlThemeClass !== '') {
@@ -218,6 +223,11 @@ if ($hjNeedsContentEnhance) {
     <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/fonts/SourceHanSerifCN/result.css'); ?>">
     <link rel="stylesheet" href="<?php $this->options->themeUrl('style.css'); ?>">
     <?php $this->header(); ?>
+    <?php if ($hjCustomCss !== ''): ?>
+    <style id="hj-custom-css">
+<?php echo $hjCustomCss; ?>
+    </style>
+    <?php endif; ?>
 </head>
 <?php
 $hjBodyClasses = [];

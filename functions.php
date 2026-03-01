@@ -157,6 +157,24 @@ function themeConfig($form)
         _t('将输出到页脚左侧。支持 HTML（请自行确保代码安全）。')
     );
     $form->addInput($footerCustomCode);
+
+    $customCss = new \Typecho\Widget\Helper\Form\Element\Textarea(
+        'hjCustomCss',
+        null,
+        '',
+        _t('自定义 CSS'),
+        _t('将以 &lt;style&gt; 注入到页面头部（head 末尾），可覆盖主题样式。请填写纯 CSS。')
+    );
+    $form->addInput($customCss);
+
+    $customJavaScript = new \Typecho\Widget\Helper\Form\Element\Textarea(
+        'hjCustomJavaScript',
+        null,
+        '',
+        _t('自定义 JavaScript'),
+        _t('将以 &lt;script&gt; 注入到页面底部（body 末尾）。请填写纯 JavaScript。')
+    );
+    $form->addInput($customJavaScript);
 }
 
 /**
