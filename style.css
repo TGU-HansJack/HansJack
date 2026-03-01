@@ -7503,6 +7503,49 @@ html.hj-login-modal-open .hj-login-modal {
     }
 }
 
+:is(.hj-article-content, .hj-comment-content) .hj-excalidraw-block {
+    display: block;
+    margin: 1rem 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #000;
+    border-radius: 4px;
+    background: transparent;
+    overflow: hidden;
+}
+
+:is(.hj-article-content, .hj-comment-content) .hj-excalidraw-stage {
+    position: relative;
+    width: 100%;
+    min-height: 520px;
+    max-height: min(82vh, 760px);
+    overflow: hidden;
+    background: transparent;
+}
+
+:is(.hj-article-content, .hj-comment-content) .hj-excalidraw-stage:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+:is(.hj-article-content, .hj-comment-content) .hj-excalidraw-editor {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Preview-only: hide Excalidraw editing toolbar area if runtime cache lags. */
+:is(.hj-article-content, .hj-comment-content) .hj-excalidraw-editor .excalidraw .shapes-section,
+:is(.hj-article-content, .hj-comment-content) .hj-excalidraw-editor .excalidraw .App-toolbar-container {
+    display: none !important;
+}
+
+:is(.hj-article-content, .hj-comment-content) pre.hj-excalidraw-unavailable {
+    border: 1px dashed var(--hj-line-day);
+}
+
 .page-navigator {
     list-style: none;
     margin: 0.8rem 0 0;

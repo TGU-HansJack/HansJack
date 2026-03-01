@@ -4412,6 +4412,279 @@ if ($hjCustomJavaScript !== '') {
                 return;
             }
 
+            function isExcalidrawCodeBlock(codeEl) {
+                if (!codeEl || !codeEl.getAttribute) {
+                    return false;
+                }
+
+                var className = String(codeEl.getAttribute("class") || "").toLowerCase();
+                if (className.indexOf("language-excalidraw") !== -1 || className.indexOf("lang-excalidraw") !== -1) {
+                    return true;
+                }
+
+                var language = String(
+                    codeEl.getAttribute("data-language") ||
+                    codeEl.getAttribute("data-lang") ||
+                    ""
+                ).toLowerCase();
+
+                return language === "excalidraw";
+            }
+
+            var targets = [];
+            for (var c = 0; c < contents.length; c++) {
+                var content = contents[c];
+                if (!content || !content.querySelectorAll) {
+                    continue;
+                }
+
+                var blocks = content.querySelectorAll("pre code");
+                if (!blocks || blocks.length === 0) {
+                    continue;
+                }
+
+                for (var i = 0; i < blocks.length; i++) {
+                    var code = blocks[i];
+                    if (!code || !isExcalidrawCodeBlock(code)) {
+                        continue;
+                    }
+                    targets.push(code);
+                }
+            }
+
+            if (targets.length === 0) {
+                return;
+            }
+
+            function parseScene(rawText) {
+                var text = String(rawText || "").replace(/^\uFEFF/, "").trim();
+                if (!text) {
+                    return null;
+                }
+
+                try {
+                    var scene = JSON.parse(text);
+                    if (!scene || typeof scene !== "object") {
+                        return null;
+                    }
+                    return scene;
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function normalizeScene(scene) {
+                if (!scene || typeof scene !== "object") {
+                    return null;
+                }
+
+                var normalized = {
+                    scrollToContent: true,
+                    elements: Array.isArray(scene.elements) ? scene.elements : [],
+                    appState: {},
+                    files: scene.files && typeof scene.files === "object" ? scene.files : {}
+                };
+
+                var sourceAppState = scene.appState && typeof scene.appState === "object" ? scene.appState : {};
+                for (var key in sourceAppState) {
+                    if (Object.prototype.hasOwnProperty.call(sourceAppState, key)) {
+                        normalized.appState[key] = sourceAppState[key];
+                    }
+                }
+                normalized.appState.viewModeEnabled = true;
+                normalized.appState.zenModeEnabled = false;
+                normalized.appState.viewBackgroundColor = "transparent";
+
+                return normalized;
+            }
+
+            function markUnavailable(preEl, reason) {
+                if (!preEl || !preEl.classList) {
+                    return;
+                }
+                try {
+                    preEl.classList.add("hj-excalidraw-unavailable");
+                    if (reason) {
+                        preEl.setAttribute("data-hj-excalidraw-error", reason);
+                    }
+                } catch (e) {}
+            }
+
+            function appendRuntimeCss(href) {
+                if (!href) {
+                    return;
+                }
+                var existing = document.querySelector("link[data-hj-excalidraw-css]");
+                if (existing) {
+                    return;
+                }
+
+                try {
+                    var link = document.createElement("link");
+                    link.rel = "stylesheet";
+                    link.href = href;
+                    link.setAttribute("data-hj-excalidraw-css", "1");
+                    document.head.appendChild(link);
+                } catch (e) {}
+            }
+
+            function loadScriptOnce(src, done) {
+                if (!src) {
+                    done();
+                    return;
+                }
+
+                var key = src.replace(/[^a-z0-9]/gi, "_");
+                var selector = 'script[data-hj-excalidraw-js="' + key + '"]';
+                var existing = document.querySelector(selector);
+                if (existing) {
+                    if (existing.getAttribute("data-hj-excalidraw-loaded") === "1") {
+                        done();
+                        return;
+                    }
+
+                    existing.addEventListener("load", done);
+                    existing.addEventListener("error", done);
+                    return;
+                }
+
+                var script = document.createElement("script");
+                script.src = src;
+                script.async = false;
+                script.setAttribute("data-hj-excalidraw-js", key);
+                script.onload = function () {
+                    script.setAttribute("data-hj-excalidraw-loaded", "1");
+                    done();
+                };
+                script.onerror = done;
+                document.head.appendChild(script);
+            }
+
+            function ensureRuntimeAssets(done) {
+                if (
+                    typeof window.HansJackExcalidraw !== "undefined" &&
+                    window.HansJackExcalidraw &&
+                    typeof window.HansJackExcalidraw.mount === "function"
+                ) {
+                    done();
+                    return;
+                }
+
+                if (!window.EXCALIDRAW_ASSET_PATH) {
+                    window.EXCALIDRAW_ASSET_PATH = "<?php $this->options->themeUrl('assets/vendor/excalidraw/prod/'); ?>";
+                }
+                appendRuntimeCss("<?php $this->options->themeUrl('assets/vendor/excalidraw/hj-excalidraw-runtime.css'); ?>");
+                loadScriptOnce("<?php $this->options->themeUrl('assets/vendor/excalidraw/hj-excalidraw-runtime.js'); ?>", done);
+            }
+
+            function resolveTheme() {
+                var root = document.documentElement;
+                if (!root || !root.classList) {
+                    return "light";
+                }
+                var isDark = root.classList.contains("hj-theme-dark") && !root.classList.contains("hj-theme-light");
+                return isDark ? "dark" : "light";
+            }
+
+            function buildEditorFigure() {
+                var figure = document.createElement("figure");
+                figure.className = "hj-excalidraw-block";
+                figure.setAttribute("data-hj-excalidraw", "1");
+
+                var stage = document.createElement("div");
+                stage.className = "hj-excalidraw-stage";
+
+                var editorRoot = document.createElement("div");
+                editorRoot.className = "hj-excalidraw-editor";
+                stage.appendChild(editorRoot);
+                figure.appendChild(stage);
+                return {
+                    figure: figure,
+                    editorRoot: editorRoot
+                };
+            }
+
+            function renderBlock(codeEl) {
+                if (!codeEl) {
+                    return;
+                }
+
+                var preEl = codeEl.closest ? codeEl.closest("pre") : null;
+                if (!preEl || !preEl.parentNode) {
+                    return;
+                }
+                if (preEl.getAttribute("data-hj-excalidraw-rendered") === "1") {
+                    return;
+                }
+
+                var scene = parseScene(codeEl.textContent || "");
+                if (!scene) {
+                    markUnavailable(preEl, "json");
+                    return;
+                }
+
+                var normalized = normalizeScene(scene);
+                if (!normalized) {
+                    markUnavailable(preEl, "scene");
+                    return;
+                }
+
+                var mounted = buildEditorFigure();
+                var figure = mounted.figure;
+                var editorRoot = mounted.editorRoot;
+                preEl.setAttribute("data-hj-excalidraw-rendered", "1");
+
+                try {
+                    preEl.parentNode.replaceChild(figure, preEl);
+                } catch (e) {
+                    markUnavailable(preEl, "replace");
+                    return;
+                }
+
+                try {
+                    var runtime = window.HansJackExcalidraw;
+                    if (!runtime || typeof runtime.mount !== "function") {
+                        throw new Error("runtime");
+                    }
+                    var mountedEditor = runtime.mount(editorRoot, normalized, { theme: resolveTheme() });
+                    if (mountedEditor && typeof mountedEditor.unmount === "function") {
+                        figure._hjExcalidrawUnmount = mountedEditor.unmount;
+                    }
+                } catch (e) {
+                    markUnavailable(figure, "mount");
+                }
+            }
+
+            ensureRuntimeAssets(function () {
+                var runtime = window.HansJackExcalidraw;
+                if (!runtime || typeof runtime.mount !== "function") {
+                    for (var i = 0; i < targets.length; i++) {
+                        var codeEl = targets[i];
+                        if (!codeEl || !codeEl.closest) {
+                            continue;
+                        }
+                        markUnavailable(codeEl.closest("pre"), "runtime");
+                    }
+                    if (window.console && typeof window.console.warn === "function") {
+                        window.console.warn("[HansJack] Excalidraw runtime unavailable.");
+                    }
+                    return;
+                }
+
+                for (var i = 0; i < targets.length; i++) {
+                    var codeEl = targets[i];
+                    renderBlock(codeEl);
+                }
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
+            if (!contents || contents.length === 0) {
+                return;
+            }
+
             function hasOnlyImageParagraph(p, carrier) {
                 if (!p) {
                     return false;
