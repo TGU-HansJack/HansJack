@@ -385,15 +385,12 @@ if ($hjCustomJavaScript !== '') {
         var tocOpenClass = "hj-mobile-toc-open";
         var wideMql = null;
         var narrowMql = null;
-        var rewardHoverMql = null;
         try {
             wideMql = window.matchMedia ? window.matchMedia("(min-width: 1100px)") : null;
             narrowMql = window.matchMedia ? window.matchMedia("(max-width: 980px)") : null;
-            rewardHoverMql = window.matchMedia ? window.matchMedia("(hover: hover) and (pointer: fine)") : null;
         } catch (e) {
             wideMql = null;
             narrowMql = null;
-            rewardHoverMql = null;
         }
         var raf = window.requestAnimationFrame
             ? window.requestAnimationFrame.bind(window)
@@ -883,13 +880,6 @@ if ($hjCustomJavaScript !== '') {
             }
         }
 
-        function shouldUseRewardHover() {
-            if (rewardHoverMql) {
-                return !!rewardHoverMql.matches;
-            }
-            return !isNarrowScreen();
-        }
-
         function positionRewardPopover() {
             if (!rewardPopover || !rewardPanel) {
                 return;
@@ -1118,13 +1108,6 @@ if ($hjCustomJavaScript !== '') {
             });
 
             rewardBtn.addEventListener("focus", function () {
-                openRewardPopover();
-            });
-
-            rewardBtn.addEventListener("mouseenter", function () {
-                if (!shouldUseRewardHover()) {
-                    return;
-                }
                 openRewardPopover();
             });
 
