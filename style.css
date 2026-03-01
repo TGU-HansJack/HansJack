@@ -7536,10 +7536,29 @@ html.hj-login-modal-open .hj-login-modal {
     height: 100%;
 }
 
-/* Preview-only: hide Excalidraw editing toolbar area if runtime cache lags. */
-:is(.hj-article-content, .hj-comment-content) .hj-excalidraw-editor .excalidraw .shapes-section,
-:is(.hj-article-content, .hj-comment-content) .hj-excalidraw-editor .excalidraw .App-toolbar-container {
+/* Preview-only: hide shape editing section. */
+:is(.hj-article-content, .hj-comment-content) .hj-excalidraw-editor .excalidraw .shapes-section {
     display: none !important;
+}
+
+@media (max-width: 768px) {
+    :is(.hj-article-content, .hj-comment-content) .hj-excalidraw-stage {
+        min-height: 380px;
+        max-height: min(68vh, 560px);
+    }
+
+    /* Force desktop-style footer on narrow screens in preview mode. */
+    :is(.hj-article-content, .hj-comment-content) .hj-excalidraw-editor .excalidraw.excalidraw--mobile .App-bottom-bar,
+    :is(.hj-article-content, .hj-comment-content) .hj-excalidraw-editor .excalidraw.excalidraw--mobile footer.App-toolbar {
+        display: none !important;
+    }
+
+    :is(.hj-article-content, .hj-comment-content) .hj-excalidraw-editor .excalidraw.excalidraw--mobile .layer-ui__wrapper__footer,
+    :is(.hj-article-content, .hj-comment-content) .hj-excalidraw-editor .excalidraw.excalidraw--mobile .App-menu_bottom {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
 }
 
 :is(.hj-article-content, .hj-comment-content) pre.hj-excalidraw-unavailable {

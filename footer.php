@@ -4578,7 +4578,7 @@ if ($hjCustomJavaScript !== '') {
                     window.EXCALIDRAW_ASSET_PATH = "<?php $this->options->themeUrl('assets/vendor/excalidraw/prod/'); ?>";
                 }
                 appendRuntimeCss("<?php $this->options->themeUrl('assets/vendor/excalidraw/hj-excalidraw-runtime.css'); ?>");
-                loadScriptOnce("<?php $this->options->themeUrl('assets/vendor/excalidraw/hj-excalidraw-runtime.mod.js'); ?>", done, "module");
+                loadScriptOnce("<?php $this->options->themeUrl('assets/vendor/excalidraw/hj-excalidraw-runtime.mod.r2.js'); ?>", done, "module");
             }
 
             function resolveTheme() {
@@ -4608,8 +4608,12 @@ if ($hjCustomJavaScript !== '') {
                 stage.className = "hj-excalidraw-stage";
                 stage.style.position = "relative";
                 stage.style.width = "100%";
-                stage.style.minHeight = "520px";
-                stage.style.maxHeight = "760px";
+                var isNarrowViewport = false;
+                try {
+                    isNarrowViewport = !!(window.matchMedia && window.matchMedia("(max-width: 768px)").matches);
+                } catch (e) {}
+                stage.style.minHeight = isNarrowViewport ? "380px" : "520px";
+                stage.style.maxHeight = isNarrowViewport ? "min(68vh, 560px)" : "760px";
                 stage.style.overflow = "hidden";
                 stage.style.background = "transparent";
 
