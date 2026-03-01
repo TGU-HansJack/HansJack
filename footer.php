@@ -4528,35 +4528,39 @@ if ($hjCustomJavaScript !== '') {
                 } catch (e) {}
             }
 
-            function loadScriptOnce(src, done) {
+            function loadScriptOnce(src, done, mode) {
                 if (!src) {
                     done();
                     return;
                 }
 
+                var loadDone = typeof done === "function" ? done : function () {};
+                var scriptMode = mode === "module" ? "module" : "classic";
                 var key = src.replace(/[^a-z0-9]/gi, "_");
-                var selector = 'script[data-hj-excalidraw-js="' + key + '"]';
+                var selector = 'script[data-hj-excalidraw-js="' + key + '"][data-hj-excalidraw-mode="' + scriptMode + '"]';
                 var existing = document.querySelector(selector);
                 if (existing) {
                     if (existing.getAttribute("data-hj-excalidraw-loaded") === "1") {
-                        done();
+                        loadDone();
                         return;
                     }
 
-                    existing.addEventListener("load", done);
-                    existing.addEventListener("error", done);
+                    existing.addEventListener("load", loadDone, { once: true });
+                    existing.addEventListener("error", loadDone, { once: true });
                     return;
                 }
 
                 var script = document.createElement("script");
                 script.src = src;
+                script.type = scriptMode === "module" ? "module" : "text/javascript";
                 script.async = false;
                 script.setAttribute("data-hj-excalidraw-js", key);
+                script.setAttribute("data-hj-excalidraw-mode", scriptMode);
                 script.onload = function () {
                     script.setAttribute("data-hj-excalidraw-loaded", "1");
-                    done();
+                    loadDone();
                 };
-                script.onerror = done;
+                script.onerror = loadDone;
                 document.head.appendChild(script);
             }
 
@@ -4574,7 +4578,7 @@ if ($hjCustomJavaScript !== '') {
                     window.EXCALIDRAW_ASSET_PATH = "<?php $this->options->themeUrl('assets/vendor/excalidraw/prod/'); ?>";
                 }
                 appendRuntimeCss("<?php $this->options->themeUrl('assets/vendor/excalidraw/hj-excalidraw-runtime.css'); ?>");
-                loadScriptOnce("<?php $this->options->themeUrl('assets/vendor/excalidraw/hj-excalidraw-runtime.js'); ?>", done);
+                loadScriptOnce("<?php $this->options->themeUrl('assets/vendor/excalidraw/hj-excalidraw-runtime.mod.js'); ?>", done, "module");
             }
 
             function resolveTheme() {
@@ -4590,12 +4594,34 @@ if ($hjCustomJavaScript !== '') {
                 var figure = document.createElement("figure");
                 figure.className = "hj-excalidraw-block";
                 figure.setAttribute("data-hj-excalidraw", "1");
+                figure.style.display = "block";
+                figure.style.margin = "1rem 0";
+                figure.style.width = "100%";
+                figure.style.maxWidth = "100%";
+                figure.style.boxSizing = "border-box";
+                figure.style.border = "1px solid #000";
+                figure.style.borderRadius = "4px";
+                figure.style.background = "transparent";
+                figure.style.overflow = "hidden";
 
                 var stage = document.createElement("div");
                 stage.className = "hj-excalidraw-stage";
+                stage.style.position = "relative";
+                stage.style.width = "100%";
+                stage.style.minHeight = "520px";
+                stage.style.maxHeight = "760px";
+                stage.style.overflow = "hidden";
+                stage.style.background = "transparent";
 
                 var editorRoot = document.createElement("div");
                 editorRoot.className = "hj-excalidraw-editor";
+                editorRoot.style.position = "absolute";
+                editorRoot.style.top = "0";
+                editorRoot.style.right = "0";
+                editorRoot.style.bottom = "0";
+                editorRoot.style.left = "0";
+                editorRoot.style.width = "100%";
+                editorRoot.style.height = "100%";
                 stage.appendChild(editorRoot);
                 figure.appendChild(stage);
                 return {
