@@ -5878,6 +5878,44 @@ if ($hjCustomJavaScript !== '') {
             return;
         }
 
+        for (var c = 0; c < contents.length; c++) {
+            var content = contents[c];
+            if (!content || !content.querySelectorAll) {
+                continue;
+            }
+
+            var tables = Array.prototype.slice.call(content.querySelectorAll("table"));
+            if (!tables || tables.length === 0) {
+                continue;
+            }
+
+            for (var i = 0; i < tables.length; i++) {
+                var table = tables[i];
+                if (!table || !table.parentNode) {
+                    continue;
+                }
+                if (table.parentNode.classList && table.parentNode.classList.contains("hj-table-scroll")) {
+                    continue;
+                }
+
+                try {
+                    var wrap = document.createElement("div");
+                    wrap.className = "hj-table-scroll";
+                    table.parentNode.insertBefore(wrap, table);
+                    wrap.appendChild(table);
+                } catch (e) {}
+            }
+        }
+    })();
+</script>
+
+<script>
+    (function () {
+        var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
+        if (!contents || contents.length === 0) {
+            return;
+        }
+
         function markLinkKind(a, href) {
             if (!a || !a.classList) {
                 return;
