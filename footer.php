@@ -6001,8 +6001,8 @@ if ($hjCustomJavaScript !== '') {
             }
         }
 
-        var baseInterval = 20000;
-        var maxInterval = 120000;
+        var baseInterval = 5000;
+        var maxInterval = 60000;
         var nextInterval = baseInterval;
         var timerId = 0;
         var inFlight = false;
@@ -6013,6 +6013,7 @@ if ($hjCustomJavaScript !== '') {
         var toastDuration = 4000;
         var toastStorageKey = "hj_live_reload_toast";
         var toastHideTimer = 0;
+        var requestTimeout = 4500;
 
         function clearTimer() {
             if (timerId) {
@@ -6329,7 +6330,19 @@ if ($hjCustomJavaScript !== '') {
             }
 
             inFlight = true;
-            window.fetch(url, {
+
+            var abortController = null;
+            var abortTimer = 0;
+            if (typeof window.AbortController === "function") {
+                abortController = new window.AbortController();
+                abortTimer = window.setTimeout(function () {
+                    try {
+                        abortController.abort();
+                    } catch (e) {}
+                }, requestTimeout);
+            }
+
+            var fetchOptions = {
                 method: "GET",
                 credentials: "same-origin",
                 cache: "no-store",
@@ -6337,15 +6350,28 @@ if ($hjCustomJavaScript !== '') {
                     "X-Requested-With": "XMLHttpRequest",
                     "Accept": "application/json"
                 }
-            }).then(function (response) {
+            };
+            if (abortController) {
+                fetchOptions.signal = abortController.signal;
+            }
+
+            window.fetch(url, fetchOptions).then(function (response) {
                 if (!response || !response.ok) {
                     throw new Error("version check failed");
                 }
                 return response.json();
             }).then(function (payload) {
+                if (abortTimer) {
+                    window.clearTimeout(abortTimer);
+                    abortTimer = 0;
+                }
                 inFlight = false;
                 onPayload(payload);
             }).catch(function () {
+                if (abortTimer) {
+                    window.clearTimeout(abortTimer);
+                    abortTimer = 0;
+                }
                 inFlight = false;
                 onError();
             });
