@@ -1,0 +1,3958 @@
+﻿/* HansJack Footer Global Preload Bundle */
+
+/* block 1 */
+(function () {
+        var root = document.documentElement;
+        if (!root) {
+            return;
+        }
+
+        // Enable hover transitions after the initial paint to avoid replaying the
+        // "expand" animation when navigating while the cursor is still hovering.
+        var raf = window.requestAnimationFrame
+            ? window.requestAnimationFrame.bind(window)
+            : function (callback) {
+                return window.setTimeout(callback, 16);
+            };
+
+        raf(function () {
+            raf(function () {
+                root.classList.add("hj-motion-ready");
+            });
+        });
+    })();
+
+/* block 2 */
+(function () {
+        var typingNode = document.querySelector(".hj-landing-typing-text[data-text]");
+        if (typingNode) {
+            var fullText = typingNode.getAttribute("data-text") || "";
+            var prefersReduced = false;
+            try {
+                prefersReduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+            } catch (e) {
+                prefersReduced = false;
+            }
+
+            if (prefersReduced) {
+                typingNode.textContent = fullText;
+            } else {
+                typingNode.textContent = "";
+                var index = 0;
+                var delay = 30;
+                function tick() {
+                    if (index >= fullText.length) {
+                        return;
+                    }
+                    typingNode.textContent += fullText.charAt(index);
+                    index += 1;
+                    window.setTimeout(tick, delay);
+                }
+                window.setTimeout(tick, 240);
+            }
+        }
+
+        var quoteNode = document.querySelector(".hj-hitokoto-text");
+        if (quoteNode && window.fetch) {
+            var endpoint = "https://hitokoto.mayx.eu.org/";
+            var fallbackQuote = (quoteNode.textContent || "").trim();
+            var controller = null;
+            var timeout = null;
+            if (window.AbortController) {
+                controller = new AbortController();
+                timeout = window.setTimeout(function () {
+                    try {
+                        controller.abort();
+                    } catch (e) {}
+                }, 4500);
+            }
+
+            window.fetch(endpoint, {
+                method: "GET",
+                cache: "no-store",
+                signal: controller ? controller.signal : undefined
+            })
+                .then(function (response) {
+                    if (!response || !response.ok) {
+                        throw new Error("bad response");
+                    }
+                    return response.json();
+                })
+                .then(function (data) {
+                    var text = data && data.hitokoto ? String(data.hitokoto) : "";
+                    quoteNode.textContent = text || fallbackQuote || "\u2026";
+                })
+                .catch(function () {
+                    quoteNode.textContent = fallbackQuote || "\u2026";
+                })
+                .finally(function () {
+                    if (timeout) {
+                        window.clearTimeout(timeout);
+                    }
+                });
+        }
+
+        var scrollBtn = document.querySelector(".hj-scroll-down");
+        if (scrollBtn) {
+            scrollBtn.addEventListener("click", function () {
+                var target =
+                    document.querySelector("#hj-recent") ||
+                    document.querySelector(".hj-recent") ||
+                    document.querySelector("#hj-footer") ||
+                    document.querySelector(".hj-footer");
+                if (target && target.scrollIntoView) {
+                    target.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            });
+        }
+    })();
+
+/* block 3 */
+(function () {
+        var fab = document.querySelector(".hj-fab");
+        if (!fab) {
+            return;
+        }
+
+        var topBtn = fab.querySelector(".hj-fab-top");
+        var settingsBtn = fab.querySelector(".hj-fab-settings");
+        var rewardBtn = fab.querySelector(".hj-fab-reward");
+        var commentBtn = fab.querySelector(".hj-fab-comment");
+        var tocBtn = fab.querySelector(".hj-fab-toc");
+        var settingsPopover = document.querySelector("[data-hj-posts-settings-popover]");
+        var settingsPanel = settingsPopover ? settingsPopover.querySelector("[data-hj-posts-settings-panel]") : null;
+        var settingsSortModeSelect = settingsPopover ? settingsPopover.querySelector("[data-hj-posts-setting-sort-mode]") : null;
+        var settingsOrderSelect = settingsPopover ? settingsPopover.querySelector("[data-hj-posts-setting-order]") : null;
+        var settingsListModeSelect = settingsPopover ? settingsPopover.querySelector("[data-hj-posts-setting-list-mode]") : null;
+        var rewardBackdrop = document.querySelector("[data-hj-reward-backdrop]");
+        var rewardPopover = document.querySelector("[data-hj-reward-popover]");
+        var rewardPanel = rewardPopover ? rewardPopover.querySelector("[data-hj-reward-panel]") : null;
+        var rewardCloseBtn = rewardPopover ? rewardPopover.querySelector("[data-hj-reward-close]") : null;
+        var rewardTabButtons = rewardPopover ? Array.prototype.slice.call(rewardPopover.querySelectorAll("[data-hj-reward-tab]")) : [];
+        var rewardPanes = rewardPopover ? Array.prototype.slice.call(rewardPopover.querySelectorAll("[data-hj-reward-pane]")) : [];
+        var rewardImages = rewardPopover ? Array.prototype.slice.call(rewardPopover.querySelectorAll("[data-hj-reward-pane] img")) : [];
+        var tocBackdrop = document.querySelector("[data-hj-mobile-toc-backdrop]");
+        var tocCloseBtn = document.querySelector(".hj-article-toc-close");
+        var tocOpenClass = "hj-mobile-toc-open";
+        var wideMql = null;
+        var narrowMql = null;
+        try {
+            wideMql = window.matchMedia ? window.matchMedia("(min-width: 1100px)") : null;
+            narrowMql = window.matchMedia ? window.matchMedia("(max-width: 980px)") : null;
+        } catch (e) {
+            wideMql = null;
+            narrowMql = null;
+        }
+        var raf = window.requestAnimationFrame
+            ? window.requestAnimationFrame.bind(window)
+            : function (callback) {
+                return window.setTimeout(callback, 16);
+            };
+
+        function isWideScreen() {
+            return !!(wideMql && wideMql.matches);
+        }
+
+        function isNarrowScreen() {
+            if (narrowMql) {
+                return !!narrowMql.matches;
+            }
+            return (window.innerWidth || 0) <= 980;
+        }
+
+        function findTocLayout() {
+            return document.querySelector(".hj-article-layout.is-has-toc");
+        }
+
+        function findCommentTarget() {
+            return (
+                // Prefer the always-visible top composer; the built-in respond box is hidden
+                // until it is moved into a comment body for replying.
+                document.querySelector("[data-hj-comment-role=\"top\"]") ||
+                document.querySelector("#comments") ||
+                document.querySelector("[data-hj-comment-respond]") ||
+                document.querySelector("#respond") ||
+                document.querySelector(".respond") ||
+                document.querySelector(".comment-list")
+            );
+        }
+
+        function readScrollState() {
+            var doc = document.documentElement;
+            var body = document.body;
+            var top = 0;
+            var height = 0;
+            var view = 0;
+
+            if (doc) {
+                top = doc.scrollTop || 0;
+                height = doc.scrollHeight || 0;
+                view = doc.clientHeight || 0;
+            }
+            if (!height && body) {
+                height = body.scrollHeight || 0;
+            }
+            if (!top && body) {
+                top = body.scrollTop || 0;
+            }
+            if (!view) {
+                view = window.innerHeight || 0;
+            }
+
+            var max = Math.max(1, height - view);
+            var p = top / max;
+            if (p < 0) p = 0;
+            if (p > 1) p = 1;
+
+            return { top: top, progress: p };
+        }
+
+        function updateTopProgress() {
+            if (!topBtn) {
+                return;
+            }
+            var state = readScrollState();
+            var ring = topBtn.querySelector(".hj-fab-top-ring-fg");
+            if (!ring) {
+                return;
+            }
+            var progress = state.progress;
+            var r = parseFloat(ring.getAttribute("r") || "0");
+            if (!isFinite(r) || r <= 0) {
+                r = 18.5;
+            }
+            var c = Math.PI * 2 * r;
+            ring.style.strokeDasharray = c.toFixed(2) + " " + c.toFixed(2);
+                ring.style.strokeDashoffset = (c * (1 - progress)).toFixed(2);
+        }
+
+        function isMobileTocOpen() {
+            var root = document.documentElement;
+            return !!(root && root.classList.contains(tocOpenClass));
+        }
+
+        function closeMobileToc() {
+            var root = document.documentElement;
+            if (root) {
+                root.classList.remove(tocOpenClass);
+            }
+            if (tocBtn) {
+                tocBtn.setAttribute("aria-expanded", "false");
+            }
+            if (tocBackdrop) {
+                tocBackdrop.setAttribute("aria-hidden", "true");
+            }
+        }
+
+        if (tocCloseBtn) {
+            tocCloseBtn.addEventListener("click", function (e) {
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+                closeMobileToc();
+            });
+        }
+
+        function openMobileToc() {
+            if (!tocBtn || !findTocLayout() || isWideScreen()) {
+                return;
+            }
+            var root = document.documentElement;
+            if (root) {
+                root.classList.add(tocOpenClass);
+            }
+            tocBtn.setAttribute("aria-expanded", "true");
+            if (tocBackdrop) {
+                tocBackdrop.setAttribute("aria-hidden", "false");
+            }
+        }
+
+        function toggleMobileToc() {
+            if (isMobileTocOpen()) {
+                closeMobileToc();
+            } else {
+                openMobileToc();
+            }
+        }
+
+        function updateMobileTocAvailability() {
+            if (!tocBtn) {
+                return;
+            }
+            var layout = findTocLayout();
+            var show = !!layout && !isWideScreen();
+            if (show) {
+                fab.classList.add("is-has-mobile-toc");
+            } else {
+                fab.classList.remove("is-has-mobile-toc");
+                closeMobileToc();
+            }
+        }
+
+        var postsSettingsStorageKey = "hj_posts_list_settings_v1";
+        var postsSettingsDefaults = { sortMode: "default", order: "desc", listMode: "compact" };
+        var postsSettings = null;
+
+        function normalizePostsSettings(next) {
+            var s = next && typeof next === "object" ? next : {};
+
+            var sortMode = String(s.sortMode || postsSettingsDefaults.sortMode);
+            if (sortMode !== "default" && sortMode !== "published" && sortMode !== "updated") {
+                sortMode = postsSettingsDefaults.sortMode;
+            }
+
+            var order = String(s.order || postsSettingsDefaults.order);
+            if (order !== "asc" && order !== "desc") {
+                order = postsSettingsDefaults.order;
+            }
+
+            var listMode = String(s.listMode || postsSettingsDefaults.listMode);
+            if (listMode !== "compact" && listMode !== "preview") {
+                listMode = postsSettingsDefaults.listMode;
+            }
+
+            return { sortMode: sortMode, order: order, listMode: listMode };
+        }
+
+        function loadPostsSettings() {
+            var raw = "";
+            try {
+                raw = window.localStorage ? String(localStorage.getItem(postsSettingsStorageKey) || "") : "";
+            } catch (e) {
+                raw = "";
+            }
+            if (!raw) {
+                return normalizePostsSettings(postsSettingsDefaults);
+            }
+            try {
+                return normalizePostsSettings(JSON.parse(raw));
+            } catch (e) {
+                return normalizePostsSettings(postsSettingsDefaults);
+            }
+        }
+
+        function savePostsSettings(next) {
+            postsSettings = normalizePostsSettings(next);
+            try {
+                if (window.localStorage) {
+                    localStorage.setItem(postsSettingsStorageKey, JSON.stringify(postsSettings));
+                }
+            } catch (e) {}
+        }
+
+        function syncPostsSettingsUI() {
+            if (!postsSettings) {
+                return;
+            }
+            if (settingsSortModeSelect) {
+                settingsSortModeSelect.value = postsSettings.sortMode;
+            }
+            if (settingsOrderSelect) {
+                settingsOrderSelect.value = postsSettings.order;
+            }
+            if (settingsListModeSelect) {
+                settingsListModeSelect.value = postsSettings.listMode;
+            }
+        }
+
+        function findPostsLists() {
+            return Array.prototype.slice.call(document.querySelectorAll(".hj-posts-list"));
+        }
+
+        function ensureOriginalOrder(items) {
+            if (!items || items.length === 0) {
+                return;
+            }
+            items.forEach(function (item, idx) {
+                if (!item || !item.setAttribute) {
+                    return;
+                }
+                if (!item.hasAttribute("data-hj-post-original-index")) {
+                    item.setAttribute("data-hj-post-original-index", String(idx));
+                }
+            });
+        }
+
+        function readIntAttr(el, name) {
+            if (!el || !el.getAttribute) {
+                return 0;
+            }
+            var v = parseInt(el.getAttribute(name) || "0", 10);
+            return isFinite(v) ? v : 0;
+        }
+
+        function applyPostsListSort(list) {
+            if (!postsSettings || !list) {
+                return;
+            }
+
+            var items = Array.prototype.slice.call(list.querySelectorAll(".hj-posts-item"));
+            if (!items || items.length === 0) {
+                return;
+            }
+
+            ensureOriginalOrder(items);
+
+            var sorted = items.slice();
+            var mode = postsSettings.sortMode;
+            var asc = postsSettings.order === "asc";
+
+            sorted.sort(function (a, b) {
+                var aIdx = readIntAttr(a, "data-hj-post-original-index");
+                var bIdx = readIntAttr(b, "data-hj-post-original-index");
+
+                if (mode === "default") {
+                    // Preserve server order; "asc" just reverses the original list.
+                    return asc ? bIdx - aIdx : aIdx - bIdx;
+                }
+
+                var aVal = 0;
+                var bVal = 0;
+                if (mode === "published") {
+                    aVal = readIntAttr(a, "data-hj-post-created");
+                    bVal = readIntAttr(b, "data-hj-post-created");
+                } else if (mode === "updated") {
+                    aVal = readIntAttr(a, "data-hj-post-modified") || readIntAttr(a, "data-hj-post-created");
+                    bVal = readIntAttr(b, "data-hj-post-modified") || readIntAttr(b, "data-hj-post-created");
+                }
+
+                if (aVal === bVal) {
+                    return aIdx - bIdx;
+                }
+
+                return asc ? aVal - bVal : bVal - aVal;
+            });
+
+            var frag = document.createDocumentFragment();
+            sorted.forEach(function (item) {
+                frag.appendChild(item);
+            });
+            list.appendChild(frag);
+        }
+
+        function ensurePostExcerpt(item) {
+            if (!item || !item.querySelector) {
+                return;
+            }
+            var text = "";
+            try {
+                text = String(item.getAttribute("data-hj-post-excerpt") || "");
+            } catch (e) {
+                text = "";
+            }
+            text = text.trim();
+            if (!text) {
+                return;
+            }
+
+            var existing = item.querySelector("[data-hj-posts-excerpt]");
+            if (existing) {
+                existing.textContent = text;
+                return;
+            }
+
+            var node = document.createElement("div");
+            node.className = "hj-posts-excerpt";
+            node.setAttribute("data-hj-posts-excerpt", "true");
+            node.textContent = text;
+
+            var left = item.querySelector(".hj-posts-item-left");
+            if (!left) {
+                item.appendChild(node);
+                return;
+            }
+
+            var time = left.querySelector(".hj-posts-date");
+            if (time && time.parentNode === left) {
+                left.insertBefore(node, time);
+            } else {
+                left.appendChild(node);
+            }
+        }
+
+        function removePostExcerpt(item) {
+            if (!item || !item.querySelectorAll) {
+                return;
+            }
+            var nodes = item.querySelectorAll("[data-hj-posts-excerpt]");
+            if (!nodes || nodes.length === 0) {
+                return;
+            }
+            Array.prototype.slice.call(nodes).forEach(function (n) {
+                if (n && n.parentNode) {
+                    n.parentNode.removeChild(n);
+                }
+            });
+        }
+
+        function applyPostsListMode(list) {
+            if (!postsSettings || !list) {
+                return;
+            }
+            var items = Array.prototype.slice.call(list.querySelectorAll(".hj-posts-item"));
+            if (!items || items.length === 0) {
+                return;
+            }
+
+            var isPreview = postsSettings.listMode === "preview";
+            items.forEach(function (item) {
+                if (isPreview) {
+                    ensurePostExcerpt(item);
+                } else {
+                    removePostExcerpt(item);
+                }
+            });
+        }
+
+        function applyPostsSettingsToAllLists() {
+            if (!postsSettings) {
+                return;
+            }
+
+            var root = document.documentElement;
+            if (root && root.classList) {
+                root.classList.toggle("hj-posts-preview-mode", postsSettings.listMode === "preview");
+            }
+
+            var lists = findPostsLists();
+            if (!lists || lists.length === 0) {
+                return;
+            }
+
+            lists.forEach(function (list) {
+                applyPostsListSort(list);
+                applyPostsListMode(list);
+            });
+        }
+
+        function shouldShowSettingsFab() {
+            if (!settingsBtn) {
+                return false;
+            }
+            var body = document.body;
+            var isPostsPage = !!(body && body.classList && body.classList.contains("hj-page-posts"));
+            if (isPostsPage) {
+                return true;
+            }
+            if (!isNarrowScreen()) {
+                return false;
+            }
+            return !!document.querySelector(".hj-posts-list");
+        }
+
+        function positionSettingsPopover() {
+            if (!settingsPopover || !settingsPanel || !settingsBtn) {
+                return;
+            }
+
+            var btnRect = settingsBtn.getBoundingClientRect();
+            var panelRect = settingsPanel.getBoundingClientRect();
+            var gap = 10;
+            var viewportPad = 8;
+
+            var left = btnRect.left - gap - panelRect.width;
+            if (left < viewportPad) {
+                left = viewportPad;
+            }
+
+            var top = btnRect.top + btnRect.height / 2 - panelRect.height / 2;
+            var maxTop = Math.max(viewportPad, window.innerHeight - panelRect.height - viewportPad);
+            if (top < viewportPad) {
+                top = viewportPad;
+            } else if (top > maxTop) {
+                top = maxTop;
+            }
+
+            settingsPopover.style.left = left.toFixed(0) + "px";
+            settingsPopover.style.top = top.toFixed(0) + "px";
+        }
+
+        function isSettingsPopoverOpen() {
+            return !!(settingsPopover && settingsPopover.classList && settingsPopover.classList.contains("is-open"));
+        }
+
+        var settingsPopoverHideTimer = null;
+
+        function closeSettingsPopover() {
+            if (!settingsPopover) {
+                return;
+            }
+            if (settingsPopoverHideTimer) {
+                window.clearTimeout(settingsPopoverHideTimer);
+                settingsPopoverHideTimer = null;
+            }
+            settingsPopover.classList.remove("is-open");
+            settingsPopover.setAttribute("aria-hidden", "true");
+            if (settingsBtn) {
+                settingsBtn.setAttribute("aria-expanded", "false");
+            }
+            settingsPopoverHideTimer = window.setTimeout(function () {
+                settingsPopoverHideTimer = null;
+                settingsPopover.hidden = true;
+                settingsPopover.style.left = "";
+                settingsPopover.style.top = "";
+            }, 180);
+        }
+
+        function openSettingsPopover() {
+            if (!settingsPopover || !settingsBtn) {
+                return;
+            }
+            if (settingsPopoverHideTimer) {
+                window.clearTimeout(settingsPopoverHideTimer);
+                settingsPopoverHideTimer = null;
+            }
+            settingsPopover.hidden = false;
+            settingsPopover.setAttribute("aria-hidden", "false");
+            settingsBtn.setAttribute("aria-expanded", "true");
+            syncPostsSettingsUI();
+            positionSettingsPopover();
+            window.setTimeout(function () {
+                settingsPopover.classList.add("is-open");
+            }, 0);
+        }
+
+        function toggleSettingsPopover() {
+            if (isSettingsPopoverOpen()) {
+                closeSettingsPopover();
+            } else {
+                openSettingsPopover();
+            }
+        }
+
+        function updateSettingsFabVisibility() {
+            if (!settingsBtn) {
+                return;
+            }
+            var show = shouldShowSettingsFab();
+            settingsBtn.style.display = show ? "inline-flex" : "none";
+            if (!show) {
+                closeSettingsPopover();
+            }
+        }
+
+        function positionRewardPopover() {
+            if (!rewardPopover || !rewardPanel) {
+                return;
+            }
+
+            var panelRect = rewardPanel.getBoundingClientRect();
+            var viewportPad = 8;
+            var left = (window.innerWidth - panelRect.width) / 2;
+            var top = (window.innerHeight - panelRect.height) / 2;
+            var maxLeft = Math.max(viewportPad, window.innerWidth - panelRect.width - viewportPad);
+            var maxTop = Math.max(viewportPad, window.innerHeight - panelRect.height - viewportPad);
+            if (left < viewportPad) {
+                left = viewportPad;
+            } else if (left > maxLeft) {
+                left = maxLeft;
+            }
+            if (top < viewportPad) {
+                top = viewportPad;
+            } else if (top > maxTop) {
+                top = maxTop;
+            }
+
+            rewardPopover.style.left = left.toFixed(0) + "px";
+            rewardPopover.style.top = top.toFixed(0) + "px";
+        }
+
+        function isRewardPopoverOpen() {
+            return !!(rewardPopover && rewardPopover.classList && rewardPopover.classList.contains("is-open"));
+        }
+
+        function getRewardActiveKey() {
+            for (var i = 0; i < rewardTabButtons.length; i++) {
+                var btn = rewardTabButtons[i];
+                if (!btn) {
+                    continue;
+                }
+                var selected = (btn.getAttribute("aria-selected") || "").toLowerCase() === "true";
+                if (selected || (btn.classList && btn.classList.contains("is-active"))) {
+                    return String(btn.getAttribute("data-hj-reward-tab") || "");
+                }
+            }
+
+            for (var j = 0; j < rewardPanes.length; j++) {
+                var pane = rewardPanes[j];
+                if (!pane || !pane.classList) {
+                    continue;
+                }
+                if (pane.classList.contains("is-active")) {
+                    return String(pane.getAttribute("data-hj-reward-pane") || "");
+                }
+            }
+
+            if (rewardPanes.length > 0) {
+                return String((rewardPanes[0] && rewardPanes[0].getAttribute("data-hj-reward-pane")) || "");
+            }
+            return "";
+        }
+
+        function setRewardActiveKey(nextKey) {
+            var target = String(nextKey || "");
+            var availableKeys = [];
+            for (var i = 0; i < rewardPanes.length; i++) {
+                var pane = rewardPanes[i];
+                if (!pane) {
+                    continue;
+                }
+                var key = String(pane.getAttribute("data-hj-reward-pane") || "");
+                if (key !== "") {
+                    availableKeys.push(key);
+                }
+            }
+
+            if (availableKeys.length === 0) {
+                return;
+            }
+            if (target === "" || availableKeys.indexOf(target) === -1) {
+                target = availableKeys[0];
+            }
+
+            rewardTabButtons.forEach(function (btn) {
+                if (!btn) {
+                    return;
+                }
+                var key = String(btn.getAttribute("data-hj-reward-tab") || "");
+                var active = key === target;
+                if (btn.classList) {
+                    btn.classList.toggle("is-active", active);
+                }
+                btn.setAttribute("aria-selected", active ? "true" : "false");
+                btn.setAttribute("tabindex", active ? "0" : "-1");
+            });
+
+            rewardPanes.forEach(function (pane) {
+                if (!pane) {
+                    return;
+                }
+                var key = String(pane.getAttribute("data-hj-reward-pane") || "");
+                var active = key === target;
+                if (pane.classList) {
+                    pane.classList.toggle("is-active", active);
+                }
+                pane.setAttribute("aria-hidden", active ? "false" : "true");
+            });
+        }
+
+        var rewardPopoverHideTimer = null;
+
+        function clearRewardPopoverHideTimer() {
+            if (rewardPopoverHideTimer) {
+                window.clearTimeout(rewardPopoverHideTimer);
+                rewardPopoverHideTimer = null;
+            }
+        }
+
+        function closeRewardPopover(immediate) {
+            if (!rewardPopover) {
+                return;
+            }
+            clearRewardPopoverHideTimer();
+            rewardPopover.classList.remove("is-open");
+            rewardPopover.setAttribute("aria-hidden", "true");
+            if (rewardBackdrop) {
+                rewardBackdrop.classList.remove("is-open");
+                rewardBackdrop.setAttribute("aria-hidden", "true");
+            }
+            if (rewardBtn) {
+                rewardBtn.setAttribute("aria-expanded", "false");
+            }
+
+            var hideNow = function () {
+                rewardPopover.hidden = true;
+                rewardPopover.style.left = "";
+                rewardPopover.style.top = "";
+                if (rewardBackdrop) {
+                    rewardBackdrop.hidden = true;
+                }
+            };
+
+            if (immediate) {
+                hideNow();
+                return;
+            }
+
+            rewardPopoverHideTimer = window.setTimeout(function () {
+                rewardPopoverHideTimer = null;
+                hideNow();
+            }, 180);
+        }
+
+        function openRewardPopover() {
+            if (!rewardPopover || !rewardPanel || !rewardBtn) {
+                return;
+            }
+            clearRewardPopoverHideTimer();
+            setRewardActiveKey(getRewardActiveKey());
+            if (rewardBackdrop) {
+                rewardBackdrop.hidden = false;
+                rewardBackdrop.setAttribute("aria-hidden", "false");
+            }
+            rewardPopover.hidden = false;
+            rewardPopover.setAttribute("aria-hidden", "false");
+            rewardBtn.setAttribute("aria-expanded", "true");
+            positionRewardPopover();
+            window.setTimeout(function () {
+                if (rewardBackdrop) {
+                    rewardBackdrop.classList.add("is-open");
+                }
+                rewardPopover.classList.add("is-open");
+            }, 0);
+        }
+
+        postsSettings = loadPostsSettings();
+        syncPostsSettingsUI();
+        applyPostsSettingsToAllLists();
+        updateSettingsFabVisibility();
+
+        if (settingsSortModeSelect) {
+            settingsSortModeSelect.addEventListener("change", function () {
+                savePostsSettings({
+                    sortMode: settingsSortModeSelect.value,
+                    order: settingsOrderSelect ? settingsOrderSelect.value : postsSettings.order,
+                    listMode: settingsListModeSelect ? settingsListModeSelect.value : postsSettings.listMode
+                });
+                applyPostsSettingsToAllLists();
+            });
+        }
+
+        if (settingsOrderSelect) {
+            settingsOrderSelect.addEventListener("change", function () {
+                savePostsSettings({
+                    sortMode: settingsSortModeSelect ? settingsSortModeSelect.value : postsSettings.sortMode,
+                    order: settingsOrderSelect.value,
+                    listMode: settingsListModeSelect ? settingsListModeSelect.value : postsSettings.listMode
+                });
+                applyPostsSettingsToAllLists();
+            });
+        }
+
+        if (settingsListModeSelect) {
+            settingsListModeSelect.addEventListener("change", function () {
+                savePostsSettings({
+                    sortMode: settingsSortModeSelect ? settingsSortModeSelect.value : postsSettings.sortMode,
+                    order: settingsOrderSelect ? settingsOrderSelect.value : postsSettings.order,
+                    listMode: settingsListModeSelect.value
+                });
+                applyPostsSettingsToAllLists();
+                // Ensure the popover doesn't drift after layout changes (excerpt insertion).
+                if (isSettingsPopoverOpen()) {
+                    window.setTimeout(positionSettingsPopover, 0);
+                }
+            });
+        }
+
+        if (settingsBtn) {
+            settingsBtn.addEventListener("click", function () {
+                toggleSettingsPopover();
+            });
+        }
+
+        if (rewardBtn && rewardPopover && rewardPanel) {
+            rewardBtn.addEventListener("click", function (e) {
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+                openRewardPopover();
+            });
+
+            rewardBtn.addEventListener("focus", function () {
+                openRewardPopover();
+            });
+
+            if (rewardTabButtons.length > 0) {
+                rewardTabButtons.forEach(function (btn) {
+                    if (!btn || !btn.addEventListener) {
+                        return;
+                    }
+                    btn.addEventListener("click", function (e) {
+                        if (e && e.preventDefault) {
+                            e.preventDefault();
+                        }
+                        var key = String(btn.getAttribute("data-hj-reward-tab") || "");
+                        setRewardActiveKey(key);
+                        if (isRewardPopoverOpen()) {
+                            positionRewardPopover();
+                        }
+                    });
+                });
+            }
+
+            if (rewardImages.length > 0) {
+                rewardImages.forEach(function (img) {
+                    if (!img || !img.addEventListener) {
+                        return;
+                    }
+                    img.addEventListener("load", function () {
+                        if (isRewardPopoverOpen()) {
+                            positionRewardPopover();
+                        }
+                    });
+                });
+            }
+        }
+
+        if (rewardCloseBtn) {
+            rewardCloseBtn.addEventListener("click", function (e) {
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+                closeRewardPopover();
+            });
+        }
+
+        document.addEventListener("mousedown", function (e) {
+            var t = e ? e.target : null;
+            if (!t || !t.closest) {
+                return;
+            }
+
+            if (isSettingsPopoverOpen()) {
+                if (!t.closest(".hj-fab-settings-popover") && !t.closest(".hj-fab-settings")) {
+                    closeSettingsPopover();
+                }
+            }
+
+            if (isRewardPopoverOpen()) {
+                if (!t.closest(".hj-fab-reward-popover") && !t.closest(".hj-fab-reward")) {
+                    closeRewardPopover();
+                }
+            }
+        }, true);
+
+        window.addEventListener("keydown", function (e) {
+            var key = e && (e.key || e.code);
+            if (key === "Escape" || key === "Esc") {
+                if (isSettingsPopoverOpen()) {
+                    closeSettingsPopover();
+                }
+                if (isRewardPopoverOpen()) {
+                    closeRewardPopover();
+                }
+            }
+        });
+
+        window.addEventListener("resize", function () {
+            updateSettingsFabVisibility();
+            if (isSettingsPopoverOpen()) {
+                positionSettingsPopover();
+            }
+            if (isRewardPopoverOpen()) {
+                positionRewardPopover();
+            }
+        });
+
+        if (commentBtn) {
+            var target = findCommentTarget();
+            if (!target) {
+                commentBtn.style.display = "none";
+            } else {
+                commentBtn.addEventListener("click", function () {
+                    var t = findCommentTarget();
+                    if (t && t.scrollIntoView) {
+                        t.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                });
+            }
+        }
+
+        if (topBtn) {
+            topBtn.addEventListener("click", function () {
+                if (window.scrollTo) {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                } else {
+                    document.documentElement.scrollTop = 0;
+                    document.body.scrollTop = 0;
+                }
+            });
+        }
+
+        if (tocBtn) {
+            updateMobileTocAvailability();
+
+            tocBtn.addEventListener("click", function () {
+                updateMobileTocAvailability();
+                toggleMobileToc();
+            });
+
+            if (tocBackdrop) {
+                tocBackdrop.addEventListener("click", function () {
+                    closeMobileToc();
+                });
+            }
+
+            window.addEventListener("keydown", function (e) {
+                if (!isMobileTocOpen()) {
+                    return;
+                }
+                var key = e && (e.key || e.code);
+                if (key === "Escape" || key === "Esc") {
+                    closeMobileToc();
+                }
+            });
+
+            document.addEventListener("click", function (e) {
+                if (!isMobileTocOpen()) {
+                    return;
+                }
+                var t = e ? e.target : null;
+                if (!t || !t.closest) {
+                    return;
+                }
+                var link = t.closest("a.hj-article-toc-link");
+                if (link) {
+                    closeMobileToc();
+                }
+            });
+
+            window.addEventListener("resize", function () {
+                updateMobileTocAvailability();
+            });
+
+            if (wideMql && wideMql.addEventListener) {
+                wideMql.addEventListener("change", updateMobileTocAvailability);
+            } else if (wideMql && wideMql.addListener) {
+                wideMql.addListener(updateMobileTocAvailability);
+            }
+        }
+
+        var ticking = false;
+        function requestTick() {
+            if (ticking) {
+                return;
+            }
+            ticking = true;
+            raf(function () {
+                ticking = false;
+                updateTopProgress();
+            });
+        }
+
+        updateTopProgress();
+        try {
+            window.addEventListener("scroll", requestTick, { passive: true });
+        } catch (e) {
+            window.addEventListener("scroll", requestTick);
+        }
+        window.addEventListener("resize", requestTick);
+    })();
+
+/* block 4 */
+(function () {
+        var nav = document.querySelector(".hj-nav-desktop");
+        if (!nav) {
+            return;
+        }
+
+        var floatIcon = nav.querySelector(".hj-nav-float-icon");
+        var links = Array.prototype.slice.call(nav.querySelectorAll(".hj-nav-link[data-nav-key]"));
+        if (!floatIcon || links.length === 0) {
+            return;
+        }
+
+        var storageKey = "hansjack_nav_last_key";
+        var activeLink = nav.querySelector(".hj-nav-link.is-active") || links[0];
+        var storageAvailable = false;
+        try {
+            storageAvailable = typeof window.localStorage !== "undefined";
+        } catch (e) {
+            storageAvailable = false;
+        }
+
+        function getIconTemplate(link) {
+            return link ? link.querySelector(".hj-nav-icon-template") : null;
+        }
+
+        function setFloatIcon(link) {
+            var template = getIconTemplate(link);
+            if (!template || !template.innerHTML.trim()) {
+                floatIcon.innerHTML = "";
+                floatIcon.style.opacity = "0";
+                return false;
+            }
+
+            floatIcon.innerHTML = template.innerHTML;
+            floatIcon.style.opacity = "1";
+            return true;
+        }
+
+        function placeFloatIcon(link) {
+            if (!link || !setFloatIcon(link)) {
+                return;
+            }
+
+            var navRect = nav.getBoundingClientRect();
+            var linkRect = link.getBoundingClientRect();
+            var textNode = link.querySelector(".hj-nav-link-text");
+            var textRect = textNode ? textNode.getBoundingClientRect() : null;
+            var iconSize = floatIcon.offsetWidth || 16;
+            var iconGap = 3;
+            var left = linkRect.left - navRect.left + 7;
+            if (textRect) {
+                left = textRect.left - navRect.left - iconSize - iconGap;
+            }
+            var top = linkRect.top - navRect.top + (linkRect.height - iconSize) / 2;
+
+            floatIcon.style.transform = "translate(" + Math.round(left) + "px," + Math.round(top) + "px)";
+        }
+
+        var currentKey = activeLink.getAttribute("data-nav-key") || "";
+        placeFloatIcon(activeLink);
+
+        if (storageAvailable && currentKey) {
+            window.localStorage.setItem(storageKey, currentKey);
+        }
+
+        links.forEach(function (link) {
+            link.addEventListener("click", function () {
+                var key = link.getAttribute("data-nav-key");
+                if (storageAvailable && key) {
+                    window.localStorage.setItem(storageKey, key);
+                }
+            });
+
+            link.addEventListener("mouseenter", function () {
+                placeFloatIcon(link);
+            });
+
+            link.addEventListener("focus", function () {
+                placeFloatIcon(link);
+            });
+        });
+
+        function updateGlowPosition(event) {
+            if (!event) {
+                return;
+            }
+
+            var rect = nav.getBoundingClientRect();
+            var x = event.clientX - rect.left;
+            var y = event.clientY - rect.top;
+            nav.style.setProperty("--hj-nav-glow-x", Math.round(x) + "px");
+            nav.style.setProperty("--hj-nav-glow-y", Math.round(y) + "px");
+        }
+
+        nav.addEventListener("mouseenter", function (event) {
+            nav.classList.add("is-hovering");
+            updateGlowPosition(event);
+        });
+
+        nav.addEventListener("mousemove", function (event) {
+            updateGlowPosition(event);
+        });
+
+        nav.addEventListener("mouseleave", function () {
+            nav.classList.remove("is-hovering");
+            nav.style.removeProperty("--hj-nav-glow-x");
+            nav.style.removeProperty("--hj-nav-glow-y");
+            placeFloatIcon(activeLink);
+        });
+
+        nav.addEventListener("focusout", function (event) {
+            var nextTarget = event ? event.relatedTarget : null;
+            if (!nextTarget || !nav.contains(nextTarget)) {
+                placeFloatIcon(activeLink);
+            }
+        });
+
+        var resizeTimer = null;
+        window.addEventListener("resize", function () {
+            if (resizeTimer) {
+                window.clearTimeout(resizeTimer);
+            }
+
+            resizeTimer = window.setTimeout(function () {
+                placeFloatIcon(activeLink);
+            }, 80);
+        });
+    })();
+
+/* block 5 */
+(function () {
+        var root = document.documentElement;
+        var toggle = document.querySelector(".hj-nav-toggle");
+        var mobileNav = document.querySelector(".hj-mobile-nav");
+        if (!root || !toggle || !mobileNav) {
+            return;
+        }
+
+        var panel = mobileNav.querySelector(".hj-mobile-nav-panel");
+        var backdrop = mobileNav.querySelector(".hj-mobile-nav-backdrop");
+        if (!panel || !backdrop) {
+            return;
+        }
+
+        var openClass = "is-open";
+        var rootOpenClass = "hj-mobile-nav-open";
+
+        function closeOtherHeaderMenus() {
+            var pagesMenu = document.querySelector(".hj-pages-menu");
+            var userMenu = document.querySelector(".hj-user-menu");
+
+            if (pagesMenu) {
+                pagesMenu.classList.remove("is-open");
+                var pagesTrigger = pagesMenu.querySelector(".hj-pages-trigger");
+                if (pagesTrigger) {
+                    pagesTrigger.setAttribute("aria-expanded", "false");
+                }
+            }
+
+            if (userMenu) {
+                userMenu.classList.remove("is-open");
+                var userTrigger = userMenu.querySelector(".hj-user-trigger");
+                if (userTrigger) {
+                    userTrigger.setAttribute("aria-expanded", "false");
+                }
+            }
+
+            root.classList.remove("hj-header-dropdown-open");
+        }
+
+        function openMenu() {
+            closeOtherHeaderMenus();
+            mobileNav.classList.add(openClass);
+            toggle.setAttribute("aria-expanded", "true");
+            mobileNav.setAttribute("aria-hidden", "false");
+            root.classList.add(rootOpenClass);
+        }
+
+        function closeMenu() {
+            mobileNav.classList.remove(openClass);
+            toggle.setAttribute("aria-expanded", "false");
+            mobileNav.setAttribute("aria-hidden", "true");
+            root.classList.remove(rootOpenClass);
+        }
+
+        toggle.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (mobileNav.classList.contains(openClass)) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        });
+
+        backdrop.addEventListener("click", function () {
+            closeMenu();
+        });
+
+        document.addEventListener("keydown", function (event) {
+            if (!event) {
+                return;
+            }
+            if (event.key === "Escape" && mobileNav.classList.contains(openClass)) {
+                closeMenu();
+            }
+        });
+
+        panel.querySelectorAll("a").forEach(function (link) {
+            link.addEventListener("click", function () {
+                closeMenu();
+            });
+        });
+
+        var themeBtn = panel.querySelector("[data-hj-theme-toggle]");
+        if (themeBtn) {
+            themeBtn.addEventListener("click", function (event) {
+                event.preventDefault();
+                var themeToggle = document.querySelector(".hj-theme-toggle");
+                if (themeToggle) {
+                    themeToggle.click();
+                }
+            });
+        }
+    })();
+
+/* block 6 */
+(function () {
+        var menu = document.querySelector(".hj-pages-menu");
+        if (!menu) {
+            return;
+        }
+
+        var trigger = menu.querySelector(".hj-pages-trigger");
+        var dropdown = menu.querySelector(".hj-pages-dropdown");
+        if (!trigger || !dropdown) {
+            return;
+        }
+
+        var openClass = "is-open";
+        var margin = 8;  // px from viewport edges
+        var hoverCapable = false;
+        try {
+            hoverCapable = !!(window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+        } catch (e) {
+            hoverCapable = false;
+        }
+        var raf = window.requestAnimationFrame
+            ? window.requestAnimationFrame.bind(window)
+            : function (callback) {
+                return window.setTimeout(callback, 16);
+            };
+        function syncHeaderDropdownLock() {
+            var pagesMenu = document.querySelector(".hj-pages-menu");
+            var userMenu = document.querySelector(".hj-user-menu");
+            var hasOpen = false;
+
+            if (pagesMenu && pagesMenu.classList.contains("is-open")) {
+                hasOpen = true;
+            }
+            if (userMenu && userMenu.classList.contains("is-open")) {
+                hasOpen = true;
+            }
+
+            document.documentElement.classList.toggle("hj-header-dropdown-open", hasOpen);
+        }
+
+        function getGapPx() {
+            try {
+                var raw = window
+                    .getComputedStyle(document.documentElement)
+                    .getPropertyValue("--hj-dropdown-gap");
+                var px = parseFloat(raw) || 0;
+                if (px > 0) {
+                    return Math.max(4, Math.min(28, Math.round(px)));
+                }
+            } catch (e) {
+                // Ignore.
+            }
+
+            // Fallback: roughly one-character height.
+            var fontSize = 0;
+            try {
+                fontSize = parseFloat(window.getComputedStyle(trigger).fontSize) || 0;
+            } catch (e) {
+                fontSize = 0;
+            }
+
+            var gap = Math.round(fontSize || 14);
+            return Math.max(8, Math.min(28, gap));
+        }
+
+        function positionDropdown() {
+            var triggerRect = trigger.getBoundingClientRect();
+            if (!triggerRect) {
+                return;
+            }
+
+            var dropdownRect = dropdown.getBoundingClientRect();
+            var width = dropdownRect.width || dropdown.offsetWidth || 0;
+            var viewportWidth = document.documentElement.clientWidth || window.innerWidth || 0;
+            if (viewportWidth <= 0) {
+                return;
+            }
+
+            var centerX = triggerRect.left + triggerRect.width / 2;
+            var left = centerX;
+            if (width > 0) {
+                var half = width / 2;
+                if (left - half < margin) {
+                    left = margin + half;
+                } else if (left + half > viewportWidth - margin) {
+                    left = viewportWidth - margin - half;
+                }
+            }
+
+            dropdown.style.position = "fixed";
+            dropdown.style.left = Math.round(left) + "px";
+            dropdown.style.top = Math.round(triggerRect.bottom + getGapPx()) + "px";
+            dropdown.style.right = "auto";
+        }
+
+        function openMenu() {
+            // Keep only one dropdown open at a time.
+            var userMenu = document.querySelector(".hj-user-menu");
+            if (userMenu) {
+                userMenu.classList.remove("is-open");
+                var userTrigger = userMenu.querySelector(".hj-user-trigger");
+                if (userTrigger) {
+                    userTrigger.setAttribute("aria-expanded", "false");
+                }
+            }
+
+            menu.classList.add(openClass);
+            trigger.setAttribute("aria-expanded", "true");
+            syncHeaderDropdownLock();
+            positionDropdown();
+        }
+
+        function closeMenu() {
+            menu.classList.remove(openClass);
+            trigger.setAttribute("aria-expanded", "false");
+            syncHeaderDropdownLock();
+        }
+
+        syncHeaderDropdownLock();
+
+        trigger.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (hoverCapable) {
+                openMenu();
+                return;
+            }
+
+            if (menu.classList.contains(openClass)) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        });
+
+        if (hoverCapable) {
+            var closeTimer = null;
+            function cancelClose() {
+                if (!closeTimer) {
+                    return;
+                }
+                window.clearTimeout(closeTimer);
+                closeTimer = null;
+            }
+            function scheduleClose(event) {
+                var next = event ? event.relatedTarget : null;
+                if (next && menu.contains(next)) {
+                    return;
+                }
+
+                cancelClose();
+                closeTimer = window.setTimeout(function () {
+                    closeTimer = null;
+                    closeMenu();
+                }, 240);
+            }
+
+            menu.addEventListener("mouseenter", function () {
+                cancelClose();
+                openMenu();
+            });
+            menu.addEventListener("mouseleave", scheduleClose);
+            dropdown.addEventListener("mouseenter", cancelClose);
+            dropdown.addEventListener("mouseleave", scheduleClose);
+            menu.addEventListener("focusin", function () {
+                cancelClose();
+                openMenu();
+            });
+            menu.addEventListener("focusout", function (event) {
+                var next = event ? event.relatedTarget : null;
+                if (next && menu.contains(next)) {
+                    return;
+                }
+                cancelClose();
+                closeMenu();
+            });
+        } else {
+            menu.addEventListener("mouseenter", function () {
+                raf(positionDropdown);
+            });
+
+            menu.addEventListener("focusin", function () {
+                raf(positionDropdown);
+            });
+        }
+
+        document.addEventListener("click", function (event) {
+            var target = event ? event.target : null;
+            if (target && menu.contains(target)) {
+                return;
+            }
+            closeMenu();
+        });
+
+        document.addEventListener("keydown", function (event) {
+            if (!event) {
+                return;
+            }
+            if (event.key === "Escape") {
+                closeMenu();
+            }
+        });
+
+        dropdown.querySelectorAll("a").forEach(function (link) {
+            link.addEventListener("click", function () {
+                closeMenu();
+            });
+        });
+
+        var resizeTimer = null;
+        function scheduleReposition() {
+            var shouldReposition = menu.classList.contains(openClass);
+            try {
+                shouldReposition = shouldReposition || menu.matches(":hover") || menu.matches(":focus-within");
+            } catch (e) {
+                // Ignore selector support issues.
+            }
+
+            if (!shouldReposition) {
+                return;
+            }
+
+            if (resizeTimer) {
+                window.clearTimeout(resizeTimer);
+            }
+            resizeTimer = window.setTimeout(function () {
+                positionDropdown();
+            }, 60);
+        }
+
+        window.addEventListener("resize", scheduleReposition);
+        window.addEventListener("scroll", scheduleReposition, true);
+    })();
+
+/* block 7 */
+(function () {
+        var menu = document.querySelector(".hj-user-menu");
+        if (!menu) {
+            return;
+        }
+
+        var trigger = menu.querySelector(".hj-user-trigger");
+        var dropdown = menu.querySelector(".hj-user-dropdown");
+        if (!trigger || !dropdown) {
+            return;
+        }
+
+        var openClass = "is-open";
+        var margin = 8;  // px from viewport edges
+        var hoverCapable = false;
+        try {
+            hoverCapable = !!(window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+        } catch (e) {
+            hoverCapable = false;
+        }
+        var raf = window.requestAnimationFrame
+            ? window.requestAnimationFrame.bind(window)
+            : function (callback) {
+                return window.setTimeout(callback, 16);
+            };
+        function syncHeaderDropdownLock() {
+            var pagesMenu = document.querySelector(".hj-pages-menu");
+            var userMenu = document.querySelector(".hj-user-menu");
+            var hasOpen = false;
+
+            if (pagesMenu && pagesMenu.classList.contains("is-open")) {
+                hasOpen = true;
+            }
+            if (userMenu && userMenu.classList.contains("is-open")) {
+                hasOpen = true;
+            }
+
+            document.documentElement.classList.toggle("hj-header-dropdown-open", hasOpen);
+        }
+
+        function getGapPx() {
+            try {
+                var raw = window
+                    .getComputedStyle(document.documentElement)
+                    .getPropertyValue("--hj-dropdown-gap");
+                var px = parseFloat(raw) || 0;
+                if (px > 0) {
+                    return Math.max(4, Math.min(28, Math.round(px)));
+                }
+            } catch (e) {
+                // Ignore.
+            }
+
+            // Fallback: roughly one-character height.
+            var fontSize = 0;
+            try {
+                fontSize = parseFloat(window.getComputedStyle(trigger).fontSize) || 0;
+            } catch (e) {
+                fontSize = 0;
+            }
+
+            var gap = Math.round(fontSize || 14);
+            return Math.max(8, Math.min(28, gap));
+        }
+
+        function positionDropdown() {
+            var triggerRect = trigger.getBoundingClientRect();
+            if (!triggerRect) {
+                return;
+            }
+
+            var dropdownRect = dropdown.getBoundingClientRect();
+            var width = dropdownRect.width || dropdown.offsetWidth || 0;
+            var viewportWidth = document.documentElement.clientWidth || window.innerWidth || 0;
+            if (viewportWidth <= 0) {
+                return;
+            }
+
+            var centerX = triggerRect.left + triggerRect.width / 2;
+            var left = centerX;
+            if (width > 0) {
+                var half = width / 2;
+                if (left - half < margin) {
+                    left = margin + half;
+                } else if (left + half > viewportWidth - margin) {
+                    left = viewportWidth - margin - half;
+                }
+            }
+
+            // Fixed positioning avoids being clipped by narrow layout containers.
+            dropdown.style.position = "fixed";
+            dropdown.style.left = Math.round(left) + "px";
+            dropdown.style.top = Math.round(triggerRect.bottom + getGapPx()) + "px";
+            dropdown.style.right = "auto";
+        }
+
+        function openMenu() {
+            // Keep only one dropdown open at a time.
+            var pagesMenu = document.querySelector(".hj-pages-menu");
+            if (pagesMenu) {
+                pagesMenu.classList.remove("is-open");
+                var pagesTrigger = pagesMenu.querySelector(".hj-pages-trigger");
+                if (pagesTrigger) {
+                    pagesTrigger.setAttribute("aria-expanded", "false");
+                }
+            }
+
+            menu.classList.add(openClass);
+            trigger.setAttribute("aria-expanded", "true");
+            syncHeaderDropdownLock();
+            positionDropdown();
+        }
+
+        function closeMenu() {
+            menu.classList.remove(openClass);
+            trigger.setAttribute("aria-expanded", "false");
+            syncHeaderDropdownLock();
+        }
+
+        syncHeaderDropdownLock();
+
+        trigger.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (hoverCapable) {
+                openMenu();
+                return;
+            }
+
+            if (menu.classList.contains(openClass)) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        });
+
+        if (hoverCapable) {
+            var closeTimer = null;
+            function cancelClose() {
+                if (!closeTimer) {
+                    return;
+                }
+                window.clearTimeout(closeTimer);
+                closeTimer = null;
+            }
+            function scheduleClose(event) {
+                var next = event ? event.relatedTarget : null;
+                if (next && menu.contains(next)) {
+                    return;
+                }
+
+                cancelClose();
+                closeTimer = window.setTimeout(function () {
+                    closeTimer = null;
+                    closeMenu();
+                }, 240);
+            }
+
+            menu.addEventListener("mouseenter", function () {
+                cancelClose();
+                openMenu();
+            });
+            menu.addEventListener("mouseleave", scheduleClose);
+            dropdown.addEventListener("mouseenter", cancelClose);
+            dropdown.addEventListener("mouseleave", scheduleClose);
+            menu.addEventListener("focusin", function () {
+                cancelClose();
+                openMenu();
+            });
+            menu.addEventListener("focusout", function (event) {
+                var next = event ? event.relatedTarget : null;
+                if (next && menu.contains(next)) {
+                    return;
+                }
+                cancelClose();
+                closeMenu();
+            });
+        } else {
+            menu.addEventListener("mouseenter", function () {
+                raf(positionDropdown);
+            });
+
+            menu.addEventListener("focusin", function () {
+                raf(positionDropdown);
+            });
+        }
+
+        document.addEventListener("click", function (event) {
+            var target = event ? event.target : null;
+            if (target && menu.contains(target)) {
+                return;
+            }
+            closeMenu();
+        });
+
+        document.addEventListener("keydown", function (event) {
+            if (!event) {
+                return;
+            }
+            if (event.key === "Escape") {
+                closeMenu();
+            }
+        });
+
+        dropdown.querySelectorAll("a").forEach(function (link) {
+            link.addEventListener("click", function () {
+                closeMenu();
+            });
+        });
+
+        var resizeTimer = null;
+        function scheduleReposition() {
+            var shouldReposition = menu.classList.contains(openClass);
+            try {
+                shouldReposition = shouldReposition || menu.matches(":hover") || menu.matches(":focus-within");
+            } catch (e) {
+                // Ignore selector support issues.
+            }
+
+            if (!shouldReposition) {
+                return;
+            }
+
+            if (resizeTimer) {
+                window.clearTimeout(resizeTimer);
+            }
+            resizeTimer = window.setTimeout(function () {
+                positionDropdown();
+            }, 60);
+        }
+
+        window.addEventListener("resize", scheduleReposition);
+        window.addEventListener("scroll", scheduleReposition, true);
+    })();
+
+/* block 8 */
+(function () {
+        var root = document.documentElement;
+        var toggle = document.querySelector(".hj-theme-toggle");
+        var curtain = document.querySelector(".hj-theme-curtain");
+        if (!root || !toggle) {
+            return;
+        }
+
+        var storageKey = "hansjack_theme_mode";
+        var storageAvailable = false;
+        try {
+            storageAvailable = typeof window.localStorage !== "undefined";
+        } catch (e) {
+            storageAvailable = false;
+        }
+
+        var media = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+        var raf = window.requestAnimationFrame
+            ? window.requestAnimationFrame.bind(window)
+            : function (callback) {
+                return window.setTimeout(callback, 16);
+            };
+        var transitionDuration = 520;
+        var isSwitching = false;
+
+        function prefersReducedMotion() {
+            if (!window.matchMedia) {
+                return false;
+            }
+
+            return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        }
+
+        function getStoredTheme() {
+            if (!storageAvailable) {
+                return "";
+            }
+
+            var saved = window.localStorage.getItem(storageKey);
+            return saved === "light" || saved === "dark" ? saved : "";
+        }
+
+        function setToggleText(mode) {
+            var label = mode === "dark" ? "切换到日间模式" : "切换到夜间模式";
+            toggle.setAttribute("aria-label", label);
+            toggle.setAttribute("title", label);
+            toggle.setAttribute("aria-pressed", mode === "dark" ? "true" : "false");
+        }
+
+        function writeCookie(value) {
+            try {
+                var maxAge = 60 * 60 * 24 * 365;
+                document.cookie =
+                    storageKey +
+                    "=" +
+                    encodeURIComponent(value) +
+                    "; path=/; max-age=" +
+                    maxAge +
+                    "; samesite=lax";
+            } catch (e) {}
+        }
+
+        function applyTheme(mode, persist) {
+            root.classList.remove("hj-theme-light", "hj-theme-dark");
+            if (mode === "dark") {
+                root.classList.add("hj-theme-dark");
+            } else {
+                root.classList.add("hj-theme-light");
+            }
+
+            setToggleText(mode);
+
+            if (persist) {
+                writeCookie(mode);
+                if (storageAvailable) {
+                    window.localStorage.setItem(storageKey, mode);
+                }
+            }
+        }
+
+        function readThemeVisual(mode) {
+            var styles = window.getComputedStyle(root);
+            var colorVar = mode === "dark" ? "--hj-night-bg" : "--hj-day-bg";
+            var imageVar = mode === "dark" ? "--hj-night-bg-image" : "--hj-day-bg-image";
+            var color = (styles.getPropertyValue(colorVar) || "").trim();
+            var image = (styles.getPropertyValue(imageVar) || "").trim();
+
+            return {
+                color: color || (mode === "dark" ? "#111111" : "#ffffff"),
+                image: image || "none"
+            };
+        }
+
+        function setCurtainSplit(fromMode, toMode) {
+            if (!curtain) {
+                return;
+            }
+
+            var fromVisual = readThemeVisual(fromMode);
+            var toVisual = readThemeVisual(toMode);
+            var topVisual = toMode === "dark" ? toVisual : fromVisual;
+            var bottomVisual = toMode === "dark" ? fromVisual : toVisual;
+
+            curtain.classList.remove("is-dark", "is-light");
+            curtain.classList.add(toMode === "dark" ? "is-dark" : "is-light");
+            curtain.style.setProperty("--hj-curtain-top-color", topVisual.color);
+            curtain.style.setProperty("--hj-curtain-top-image", topVisual.image);
+            curtain.style.setProperty("--hj-curtain-bottom-color", bottomVisual.color);
+            curtain.style.setProperty("--hj-curtain-bottom-image", bottomVisual.image);
+        }
+
+        function runCurtainTransition(fromMode, toMode, onCovered, onFinished) {
+            if (!curtain || prefersReducedMotion()) {
+                onCovered();
+                if (typeof onFinished === "function") {
+                    onFinished();
+                }
+                return;
+            }
+
+            var enterFrom = toMode === "dark" ? -105 : 105;
+            var leaveTo = toMode === "dark" ? 105 : -105;
+
+            setCurtainSplit(fromMode, toMode);
+            curtain.style.transition = "none";
+            curtain.style.opacity = "1";
+            curtain.style.transform = "translate3d(0, " + enterFrom + "%, 0)";
+            curtain.getBoundingClientRect();
+
+            raf(function () {
+                curtain.style.transition = "transform " + transitionDuration + "ms cubic-bezier(0.22, 1, 0.36, 1)";
+                curtain.style.transform = "translate3d(0, 0, 0)";
+
+                window.setTimeout(function () {
+                    onCovered();
+
+                    curtain.style.transition = "transform " + transitionDuration + "ms cubic-bezier(0.65, 0, 0.35, 1)";
+                    curtain.style.transform = "translate3d(0, " + leaveTo + "%, 0)";
+
+                    window.setTimeout(function () {
+                        curtain.style.opacity = "0";
+                        curtain.style.transition = "none";
+
+                        if (typeof onFinished === "function") {
+                            onFinished();
+                        }
+                    }, transitionDuration);
+                }, transitionDuration);
+            });
+        }
+
+        function runViewTransition(toMode, onFinished) {
+            if (prefersReducedMotion() || typeof document.startViewTransition !== "function") {
+                return false;
+            }
+
+            root.style.setProperty("--hj-vt-duration", transitionDuration + "ms");
+            if (toMode === "dark") {
+                root.style.setProperty("--hj-vt-inset-from", "0 0 100% 0");
+            } else {
+                root.style.setProperty("--hj-vt-inset-from", "100% 0 0 0");
+            }
+            root.style.setProperty("--hj-vt-inset-to", "0 0 0 0");
+
+            var transition = document.startViewTransition(function () {
+                applyTheme(toMode, true);
+            });
+
+            transition.finished
+                .catch(function () {})
+                .finally(function () {
+                    root.style.removeProperty("--hj-vt-duration");
+                    root.style.removeProperty("--hj-vt-inset-from");
+                    root.style.removeProperty("--hj-vt-inset-to");
+
+                    if (typeof onFinished === "function") {
+                        onFinished();
+                    }
+                });
+
+            return true;
+        }
+
+        var mode = getStoredTheme();
+        if (!mode) {
+            mode = media && media.matches ? "dark" : "light";
+        }
+        applyTheme(mode, false);
+
+        toggle.addEventListener("click", function () {
+            if (isSwitching) {
+                return;
+            }
+
+            var fromMode = root.classList.contains("hj-theme-dark") ? "dark" : "light";
+            mode = fromMode === "dark" ? "light" : "dark";
+            isSwitching = true;
+
+            if (runViewTransition(mode, function () {
+                isSwitching = false;
+            })) {
+                return;
+            }
+
+            runCurtainTransition(fromMode, mode, function () {
+                applyTheme(mode, true);
+            }, function () {
+                isSwitching = false;
+            });
+        });
+
+        if (media) {
+            var handleSystemThemeChange = function (event) {
+                if (getStoredTheme() || isSwitching) {
+                    return;
+                }
+
+                applyTheme(event.matches ? "dark" : "light", false);
+            };
+
+            if (typeof media.addEventListener === "function") {
+                media.addEventListener("change", handleSystemThemeChange);
+            } else if (typeof media.addListener === "function") {
+                media.addListener(handleSystemThemeChange);
+            }
+        }
+    })();
+
+/* block 9 */
+(function () {
+        var body = document.body;
+        if (!body) {
+            return;
+        }
+
+        var isPosts = body.classList.contains("hj-page-posts");
+        var isNotes = body.classList.contains("hj-page-notes");
+        if (!isPosts && !isNotes) {
+            return;
+        }
+
+        var pager = body.querySelector(".hj-posts-pager.page-navigator");
+        if (!pager) {
+            return;
+        }
+
+        var host = null;
+        if (typeof pager.closest === "function") {
+            host = pager.closest(".hj-posts-main");
+        }
+        if (!host) {
+            host = pager.parentElement || body;
+        }
+
+        var spacer = document.createElement("div");
+        spacer.className = "hj-posts-pager-spacer";
+        spacer.style.height = "0px";
+        spacer.setAttribute("aria-hidden", "true");
+        if (!pager.parentNode) {
+            return;
+        }
+        pager.parentNode.insertBefore(spacer, pager);
+
+        var affixClass = "is-affixed";
+        var naturalMarginTop = 0;
+        var naturalMarginBottom = 0;
+        var raf = window.requestAnimationFrame
+            ? window.requestAnimationFrame.bind(window)
+            : function (callback) {
+                return window.setTimeout(callback, 16);
+            };
+
+        function readNaturalMargins() {
+            var styles = null;
+            try {
+                styles = window.getComputedStyle(pager);
+            } catch (e) {
+                styles = null;
+            }
+
+            if (!styles) {
+                naturalMarginTop = 0;
+                naturalMarginBottom = 0;
+                return;
+            }
+
+            naturalMarginTop = parseFloat(styles.marginTop) || 0;
+            naturalMarginBottom = parseFloat(styles.marginBottom) || 0;
+        }
+
+        readNaturalMargins();
+
+        function setSpacerHeight(px) {
+            var h = Math.max(0, Math.ceil(px || 0));
+            spacer.style.height = h ? h + "px" : "0px";
+        }
+
+        function applyFixedSizing() {
+            var rect = null;
+            try {
+                rect = host.getBoundingClientRect();
+            } catch (e) {
+                rect = null;
+            }
+
+            if (!rect || !rect.width) {
+                pager.style.left = "0px";
+                pager.style.width = "100%";
+                return;
+            }
+
+            pager.style.left = Math.round(rect.left) + "px";
+            pager.style.width = Math.round(rect.width) + "px";
+        }
+
+        function clearFixedSizing() {
+            pager.style.left = "";
+            pager.style.width = "";
+        }
+
+        function update() {
+            var viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
+            if (!viewportH) {
+                return;
+            }
+
+            var pagerRect = pager.getBoundingClientRect();
+            var pagerH = pagerRect ? pagerRect.height : 0;
+            if (!pagerH || pagerH <= 0) {
+                pagerH = pager.offsetHeight || 0;
+            }
+
+            var spacerRect = spacer.getBoundingClientRect();
+            var threshold = viewportH - pagerH;
+            var shouldAffix = spacerRect && typeof spacerRect.top === "number"
+                ? spacerRect.top + naturalMarginTop > threshold
+                : false;
+
+            var isAffixed = pager.classList.contains(affixClass);
+            if (shouldAffix) {
+                if (!isAffixed) {
+                    pager.classList.add(affixClass);
+                }
+
+                // Height can change after affixing (safe-area padding), so re-measure.
+                pagerRect = pager.getBoundingClientRect();
+                pagerH = pagerRect ? pagerRect.height : (pager.offsetHeight || pagerH);
+
+                setSpacerHeight(pagerH + naturalMarginTop + naturalMarginBottom);
+                applyFixedSizing();
+            } else {
+                if (isAffixed) {
+                    pager.classList.remove(affixClass);
+                    clearFixedSizing();
+                }
+                setSpacerHeight(0);
+            }
+        }
+
+        var ticking = false;
+        function requestUpdate() {
+            if (ticking) {
+                return;
+            }
+            ticking = true;
+            raf(function () {
+                ticking = false;
+                update();
+            });
+        }
+
+        window.addEventListener("scroll", requestUpdate, { passive: true });
+        window.addEventListener("resize", function () {
+            readNaturalMargins();
+            requestUpdate();
+        });
+
+        requestUpdate();
+    })();
+
+/* block 10 */
+(function () { 
+        var comments = document.querySelector(".hj-comments"); 
+        if (!comments) { 
+            return; 
+        } 
+
+        (function setupCommentsToolbar() {
+            var refreshBtn = comments.querySelector("[data-hj-comments-refresh]");
+            if (refreshBtn) {
+                refreshBtn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    try {
+                        if (window && window.location && window.location.hash !== "#comments") {
+                            window.location.hash = "comments";
+                        }
+                    } catch (err) {}
+                    try {
+                        window.location.reload();
+                    } catch (err2) {}
+                });
+            }
+
+            var sortBtn = comments.querySelector("[data-hj-comments-sort-toggle]");
+            if (!sortBtn) {
+                return;
+            }
+
+            function getOrder() {
+                var v = (comments.getAttribute("data-hj-comments-order") || "asc").toLowerCase();
+                return v === "desc" ? "desc" : "asc";
+            }
+
+            function setOrder(v) {
+                comments.setAttribute("data-hj-comments-order", v === "desc" ? "desc" : "asc");
+            }
+
+            function updateSortLabel() {
+                var order = getOrder();
+                var target = order === "desc" ? "asc" : "desc";
+                var label = target === "asc" ? "切换为时间升序" : "切换为时间降序";
+                sortBtn.setAttribute("aria-label", label);
+                sortBtn.setAttribute("title", label);
+            }
+
+            var iconAsc = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-arrow-up-icon lucide-clock-arrow-up" aria-hidden="true"><path d="M12 6v6l1.56.78"/><path d="M13.227 21.925a10 10 0 1 1 8.767-9.588"/><path d="m14 18 4-4 4 4"/><path d="M18 22v-8"/></svg>';
+            var iconDesc = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-arrow-down-icon lucide-clock-arrow-down" aria-hidden="true"><path d="M12 6v6l2 1"/><path d="M12.337 21.994a10 10 0 1 1 9.588-8.767"/><path d="m14 18 4 4 4-4"/><path d="M18 14v8"/></svg>';
+
+            function renderSortIcon() {
+                var order = getOrder();
+                var target = order === "desc" ? "asc" : "desc";
+                sortBtn.innerHTML = target === "asc" ? iconAsc : iconDesc;
+            }
+
+            function reverseList(list) {
+                if (!list) {
+                    return;
+                }
+                var nodes = Array.prototype.slice.call(list.children || []);
+                for (var i = nodes.length - 1; i >= 0; i--) {
+                    list.appendChild(nodes[i]);
+                }
+            }
+
+            function cleanText(text) {
+                return String(text || "").replace(/\s+/g, " ").trim();
+            }
+
+            function shorten(text, maxLen) {
+                text = cleanText(text);
+                maxLen = parseInt(maxLen || "0", 10);
+                if (!isFinite(maxLen) || maxLen <= 0) {
+                    return text;
+                }
+                if (text.length <= maxLen) {
+                    return text;
+                }
+                if (maxLen <= 3) {
+                    return text.slice(0, maxLen);
+                }
+                return text.slice(0, maxLen - 3) + "...";
+            }
+
+            function rebuildPreview(detailsEl) {
+                if (!detailsEl) {
+                    return;
+                }
+                var preview = detailsEl.querySelector(".hj-comment-children-preview");
+                var list = detailsEl.querySelector(".hj-comment-children-full > .comment-list");
+                if (!preview || !list) {
+                    return;
+                }
+
+                var items = Array.prototype.slice.call(list.children || []).filter(function (n) {
+                    return n && n.classList && n.classList.contains("comment-body");
+                });
+
+                // Keep the same 5-item cap as the server-side render.
+                var maxItems = 5;
+                items = items.slice(0, maxItems);
+
+                while (preview.firstChild) {
+                    preview.removeChild(preview.firstChild);
+                }
+
+                items.forEach(function (item) {
+                    var authorEl = item.querySelector(".comment-author .fn");
+                    var author = cleanText(authorEl ? authorEl.textContent : "");
+                    if (!author) {
+                        author = "匿名";
+                    }
+
+                    var text = "";
+                    if (item.classList.contains("is-private-hidden")) {
+                        text = "私信内容";
+                    } else {
+                        var contentEl = item.querySelector(".comment-content");
+                        text = cleanText(contentEl ? contentEl.textContent : "");
+                        if (!text) {
+                            text = "（无内容）";
+                        } else {
+                            text = shorten(text, 72);
+                        }
+                    }
+
+                    var row = document.createElement("div");
+                    row.className = "hj-comment-children-preview-item";
+
+                    var a = document.createElement("span");
+                    a.className = "hj-comment-children-preview-author";
+                    a.textContent = author;
+
+                    var sep = document.createElement("span");
+                    sep.className = "hj-comment-children-preview-sep";
+                    sep.textContent = "：";
+
+                    var t = document.createElement("span");
+                    t.className = "hj-comment-children-preview-text";
+                    t.textContent = text;
+
+                    row.appendChild(a);
+                    row.appendChild(sep);
+                    row.appendChild(t);
+                    preview.appendChild(row);
+                });
+            }
+
+            function rebuildAllPreviews() {
+                var blocks = Array.prototype.slice.call(comments.querySelectorAll("details.hj-comment-children"));
+                blocks.forEach(rebuildPreview);
+            }
+
+            sortBtn.addEventListener("click", function (e) {
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+
+                // Flip current order.
+                var current = getOrder();
+                var next = current === "asc" ? "desc" : "asc";
+
+                // Reverse every comment list (top-level + threaded lists) to match Typecho's backend behavior.
+                var lists = Array.prototype.slice.call(comments.querySelectorAll(".comment-list"));
+                lists.forEach(reverseList);
+
+                setOrder(next);
+                updateSortLabel();
+                renderSortIcon();
+                rebuildAllPreviews();
+            });
+
+            updateSortLabel();
+            renderSortIcon();
+        })();
+ 
+        function copyText(text) { 
+            if (!text) { 
+                return Promise.reject(new Error("no text")); 
+            } 
+ 
+            if (navigator && navigator.clipboard && window && window.isSecureContext) { 
+                return navigator.clipboard.writeText(text); 
+            } 
+ 
+            return new Promise(function (resolve, reject) { 
+                try { 
+                    var ta = document.createElement("textarea"); 
+                    ta.value = text; 
+                    ta.setAttribute("readonly", ""); 
+                    ta.style.position = "fixed"; 
+                    ta.style.top = "-9999px"; 
+                    ta.style.left = "-9999px"; 
+                    document.body.appendChild(ta); 
+                    ta.focus(); 
+                    ta.select(); 
+                    ta.setSelectionRange(0, ta.value.length); 
+                    var ok = false; 
+                    try { 
+                        ok = document.execCommand("copy"); 
+                    } catch (e) {} 
+                    document.body.removeChild(ta); 
+                    if (ok) { 
+                        resolve(); 
+                    } else { 
+                        reject(new Error("copy failed")); 
+                    } 
+                } catch (e) { 
+                    reject(e); 
+                } 
+            }); 
+        } 
+ 
+        (function setupCommentShare() { 
+            var buttons = Array.prototype.slice.call(comments.querySelectorAll("[data-hj-comment-share]"));  
+            if (!buttons || buttons.length === 0) {  
+                return;  
+            }  
+ 
+            buttons.forEach(function (btn) { 
+                btn.addEventListener("click", function (e) { 
+                    if (e && e.preventDefault) { 
+                        e.preventDefault(); 
+                    } 
+ 
+                    var url = btn.getAttribute("data-hj-comment-share") || ""; 
+                    if (!url) { 
+                        return; 
+                    } 
+ 
+                    if (navigator && typeof navigator.share === "function") { 
+                        navigator.share({ url: url }).catch(function () {}); 
+                        return; 
+                    } 
+ 
+                    copyText(url).then(function () { 
+                        var prevTitle = btn.getAttribute("title") || ""; 
+                        btn.setAttribute("title", "已复制"); 
+                        window.setTimeout(function () { 
+                            btn.setAttribute("title", prevTitle || "分享"); 
+                        }, 1200); 
+                    }).catch(function () { 
+                        try { 
+                            window.prompt("复制链接", url); 
+                        } catch (err) {} 
+                    }); 
+                }); 
+            });  
+        })();  
+
+        (function setupCommentChildrenToggleGuard() {
+            // Only the "共x条回复 / 收起回复" text can toggle <details>.
+            comments.addEventListener("click", function (e) {
+                var t = e && e.target;
+                if (!t || !t.closest) {
+                    return;
+                }
+
+                var summary = t.closest("summary.hj-comment-children-summary");
+                if (!summary) {
+                    return;
+                }
+
+                var toggle = t.closest(".hj-comment-children-toggle");
+                if (toggle) {
+                    return;
+                }
+
+                if (e && typeof e.preventDefault === "function") {
+                    e.preventDefault();
+                }
+                if (e && typeof e.stopPropagation === "function") {
+                    e.stopPropagation();
+                }
+            }, true);
+        })();
+
+        (function setupCommentAvatarSizing() {
+            // Make the avatar diameter match the author-meta two-line height.
+            // We also update --hj-comment-avatar-size so all left indents stay aligned.
+            var raf = window.requestAnimationFrame || function (fn) { return window.setTimeout(fn, 16); };
+            var ticking = false;
+
+            function update() {
+                var items = Array.prototype.slice.call(comments.querySelectorAll(".comment-body"));
+                if (!items || items.length === 0) {
+                    return;
+                }
+
+                items.forEach(function (item) {
+                    var meta = item.querySelector(".hj-comment-author-meta");
+                    if (!meta) {
+                        return;
+                    }
+
+                    var rect;
+                    try {
+                        rect = meta.getBoundingClientRect();
+                    } catch (e) {
+                        rect = null;
+                    }
+                    if (!rect || !isFinite(rect.height) || rect.height <= 0) {
+                        return;
+                    }
+
+                    // Clamp to a reasonable minimum so it doesn't collapse on edge cases.
+                    var h = Math.max(24, rect.height);
+                    item.style.setProperty("--hj-comment-avatar-size", h.toFixed(2) + "px");
+                });
+            }
+
+            function requestUpdate() {
+                if (ticking) {
+                    return;
+                }
+                ticking = true;
+                raf(function () {
+                    ticking = false;
+                    update();
+                });
+            }
+
+            window.addEventListener("resize", requestUpdate);
+
+            // Recompute after expanding/collapsing reply blocks.
+            comments.addEventListener("click", function (e) {
+                var t = e && e.target;
+                if (!t || !t.closest) {
+                    return;
+                }
+                if (!t.closest(".hj-comment-children-toggle")) {
+                    return;
+                }
+                window.setTimeout(requestUpdate, 0);
+            }, true);
+
+            requestUpdate();
+        })();
+ 
+        // Typecho's built-in reply script toggles #cancel-comment-reply-link.
+        // We removed the button, so make the helper tolerant of null.
+        (function patchTypechoCommentVisiable() {
+            if (!window || !window.TypechoComment) {
+                return;
+            }
+            var tc = window.TypechoComment;
+            if (!tc || typeof tc.visiable !== "function") {
+                return;
+            }
+            var orig = tc.visiable;
+            if (orig && orig.__hj_safe_null) {
+                return;
+            }
+            tc.visiable = function (el, show) {
+                if (!el) {
+                    return;
+                }
+                try {
+                    return orig.call(tc, el, show);
+                } catch (e) {}
+            };
+            tc.visiable.__hj_safe_null = true;
+        })();
+
+        var forms = Array.prototype.slice.call(comments.querySelectorAll("[data-hj-comment-form]"));
+        if (!forms || forms.length === 0) {
+            return;
+        }
+
+        var root = document.documentElement;
+        var modal = document.querySelector("[data-hj-login-modal]");
+        var backdrop = modal ? modal.querySelector("[data-hj-login-backdrop]") : null;
+        var panel = modal ? modal.querySelector("[data-hj-login-panel]") : null;
+        var loginOpenClass = "hj-login-modal-open";
+
+        var commentsUserLogged = comments.getAttribute("data-hj-user-logged") === "1";
+        var commentsRequireMail = comments.getAttribute("data-hj-comments-require-mail") === "1";
+        var commentsRequireUrl = comments.getAttribute("data-hj-comments-require-url") === "1";
+        var commentEditBusy = false;
+        var isMemoryComments = comments.classList.contains("hj-memory-comments-shell");
+        var topCommentForm = comments.querySelector("[data-hj-comment-form][data-hj-comment-role=\"top\"]");
+        var topCommentFormHomeParent = topCommentForm ? topCommentForm.parentNode : null;
+        var topCommentFormHomeNext = topCommentForm ? topCommentForm.nextSibling : null;
+
+        function getCommentEditForm() {
+            var reply = comments.querySelector("[data-hj-comment-form][data-hj-comment-role=\"reply\"]");
+            if (reply) {
+                return reply;
+            }
+            if (isMemoryComments) {
+                return null;
+            }
+            var top = comments.querySelector("[data-hj-comment-form][data-hj-comment-role=\"top\"]");
+            if (top) {
+                return top;
+            }
+            return forms[0] || null;
+        }
+
+        function getCommentEditToken(form) {
+            var tokenInput = form ? form.querySelector("input[name=\"_\"]") : null;
+            if (!tokenInput && comments && comments.querySelector) {
+                tokenInput = comments.querySelector("input[name=\"_\"]");
+            }
+            return tokenInput && tokenInput.value ? String(tokenInput.value).trim() : "";
+        }
+
+        function getCommentEditEndpoint() {
+            var raw = "";
+            try {
+                raw = (window && window.location && window.location.href) ? String(window.location.href) : "";
+            } catch (e) {
+                raw = "";
+            }
+
+            if (!raw) {
+                return "?hj_comment_edit=1";
+            }
+
+            try {
+                var u = new URL(raw);
+                u.searchParams.set("hj_comment_edit", "1");
+                return u.toString();
+            } catch (e) {
+                var clean = raw;
+                var hashPos = clean.indexOf("#");
+                if (hashPos >= 0) {
+                    clean = clean.slice(0, hashPos);
+                }
+                return clean + (clean.indexOf("?") === -1 ? "?" : "&") + "hj_comment_edit=1";
+            }
+        }
+
+        function parseCommentEditJson(text) {
+            try {
+                return JSON.parse(String(text || ""));
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function extractCommentEditErrorMessage(raw, response) {
+            var text = String(raw || "").trim();
+            if (text) {
+                var jsonMsg = text.match(/"message"\s*:\s*"([^"]+)"/i);
+                if (jsonMsg && jsonMsg[1]) {
+                    return jsonMsg[1];
+                }
+                var title = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+                if (title && title[1]) {
+                    var titleText = String(title[1]).replace(/\s+/g, " ").trim();
+                    if (titleText) {
+                        return titleText;
+                    }
+                }
+            }
+            if (response) {
+                var status = parseInt(response.status || "0", 10);
+                if (status === 401 || status === 403) {
+                    return "权限或安全校验失败，请重新登录管理员并刷新后重试";
+                }
+                if (status === 404) {
+                    return "评论编辑接口不可用（404）";
+                }
+                if (status >= 500) {
+                    return "服务器错误（" + String(status) + "），请稍后重试";
+                }
+            }
+            return "评论编辑失败，请重试";
+        }
+
+        function clearCommentEditState() {
+            forms.forEach(function (f) {
+                if (!f) {
+                    return;
+                }
+                f.removeAttribute("data-hj-comment-edit-coid");
+                f.removeAttribute("data-hj-comment-editing");
+                var box = f.querySelector("[data-hj-comment-box]");
+                if (box && box.classList) {
+                    box.classList.remove("is-editing");
+                }
+                if (f.classList) {
+                    f.classList.remove("hj-comment-edit-inline");
+                }
+            });
+
+            if (isMemoryComments && topCommentForm && topCommentFormHomeParent) {
+                if (topCommentForm.parentNode !== topCommentFormHomeParent) {
+                    if (topCommentFormHomeNext && topCommentFormHomeNext.parentNode === topCommentFormHomeParent) {
+                        topCommentFormHomeParent.insertBefore(topCommentForm, topCommentFormHomeNext);
+                    } else {
+                        topCommentFormHomeParent.appendChild(topCommentForm);
+                    }
+                }
+            }
+        }
+
+        function setCommentPrivateState(form, isPrivate) {
+            if (!form) {
+                return;
+            }
+            var privateBtn = form.querySelector("[data-hj-comment-private-toggle]");
+            var box = form.querySelector("[data-hj-comment-box]");
+            if (privateBtn) {
+                privateBtn.setAttribute("aria-pressed", isPrivate ? "true" : "false");
+            }
+            if (box && box.classList) {
+                box.classList.toggle("is-private", !!isPrivate);
+            }
+        }
+
+        function openCommentEdit(btn) {
+            if (!btn || !btn.closest) {
+                return;
+            }
+
+            var coid = parseInt(btn.getAttribute("data-hj-comment-coid") || "0", 10);
+            if (!isFinite(coid) || coid <= 0) {
+                return;
+            }
+
+            var row = btn.closest(".comment-reply");
+            var source = row ? row.querySelector("[data-hj-comment-edit-source]") : null;
+            var text = "";
+            if (source) {
+                if (typeof source.value === "string") {
+                    text = source.value;
+                } else {
+                    text = source.textContent || "";
+                }
+            }
+            text = String(text || "").replace(/\r\n?/g, "\n");
+            var isPrivate = btn.getAttribute("data-hj-comment-edit-private") === "1";
+
+            var form = getCommentEditForm();
+            if (!form || !form.querySelector) {
+                return;
+            }
+
+            var textarea = form.querySelector("textarea[name=\"text\"]");
+            if (!textarea) {
+                return;
+            }
+
+            clearCommentEditState();
+
+            var role = form.getAttribute("data-hj-comment-role") || "";
+            var item = btn.closest(".comment-body");
+            if (item) {
+                if (role === "reply") {
+                    var respondWrap = form.closest("[data-hj-comment-respond]") || form.closest(".hj-respond") || form.closest("#respond");
+                    if (respondWrap && respondWrap.parentNode !== item) {
+                        item.appendChild(respondWrap);
+                    }
+                } else if (isMemoryComments) {
+                    if (form.parentNode !== item) {
+                        item.appendChild(form);
+                    }
+                    if (form.classList) {
+                        form.classList.add("hj-comment-edit-inline");
+                    }
+                }
+            }
+
+            form.setAttribute("data-hj-comment-edit-coid", String(coid));
+            form.setAttribute("data-hj-comment-editing", "1");
+            var box = form.querySelector("[data-hj-comment-box]");
+            if (box && box.classList) {
+                box.classList.add("is-editing");
+            }
+
+            setCommentPrivateState(form, isPrivate);
+
+            textarea.value = text;
+            try {
+                textarea.dispatchEvent(new Event("input", { bubbles: true }));
+            } catch (e) {}
+
+            if (role !== "reply" && window && window.TypechoComment && typeof window.TypechoComment.cancelReply === "function") {
+                try {
+                    window.TypechoComment.cancelReply();
+                } catch (e) {}
+            }
+
+            try {
+                form.scrollIntoView({ behavior: "smooth", block: "center" });
+            } catch (e) {}
+            window.setTimeout(function () {
+                try {
+                    textarea.focus();
+                    var len = (textarea.value || "").length;
+                    textarea.setSelectionRange(len, len);
+                } catch (e) {}
+            }, 80);
+        }
+
+        function submitCommentEdit(form, coid, text, done) {
+            if (commentEditBusy) {
+                return;
+            }
+            var token = getCommentEditToken(form);
+            if (!token) {
+                try {
+                    window.alert("安全令牌缺失，请刷新页面后再试");
+                } catch (e) {}
+                return;
+            }
+
+            var endpoint = getCommentEditEndpoint();
+            var formData = new FormData();
+            formData.append("coid", String(coid));
+            formData.append("text", String(text || ""));
+            formData.append("_", token);
+
+            commentEditBusy = true;
+
+            window.fetch(endpoint, {
+                method: "POST",
+                body: formData,
+                credentials: "same-origin",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            }).then(function (response) {
+                return response.text().then(function (raw) {
+                    var payload = parseCommentEditJson(raw);
+                    if (!response.ok || !payload || !payload.ok) {
+                        var msg = payload && payload.message ? String(payload.message) : extractCommentEditErrorMessage(raw, response);
+                        throw new Error(msg);
+                    }
+                    return payload;
+                });
+            }).then(function () {
+                clearCommentEditState();
+                try {
+                    window.location.hash = "comment-" + String(coid);
+                } catch (e) {}
+                try {
+                    window.location.reload();
+                } catch (e) {}
+            }).catch(function (err) {
+                var msg = err && err.message ? String(err.message) : "评论编辑失败，请重试";
+                try {
+                    window.alert(msg);
+                } catch (e) {}
+            }).finally(function () {
+                commentEditBusy = false;
+                if (typeof done === "function") {
+                    done();
+                }
+            });
+        }
+
+        var identityKey = "hj_comment_identity_" + (location && location.pathname ? location.pathname : "page");
+        var loginFocusTarget = null;
+
+        var privateMarker = "<!--hj-private-->";
+        var fullscreenRootClass = "hj-comment-fullscreen-open";
+        var activeEmojiClose = null;
+
+        (function setupCommentEditButtons() {
+            var buttons = Array.prototype.slice.call(comments.querySelectorAll("[data-hj-comment-edit][data-hj-comment-coid]"));
+            if (!buttons || buttons.length === 0) {
+                return;
+            }
+
+            buttons.forEach(function (btn) {
+                btn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    openCommentEdit(btn);
+                });
+            });
+
+            comments.addEventListener("click", function (e) {
+                var t = e && e.target;
+                if (!t || !t.closest) {
+                    return;
+                }
+                var replyLink = t.closest(".comment-reply a");
+                if (!replyLink) {
+                    return;
+                }
+                window.setTimeout(function () {
+                    clearCommentEditState();
+                }, 0);
+            });
+        })();
+
+        var EMOJIS = [
+            "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙", "😋", "😛", "😜", "🤪", "😝", "🤑",
+            "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢", "🤮", "🤧",
+            "🥵", "🥶", "🥴", "😵", "🤯", "🤠", "🥳", "😎", "🤓", "🧐", "😕", "😟", "🙁", "☹️", "😮", "😯", "😲", "😳", "🥺", "😦", "😧", "😨", "😰", "😥",
+            "😢", "😭", "😱", "😖", "😣", "😞", "😓", "😩", "😫", "🥱", "😤", "😡", "😠", "🤬", "😈", "👿", "💀", "☠️", "💩", "🤡", "👻", "👽", "🤖",
+
+            "👍", "👎", "👌", "🤌", "🤏", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "👇", "☝️", "✋", "🤚", "🖐️", "🖖", "👋", "🤝", "🙏", "👏", "🙌", "💪", "🫶", "🫡",
+
+            "❤️", "🧡", "💛", "💚", "💙", "💜", "🤎", "🖤", "🤍", "💔", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "✨", "🔥", "🌟", "💫", "🎉", "🎊", "💯", "✅", "❌", "⚠️", "❗", "❓", "💡",
+
+            "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🐦", "🐤", "🦆", "🦉", "🦇", "🐺", "🦄",
+            "🐝", "🐛", "🦋", "🐌", "🐞", "🐢", "🐍", "🦖", "🦕", "🐙", "🦑", "🦀", "🐡", "🐠", "🐟", "🐬", "🦈", "🐳", "🐋",
+
+            "🍎", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍒", "🥝", "🍑", "🥭", "🍍", "🥥", "🥑", "🍅", "🥕", "🌽", "🥔", "🍠", "🍞", "🥐", "🥯", "🥖", "🧀",
+            "🥚", "🍳", "🥞", "🧇", "🥓", "🍗", "🍖", "🌭", "🍔", "🍟", "🍕", "🥪", "🥙", "🌮", "🌯", "🍣", "🍱", "🍜", "🍝", "🍛", "🍙", "🍚", "🍘", "🍥", "🥟", "🍤",
+            "🍦", "🍨", "🍰", "🎂", "🍪", "🍩", "🍫", "🍬", "🍭", "☕", "🫖", "🍵", "🥤", "🧋", "🍺", "🍻",
+
+            "⚽", "🏀", "🏈", "⚾", "🎾", "🏐", "🏉", "🥏", "🎱", "🏓", "🏸", "🥊", "🏆", "🥇", "🥈", "🥉",
+
+            "📌", "📍", "🧭", "🗺️", "🚗", "🚕", "🚌", "🚇", "✈️", "🛫", "🛬", "🚀", "🛰️", "🌍", "🌙", "☀️", "⛅", "🌧️", "❄️",
+
+            "📝", "✏️", "🖊️", "📷", "📸", "🎥", "📺", "📱", "💻", "⌨️", "🖥️", "🖨️", "🔋", "🔌", "💾", "💿", "📀", "🎧", "🎵", "🎶",
+
+            "🏠", "🏡", "🏢", "🏪", "🏫", "⛪", "🕌", "🛕", "🕍", "⛩️", "🏯", "🏰"
+        ];
+
+        function trimText(value) {
+            return String(value || "").replace(/\s+/g, " ").trim();
+        }
+
+        function readInputValue(input) {
+            if (!input) {
+                return "";
+            }
+            return trimText(input.value || "");
+        }
+
+        function loadIdentity() {
+            try {
+                var raw = sessionStorage.getItem(identityKey);
+                if (!raw) {
+                    return null;
+                }
+                var parsed = JSON.parse(raw);
+                if (!parsed || typeof parsed !== "object") {
+                    return null;
+                }
+                return {
+                    author: trimText(parsed.author || ""),
+                    url: trimText(parsed.url || ""),
+                    mail: trimText(parsed.mail || "")
+                };
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function saveIdentity(id) {
+            try {
+                sessionStorage.setItem(identityKey, JSON.stringify({
+                    author: trimText(id && id.author ? id.author : ""),
+                    url: trimText(id && id.url ? id.url : ""),
+                    mail: trimText(id && id.mail ? id.mail : "")
+                }));
+            } catch (e) {}
+        }
+
+        function readIdentityFromForms() {
+            if (!forms || forms.length === 0) {
+                return null;
+            }
+            var f = forms[0];
+            if (!f || !f.querySelector) {
+                return null;
+            }
+            var author = readInputValue(f.querySelector("input[name=\"author\"]"));
+            var url = readInputValue(f.querySelector("input[name=\"url\"]"));
+            var mail = readInputValue(f.querySelector("input[name=\"mail\"]"));
+            if (!author && !url && !mail) {
+                return null;
+            }
+            return { author: author, url: url, mail: mail };
+        }
+
+        function applyIdentityToForm(form, id) {
+            if (!form || !id) {
+                return;
+            }
+            var author = form.querySelector("input[name=\"author\"]");
+            var url = form.querySelector("input[name=\"url\"]");
+            var mail = form.querySelector("input[name=\"mail\"]");
+
+            if (author) author.value = id.author || "";
+            if (url) url.value = id.url || "";
+            if (mail) mail.value = id.mail || "";
+        }
+
+        function applyIdentityToAllForms(id) {
+            if (!forms || forms.length === 0 || !id) {
+                return;
+            }
+            forms.forEach(function (f) {
+                applyIdentityToForm(f, id);
+            });
+        }
+
+        function syncModalInputs(id) {
+            if (!modal || !id) {
+                return;
+            }
+            var nameInput = modal.querySelector("#hj-login-name");
+            var urlInput = modal.querySelector("#hj-login-url");
+            var mailInput = modal.querySelector("#hj-login-mail");
+            if (nameInput) nameInput.value = id.author || "";
+            if (urlInput) urlInput.value = id.url || "";
+            if (mailInput) mailInput.value = id.mail || "";
+        }
+
+        // Restore identity into hidden comment fields (so guest comments can submit without extra fields).
+        (function restoreIdentityToForms() {
+            var id = loadIdentity();
+            if (!id) {
+                id = readIdentityFromForms();
+            }
+            if (!id) {
+                return;
+            }
+            applyIdentityToAllForms(id);
+        })();
+
+        function openLogin(saveDraftFn, focusTarget) {
+            if (!modal || !root) {
+                return;
+            }
+            if (typeof saveDraftFn === "function") {
+                saveDraftFn();
+            }
+            loginFocusTarget = focusTarget || null;
+
+            // Ensure modal inputs reflect the last saved identity.
+            var id = loadIdentity();
+            if (!id) {
+                id = readIdentityFromForms();
+            }
+            if (id) {
+                syncModalInputs(id);
+            }
+
+            root.classList.add(loginOpenClass);
+            modal.setAttribute("aria-hidden", "false");
+
+            var nameInput = modal.querySelector("#hj-login-name");
+            if (nameInput) {
+                window.setTimeout(function () {
+                    try {
+                        nameInput.focus();
+                    } catch (e) {}
+                }, 0);
+            } else if (panel) {
+                try {
+                    panel.focus();
+                } catch (e) {}
+            }
+        }
+
+        function closeLogin() {
+            if (!modal || !root) {
+                return;
+            }
+            root.classList.remove(loginOpenClass);
+            modal.setAttribute("aria-hidden", "true");
+
+            if (loginFocusTarget) {
+                var target = loginFocusTarget;
+                loginFocusTarget = null;
+                window.setTimeout(function () {
+                    try {
+                        target.focus();
+                    } catch (e) {}
+                }, 0);
+            }
+        }
+
+        if (backdrop) {
+            backdrop.addEventListener("click", function () {
+                closeLogin();
+            });
+        }
+
+        window.addEventListener("keydown", function (e) {
+            if (!root || !root.classList.contains(loginOpenClass)) {
+                return;
+            }
+            var key = e && (e.key || e.code);
+            if (key === "Escape" || key === "Esc") {
+                closeLogin();
+            }
+        });
+
+        // Header/mobile "login" links: open the same modal instead of navigating to /admin/login.php.
+        (function setupHeaderLoginModalTriggers() {
+            var triggers = document.querySelectorAll("[data-hj-open-login-modal]");
+            if (!triggers || triggers.length === 0) {
+                return;
+            }
+            triggers.forEach(function (el) {
+                el.addEventListener("click", function (e) {
+                    if (!modal) {
+                        return;
+                    }
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    openLogin(null, el);
+                });
+            });
+        })();
+
+        // The "login" modal doubles as the guest identity editor:
+        // - If password is empty: save author/url/mail and close.
+        // - If password is filled: submit to Typecho login action as usual.
+        (function setupLoginIdentityForm() {
+            if (!modal) {
+                return;
+            }
+            var form = modal.querySelector("form");
+            if (!form) {
+                return;
+            }
+
+            var nameInput = modal.querySelector("#hj-login-name");
+            var urlInput = modal.querySelector("#hj-login-url");
+            var mailInput = modal.querySelector("#hj-login-mail");
+            var passInput = modal.querySelector("#hj-login-pass");
+            var submitBtn = form.querySelector(".hj-login-modal-submit");
+
+            function updateSubmitLabel() {
+                if (!submitBtn) {
+                    return;
+                }
+                var password = readInputValue(passInput);
+                var next = password ? "登录" : "保存";
+                // Avoid touching the DOM if nothing changes.
+                if (submitBtn.textContent !== next) {
+                    submitBtn.textContent = next;
+                }
+                submitBtn.setAttribute("aria-label", next);
+                submitBtn.setAttribute("title", next);
+            }
+
+            if (passInput) {
+                passInput.addEventListener("input", updateSubmitLabel);
+                passInput.addEventListener("change", updateSubmitLabel);
+            }
+            // Browser autofill may not trigger input events; set initial state.
+            updateSubmitLabel();
+
+            function focusFirstMissing(id) {
+                if (!id.author && nameInput) {
+                    try { nameInput.focus(); } catch (e) {}
+                    return true;
+                }
+                if (!commentsUserLogged && commentsRequireUrl && !id.url && urlInput) {
+                    try { urlInput.focus(); } catch (e) {}
+                    return true;
+                }
+                if (!commentsUserLogged && commentsRequireMail && !id.mail && mailInput) {
+                    try { mailInput.focus(); } catch (e) {}
+                    return true;
+                }
+                return false;
+            }
+
+            form.addEventListener("submit", function (e) {
+                var password = readInputValue(passInput);
+                if (password) {
+                    return;
+                }
+
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+
+                var id = {
+                    author: readInputValue(nameInput),
+                    url: readInputValue(urlInput),
+                    mail: readInputValue(mailInput)
+                };
+
+                if (focusFirstMissing(id)) {
+                    return;
+                }
+
+                saveIdentity(id);
+                applyIdentityToAllForms(id);
+                if (passInput) {
+                    passInput.value = "";
+                }
+                updateSubmitLabel();
+                closeLogin();
+            });
+        })();
+
+        function cancelReplyIfAny() {
+            if (!window || !window.TypechoComment || typeof window.TypechoComment.cancelReply !== "function") {
+                return;
+            }
+            try {
+                window.TypechoComment.cancelReply();
+            } catch (e) {}
+        }
+
+        function setupComposer(form) {
+            if (!form) {
+                return;
+            }
+
+            var textarea = form.querySelector("textarea[name=\"text\"]");
+            var box = form.querySelector("[data-hj-comment-box]");
+            if (!textarea || !box) {
+                return;
+            }
+
+            var role = form.getAttribute("data-hj-comment-role") || "default";
+            var isTop = role === "top";
+            var isUserLogged = form.getAttribute("data-hj-user-logged") === "1";
+
+            var authorInput = form.querySelector("input[name=\"author\"]");
+            var urlInput = form.querySelector("input[name=\"url\"]");
+            var mailInput = form.querySelector("input[name=\"mail\"]");
+
+            var privateBtn = form.querySelector("[data-hj-comment-private-toggle]");
+            var fullscreenBtn = form.querySelector("[data-hj-comment-fullscreen-toggle]");
+            var loginBtn = form.querySelector("[data-hj-open-login]");
+            var emojiBtn = form.querySelector(".hj-comment-emoji");
+            var attachBtn = form.querySelector(".hj-comment-attach");
+
+            // Auto-grow the composer textarea with content (no manual resize).
+            // Reply form is initially hidden; compute min height lazily on first focus.
+            var minTextareaH = 0;
+            function ensureMinTextareaH() {
+                if (minTextareaH) {
+                    return;
+                }
+                var h = textarea.offsetHeight || 0;
+                if (h) {
+                    minTextareaH = h;
+                }
+            }
+
+            function autoGrowTextarea() {
+                try {
+                    if (box && box.classList && box.classList.contains("is-fullscreen")) {
+                        return;
+                    }
+                    ensureMinTextareaH();
+                    if (minTextareaH) {
+                        textarea.style.height = minTextareaH + "px";
+                    } else {
+                        textarea.style.height = "auto";
+                    }
+
+                    var next = textarea.scrollHeight || 0;
+                    if (minTextareaH && next < minTextareaH) {
+                        next = minTextareaH;
+                    }
+
+                    // Only add a tiny buffer when we actually need to grow, to prevent clipping.
+                    if (minTextareaH && next > minTextareaH) {
+                        next += 2;
+                    }
+
+                    if (next) {
+                        textarea.style.height = next + "px";
+                    }
+                } catch (e) {}
+            }
+
+            var draftKey = "hj_comment_draft_" + role + "_" + (location && location.pathname ? location.pathname : "page");
+            var privateKey = draftKey + "_private";
+
+            function saveDraft() {
+                try {
+                    sessionStorage.setItem(draftKey, textarea.value || "");
+                } catch (e) {}
+
+                if (privateBtn) {
+                    try {
+                        sessionStorage.setItem(privateKey, privateBtn.getAttribute("aria-pressed") === "true" ? "1" : "0");
+                    } catch (e) {}
+                }
+            }
+
+            function setPrivateState(isOn) {
+                if (!privateBtn) {
+                    return;
+                }
+                privateBtn.setAttribute("aria-pressed", isOn ? "true" : "false");
+                box.classList.toggle("is-private", !!isOn);
+                try {
+                    sessionStorage.setItem(privateKey, isOn ? "1" : "0");
+                } catch (e) {}
+            }
+
+            function restoreDraft() {
+                try {
+                    var saved = sessionStorage.getItem(draftKey);
+                    if (saved && !textarea.value) {
+                        textarea.value = saved;
+                    }
+                } catch (e) {}
+
+                if (privateBtn) {
+                    try {
+                        var savedPrivate = sessionStorage.getItem(privateKey);
+                        if (savedPrivate === "1" || savedPrivate === "0") {
+                            setPrivateState(savedPrivate === "1");
+                        }
+                    } catch (e) {}
+                }
+            }
+
+            function clearDraft() {
+                try {
+                    sessionStorage.removeItem(draftKey);
+                } catch (e) {}
+                try {
+                    sessionStorage.removeItem(privateKey);
+                } catch (e) {}
+            }
+
+            var emojiPicker = null;
+            var emojiDocHandlersOn = false;
+
+            function ensureEmojiPicker() {
+                if (emojiPicker) {
+                    return emojiPicker;
+                }
+                if (!document || !box) {
+                    return null;
+                }
+
+                var picker = document.createElement("div");
+                picker.className = "hj-emoji-picker";
+                picker.hidden = true;
+                picker.setAttribute("role", "dialog");
+                picker.setAttribute("aria-label", "表情");
+                picker.setAttribute("data-hj-emoji-picker", "");
+
+                var grid = document.createElement("div");
+                grid.className = "hj-emoji-picker-grid";
+                grid.setAttribute("role", "listbox");
+                grid.setAttribute("aria-label", "表情列表");
+
+                var html = "";
+                for (var i = 0; i < EMOJIS.length; i++) {
+                    var emo = EMOJIS[i];
+                    html += "<button type=\"button\" class=\"hj-emoji-picker-btn\" data-hj-emoji=\"" + emo + "\" aria-label=\"" + emo + "\">" + emo + "</button>";
+                }
+                grid.innerHTML = html;
+                picker.appendChild(grid);
+
+                picker.addEventListener("click", function (e) {
+                    var t = e && e.target;
+                    if (!t || !t.closest) {
+                        return;
+                    }
+                    var btn = t.closest("[data-hj-emoji]");
+                    if (!btn) {
+                        return;
+                    }
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    var emo = btn.getAttribute("data-hj-emoji") || "";
+                    insertEmoji(emo);
+                    closeEmojiPicker();
+                });
+
+                box.appendChild(picker);
+                emojiPicker = picker;
+                return emojiPicker;
+            }
+
+            function insertEmoji(emoji) {
+                if (!emoji) {
+                    return;
+                }
+                try {
+                    textarea.focus();
+                } catch (e) {}
+
+                var start;
+                var end;
+                try {
+                    start = typeof textarea.selectionStart === "number" ? textarea.selectionStart : (textarea.value || "").length;
+                    end = typeof textarea.selectionEnd === "number" ? textarea.selectionEnd : (textarea.value || "").length;
+                } catch (e) {
+                    start = (textarea.value || "").length;
+                    end = start;
+                }
+
+                try {
+                    if (typeof textarea.setRangeText === "function" && typeof start === "number" && typeof end === "number") {
+                        textarea.setRangeText(emoji, start, end, "end");
+                    } else {
+                        var v = textarea.value || "";
+                        var before = v.slice(0, start);
+                        var after = v.slice(end);
+                        textarea.value = before + emoji + after;
+                        var pos = before.length + emoji.length;
+                        textarea.selectionStart = pos;
+                        textarea.selectionEnd = pos;
+                    }
+                } catch (e) {
+                    textarea.value = (textarea.value || "") + emoji;
+                }
+
+                autoGrowTextarea();
+                saveDraft();
+            }
+
+            var attachInput = null;
+            var attachPreview = null;
+            var attachSnippet = "";
+            var attachUploading = false;
+
+            function getCommentUploadEndpoint() {
+                var raw = "";
+                try {
+                    raw = (window && window.location && window.location.href) ? String(window.location.href) : "";
+                } catch (e) {
+                    raw = "";
+                }
+
+                if (!raw) {
+                    return "?hj_comment_upload=1";
+                }
+
+                try {
+                    var u = new URL(raw);
+                    u.searchParams.set("hj_comment_upload", "1");
+                    return u.toString();
+                } catch (e) {
+                    var clean = raw;
+                    var hashPos = clean.indexOf("#");
+                    if (hashPos >= 0) {
+                        clean = clean.slice(0, hashPos);
+                    }
+                    return clean + (clean.indexOf("?") === -1 ? "?" : "&") + "hj_comment_upload=1";
+                }
+            }
+
+            function getCommentUploadToken() {
+                var tokenInput = form.querySelector("input[name=\"_\"]");
+                if (!tokenInput && comments && comments.querySelector) {
+                    tokenInput = comments.querySelector("input[name=\"_\"]");
+                }
+                var token = tokenInput && tokenInput.value ? String(tokenInput.value).trim() : "";
+                return token;
+            }
+
+            function setAttachBusy(isBusy) {
+                attachUploading = !!isBusy;
+                if (!attachBtn) {
+                    return;
+                }
+                attachBtn.disabled = attachUploading;
+                attachBtn.setAttribute("aria-busy", attachUploading ? "true" : "false");
+            }
+
+            function normalizeAttachmentName(name) {
+                var safe = String(name || "附件")
+                    .replace(/[\r\n]+/g, " ")
+                    .replace(/[\[\]\(\)]+/g, " ")
+                    .replace(/\s+/g, " ")
+                    .trim();
+                return safe || "附件";
+            }
+
+            function buildAttachmentSnippet(data) {
+                var url = data && data.url ? String(data.url).trim() : "";
+                if (!url) {
+                    return "";
+                }
+                var name = normalizeAttachmentName(data && data.name ? data.name : "附件");
+                return data && data.isImage ? ("![" + name + "](" + url + ")") : ("[" + name + "](" + url + ")");
+            }
+
+            function insertAttachmentSnippet(snippet) {
+                if (!snippet) {
+                    return "";
+                }
+
+                var value = textarea.value || "";
+                var start;
+                var end;
+                try {
+                    start = typeof textarea.selectionStart === "number" ? textarea.selectionStart : value.length;
+                    end = typeof textarea.selectionEnd === "number" ? textarea.selectionEnd : value.length;
+                } catch (e) {
+                    start = value.length;
+                    end = value.length;
+                }
+
+                var beforeChar = start > 0 ? value.charAt(start - 1) : "";
+                var afterChar = end < value.length ? value.charAt(end) : "";
+                var insertText = snippet;
+                if (beforeChar && beforeChar !== "\n") {
+                    insertText = "\n" + insertText;
+                }
+                if (afterChar && afterChar !== "\n") {
+                    insertText += "\n";
+                }
+
+                try {
+                    textarea.focus();
+                } catch (e) {}
+
+                try {
+                    if (typeof textarea.setRangeText === "function" && typeof start === "number" && typeof end === "number") {
+                        textarea.setRangeText(insertText, start, end, "end");
+                    } else {
+                        var before = value.slice(0, start);
+                        var after = value.slice(end);
+                        textarea.value = before + insertText + after;
+                        var pos = before.length + insertText.length;
+                        textarea.selectionStart = pos;
+                        textarea.selectionEnd = pos;
+                    }
+                } catch (e) {
+                    textarea.value = value + insertText;
+                }
+
+                autoGrowTextarea();
+                saveDraft();
+                return insertText;
+            }
+
+            function removeAttachmentSnippetIfAny() {
+                if (!attachSnippet) {
+                    return;
+                }
+
+                var value = textarea.value || "";
+                var target = attachSnippet;
+                var idx = value.lastIndexOf(target);
+
+                if (idx === -1) {
+                    var trimmed = target.replace(/^\n+|\n+$/g, "");
+                    if (trimmed) {
+                        idx = value.lastIndexOf(trimmed);
+                        target = trimmed;
+                    }
+                }
+
+                if (idx !== -1) {
+                    textarea.value = value.slice(0, idx) + value.slice(idx + target.length);
+                    textarea.value = (textarea.value || "").replace(/\n{3,}/g, "\n\n");
+                    autoGrowTextarea();
+                    saveDraft();
+                }
+
+                attachSnippet = "";
+            }
+
+            function clearAttachmentPreview(removeSnippet) {
+                if (removeSnippet) {
+                    removeAttachmentSnippetIfAny();
+                }
+
+                if (attachPreview && attachPreview.parentNode) {
+                    attachPreview.parentNode.removeChild(attachPreview);
+                }
+                attachPreview = null;
+                box.classList.remove("has-attachment-preview");
+            }
+
+            function getAttachmentFileLabel(data) {
+                var name = data && data.name ? String(data.name) : "";
+                var m = name.match(/\.([A-Za-z0-9]{1,8})$/);
+                if (m && m[1]) {
+                    return m[1].toUpperCase();
+                }
+                return data && data.isImage ? "IMG" : "FILE";
+            }
+
+            function renderAttachmentPreview(data) {
+                clearAttachmentPreview(false);
+
+                if (!document || !box || !data || !data.url) {
+                    return;
+                }
+
+                var preview = document.createElement("div");
+                preview.className = "hj-comment-attachment-preview";
+                preview.setAttribute("data-hj-comment-attachment-preview", "");
+
+                var link = document.createElement("a");
+                link.className = "hj-comment-attachment-preview-link";
+                link.href = String(data.url);
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.setAttribute("aria-label", normalizeAttachmentName(data.name || "附件"));
+
+                if (data.isImage) {
+                    var img = document.createElement("img");
+                    img.className = "hj-comment-attachment-preview-img";
+                    img.src = String(data.url);
+                    img.alt = normalizeAttachmentName(data.name || "附件");
+                    img.loading = "lazy";
+                    link.appendChild(img);
+                } else {
+                    var fileTag = document.createElement("span");
+                    fileTag.className = "hj-comment-attachment-preview-file";
+                    fileTag.textContent = getAttachmentFileLabel(data);
+                    link.appendChild(fileTag);
+                }
+
+                var removeBtn = document.createElement("button");
+                removeBtn.type = "button";
+                removeBtn.className = "hj-comment-attachment-preview-remove";
+                removeBtn.setAttribute("aria-label", "删除附件");
+                removeBtn.textContent = "×";
+                removeBtn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    if (e && e.stopPropagation) {
+                        e.stopPropagation();
+                    }
+                    clearAttachmentPreview(true);
+                });
+
+                preview.appendChild(link);
+                preview.appendChild(removeBtn);
+                box.appendChild(preview);
+
+                attachPreview = preview;
+                box.classList.add("has-attachment-preview");
+            }
+
+            function ensureAttachInput() {
+                if (attachInput) {
+                    return attachInput;
+                }
+                if (!document || !form) {
+                    return null;
+                }
+
+                var input = document.createElement("input");
+                input.type = "file";
+                input.hidden = true;
+                input.tabIndex = -1;
+                input.setAttribute("aria-hidden", "true");
+                input.accept = "image/*,.pdf,.txt,.md,.zip,.rar,.7z,.tar,.gz,.mp3,.wav,.ogg,.mp4,.webm,.mov";
+                input.addEventListener("change", function () {
+                    var file = input.files && input.files[0] ? input.files[0] : null;
+                    if (!file) {
+                        return;
+                    }
+                    uploadAttachment(file);
+                });
+
+                form.appendChild(input);
+                attachInput = input;
+                return attachInput;
+            }
+
+            function parseUploadJson(text) {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function uploadAttachment(file) {
+                if (!file || attachUploading || !window.fetch || !window.FormData) {
+                    return;
+                }
+
+                var token = getCommentUploadToken();
+                if (!token) {
+                    try {
+                        window.alert("安全令牌缺失，请刷新页面后再试");
+                    } catch (e) {}
+                    return;
+                }
+
+                var endpoint = getCommentUploadEndpoint();
+                var formData = new FormData();
+                formData.append("file", file);
+                formData.append("_", token);
+
+                setAttachBusy(true);
+
+                window.fetch(endpoint, {
+                    method: "POST",
+                    body: formData,
+                    credentials: "same-origin",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                }).then(function (response) {
+                    return response.text().then(function (text) {
+                        var payload = parseUploadJson(text);
+                        if (!response.ok || !payload || !payload.ok) {
+                            var errMsg = payload && payload.message ? String(payload.message) : "附件上传失败，请重试";
+                            throw new Error(errMsg);
+                        }
+                        return payload;
+                    });
+                }).then(function (payload) {
+                    clearAttachmentPreview(true);
+                    var snippet = buildAttachmentSnippet(payload);
+                    if (!snippet) {
+                        throw new Error("附件地址无效");
+                    }
+                    attachSnippet = insertAttachmentSnippet(snippet);
+                    renderAttachmentPreview(payload);
+                }).catch(function (err) {
+                    var msg = err && err.message ? String(err.message) : "附件上传失败，请重试";
+                    try {
+                        window.alert(msg);
+                    } catch (e) {}
+                }).finally(function () {
+                    if (attachInput) {
+                        attachInput.value = "";
+                    }
+                    setAttachBusy(false);
+                });
+            }
+
+            function onEmojiDocMouseDown(e) {
+                var t = e && e.target;
+                if (!t) {
+                    return;
+                }
+                if (emojiBtn && (t === emojiBtn || (emojiBtn.contains && emojiBtn.contains(t)))) {
+                    return;
+                }
+                if (emojiPicker && (t === emojiPicker || (emojiPicker.contains && emojiPicker.contains(t)))) {
+                    return;
+                }
+                closeEmojiPicker();
+            }
+
+            function onEmojiDocKeyDown(e) {
+                var key = e && (e.key || e.code);
+                if (key === "Escape" || key === "Esc") {
+                    closeEmojiPicker();
+                }
+            }
+
+            function setEmojiPickerOpen(isOn) {
+                if (!emojiBtn) {
+                    return;
+                }
+                var picker = ensureEmojiPicker();
+                if (!picker) {
+                    return;
+                }
+
+                var currentlyOpen = !picker.hidden;
+                if (!!isOn === currentlyOpen) {
+                    return;
+                }
+
+                if (isOn && typeof activeEmojiClose === "function" && activeEmojiClose !== closeEmojiPicker) {
+                    try {
+                        activeEmojiClose();
+                    } catch (e) {}
+                }
+
+                picker.hidden = !isOn;
+                box.classList.toggle("is-emoji-open", !!isOn);
+                emojiBtn.setAttribute("aria-expanded", isOn ? "true" : "false");
+
+                if (isOn) {
+                    activeEmojiClose = closeEmojiPicker;
+                    if (!emojiDocHandlersOn) {
+                        emojiDocHandlersOn = true;
+                        document.addEventListener("mousedown", onEmojiDocMouseDown, true);
+                        window.addEventListener("keydown", onEmojiDocKeyDown, true);
+                    }
+                } else {
+                    if (activeEmojiClose === closeEmojiPicker) {
+                        activeEmojiClose = null;
+                    }
+                    if (emojiDocHandlersOn) {
+                        emojiDocHandlersOn = false;
+                        document.removeEventListener("mousedown", onEmojiDocMouseDown, true);
+                        window.removeEventListener("keydown", onEmojiDocKeyDown, true);
+                    }
+                }
+            }
+
+            function closeEmojiPicker() {
+                setEmojiPickerOpen(false);
+            }
+
+            if (loginBtn) {
+                loginBtn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    openLogin(saveDraft, textarea);
+                });
+            }
+
+            if (emojiBtn) {
+                emojiBtn.setAttribute("aria-haspopup", "dialog");
+                emojiBtn.setAttribute("aria-expanded", "false");
+                emojiBtn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    var picker = ensureEmojiPicker();
+                    var isOn = picker && !picker.hidden;
+                    setEmojiPickerOpen(!isOn);
+                });
+            }
+
+            if (attachBtn) {
+                attachBtn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    if (!window.fetch || !window.FormData) {
+                        try {
+                            window.alert("当前浏览器不支持附件上传");
+                        } catch (err) {}
+                        return;
+                    }
+                    var input = ensureAttachInput();
+                    if (!input) {
+                        return;
+                    }
+                    try {
+                        input.click();
+                    } catch (err) {}
+                });
+            }
+
+            if (privateBtn) {
+                privateBtn.addEventListener("click", function () {
+                    var isOn = privateBtn.getAttribute("aria-pressed") === "true";
+                    setPrivateState(!isOn);
+                });
+            }
+
+            function setFullscreenState(isOn) {
+                if (!fullscreenBtn || !box || !root) {
+                    return;
+                }
+                fullscreenBtn.setAttribute("aria-pressed", isOn ? "true" : "false");
+                fullscreenBtn.setAttribute("aria-label", isOn ? "收起全屏" : "展开全屏");
+                fullscreenBtn.setAttribute("title", isOn ? "收起全屏" : "展开全屏");
+
+                box.classList.toggle("is-fullscreen", !!isOn);
+                root.classList.toggle(fullscreenRootClass, !!isOn);
+
+                if (isOn) {
+                    textarea.style.height = "";
+                    try {
+                        textarea.focus();
+                    } catch (e) {}
+                } else {
+                    autoGrowTextarea();
+                }
+            }
+
+            if (fullscreenBtn) {
+                fullscreenBtn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    var isOn = fullscreenBtn.getAttribute("aria-pressed") === "true";
+                    setFullscreenState(!isOn);
+                });
+            }
+
+            restoreDraft();
+
+            textarea.addEventListener("focus", function () {
+                // Reply form might be hidden on load; re-measure once visible.
+                ensureMinTextareaH();
+                autoGrowTextarea();
+
+                if (isTop) {
+                    cancelReplyIfAny();
+                }
+            });
+
+            textarea.addEventListener("input", function () {
+                autoGrowTextarea();
+                saveDraft();
+            });
+
+            autoGrowTextarea();
+
+            form.addEventListener("submit", function (e) {
+                var isPrivate = privateBtn && privateBtn.getAttribute("aria-pressed") === "true";
+                var editCoid = parseInt(form.getAttribute("data-hj-comment-edit-coid") || "0", 10);
+                if (isFinite(editCoid) && editCoid > 0) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    var editText = textarea.value || "";
+                    if (isPrivate) {
+                        var editTrimmed = editText.replace(/^\s+/, "");
+                        if (editTrimmed.indexOf(privateMarker) !== 0) {
+                            editText = privateMarker + "\n" + editText;
+                        }
+                    }
+                    clearDraft();
+                    submitCommentEdit(form, editCoid, editText);
+                    return;
+                }
+
+                if (!isUserLogged) {
+                    var author = readInputValue(authorInput);
+                    var url = readInputValue(urlInput);
+                    var mail = readInputValue(mailInput);
+                    if (!author || (commentsRequireUrl && !url) || (commentsRequireMail && !mail)) {
+                        if (e && e.preventDefault) {
+                            e.preventDefault();
+                        }
+                        openLogin(saveDraft, textarea);
+                        return;
+                    }
+                }
+
+                if (isPrivate) {
+                    var value = textarea.value || "";
+                    var trimmed = value.replace(/^\s+/, "");
+                    if (trimmed.indexOf(privateMarker) !== 0) {
+                        textarea.value = privateMarker + "\n" + value;
+                    }
+                }
+
+                clearDraft();
+            });
+        }
+
+        forms.forEach(function (f) {
+            setupComposer(f);
+        });
+    })();
+
+/* block 11 */
+(function () {
+        var blocks = document.querySelectorAll(".hj-links-apply");
+        if (!blocks || blocks.length === 0) {
+            return;
+        }
+
+        function setup(block) {
+            if (!block || !block.querySelector) {
+                return;
+            }
+
+            var stepCheck = block.querySelector(".hj-links-step-check");
+            var stepForm = block.querySelector(".hj-links-step-form");
+            if (!stepCheck || !stepForm) {
+                return;
+            }
+
+            var cbs = Array.prototype.slice.call(stepCheck.querySelectorAll(".hj-links-check-input"));
+            if (!cbs || cbs.length === 0) {
+                return;
+            }
+
+            function allChecked() {
+                for (var i = 0; i < cbs.length; i++) {
+                    if (!cbs[i] || !cbs[i].checked) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            function setFormEnabled(enabled) {
+                var form = stepForm.querySelector("form");
+                if (!form) {
+                    return;
+                }
+                var controls = form.querySelectorAll("input, select, textarea, button");
+                for (var i = 0; i < controls.length; i++) {
+                    var el = controls[i];
+                    if (!el) {
+                        continue;
+                    }
+                    if (el.tagName === "INPUT" && String(el.type || "").toLowerCase() === "hidden") {
+                        continue;
+                    }
+                    try {
+                        el.disabled = !enabled;
+                    } catch (e) {}
+                }
+            }
+
+            function sync() {
+                var ok = allChecked();
+                stepForm.hidden = !ok;
+                stepForm.setAttribute("aria-hidden", ok ? "false" : "true");
+                if (btn) {
+                    try {
+                        btn.disabled = !!ok;
+                        btn.setAttribute("aria-disabled", ok ? "true" : "false");
+                    } catch (e) {}
+                }
+                setFormEnabled(ok);
+            }
+
+            var btn = stepCheck.querySelector("[data-hj-links-confirm]");
+            if (btn && btn.addEventListener) {
+                btn.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    for (var i = 0; i < cbs.length; i++) {
+                        try {
+                            cbs[i].checked = true;
+                        } catch (err) {}
+                    }
+                    sync();
+                });
+            }
+
+            cbs.forEach(function (cb) {
+                if (!cb || !cb.addEventListener) {
+                    return;
+                }
+                cb.addEventListener("change", sync);
+            });
+
+            sync();
+        }
+
+        Array.prototype.slice.call(blocks).forEach(setup);
+    })();

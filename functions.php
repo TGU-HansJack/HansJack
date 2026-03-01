@@ -1642,7 +1642,7 @@ function hansJackRenderFeedHtmlFromXml(string $xml): string
     $theme = trim((string) ($options->theme ?? ''));
     $themeStyleHref = '';
     if ($theme !== '') {
-        $themeStyleHref = (string) $options->themeUrl('style.css', $theme);
+        $themeStyleHref = hansJackAssetUrl($options, 'style.css', $theme);
     }
     $themeStyleTag = '';
     if ($themeStyleHref !== '') {
@@ -2600,6 +2600,46 @@ function hansJackResolveLink(Options $options, string $value, string $fallbackPa
     }
 
     return Common::url(ltrim($value, '/'), $options->siteUrl);
+}
+
+function hansJackAssetUrl(Options $options, string $assetPath, string $theme = ''): string
+{
+    $assetPath = ltrim(str_replace('\\', '/', trim($assetPath)), '/');
+    if ($assetPath === '') {
+        return '';
+    }
+
+    $themeName = trim($theme);
+    if ($themeName === '') {
+        $themeName = trim((string) ($options->theme ?? ''));
+    }
+
+    if ($themeName !== '') {
+        $url = (string) $options->themeUrl($assetPath, $themeName);
+    } else {
+        $url = (string) $options->themeUrl($assetPath);
+    }
+    if ($url === '') {
+        return '';
+    }
+
+    static $mtimeCache = [];
+    $cacheKey = $themeName . '|' . $assetPath;
+    if (!array_key_exists($cacheKey, $mtimeCache)) {
+        $root = rtrim(str_replace('\\', '/', (string) __TYPECHO_ROOT_DIR__), '/');
+        $fullPath = $root . '/usr/themes/' . $themeName . '/' . $assetPath;
+        $mtimeCache[$cacheKey] = (is_file($fullPath) && is_readable($fullPath))
+            ? (string) ((int) @filemtime($fullPath))
+            : '';
+    }
+
+    $version = (string) $mtimeCache[$cacheKey];
+    if ($version === '' || $version === '0') {
+        return $url;
+    }
+
+    $separator = (strpos($url, '?') === false) ? '?' : '&';
+    return $url . $separator . 'v=' . rawurlencode($version);
 }
 
 function hansJackNormalizeAssetUrl(Options $options, string $value): string

@@ -42,6 +42,17 @@ if ($hjNeedsContentEnhance) {
     }
 }
 
+$hjNeedsSerifFontAssets = false;
+try {
+    $hjNeedsSerifFontAssets = $this->is('post') || $this->is('page');
+} catch (\Throwable $e) {
+    $hjNeedsSerifFontAssets = false;
+}
+
+$hjThemeStyleHref = hansJackAssetUrl($this->options, 'style.css');
+$hjSerifFontCssHref = hansJackAssetUrl($this->options, 'assets/fonts/SourceHanSerifCN/result.css');
+$hjKatexCssHref = hansJackAssetUrl($this->options, 'assets/vendor/katex/katex.min.css');
+
 $hjCustomCss = trim((string) ($this->options->hjCustomCss ?? ''));
 if ($hjCustomCss !== '') {
     $hjCustomCss = str_ireplace('</style>', '<\/style>', $hjCustomCss);
@@ -218,10 +229,13 @@ if ($hjCustomCss !== '') {
         </noscript>
     <?php endif; ?>
     <?php if ($hjNeedsKatexAssets): ?>
-        <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/vendor/katex/katex.min.css'); ?>">
+        <link rel="stylesheet" href="<?php echo hansJackEscape($hjKatexCssHref); ?>">
     <?php endif; ?>
-    <link rel="stylesheet" href="<?php $this->options->themeUrl('assets/fonts/SourceHanSerifCN/result.css'); ?>">
-    <link rel="stylesheet" href="<?php $this->options->themeUrl('style.css'); ?>">
+    <?php if ($hjNeedsSerifFontAssets): ?>
+        <link rel="preload" as="style" href="<?php echo hansJackEscape($hjSerifFontCssHref); ?>" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="<?php echo hansJackEscape($hjSerifFontCssHref); ?>"></noscript>
+    <?php endif; ?>
+    <link rel="stylesheet" href="<?php echo hansJackEscape($hjThemeStyleHref); ?>">
     <?php $this->header(); ?>
     <?php if ($hjCustomCss !== ''): ?>
     <style id="hj-custom-css">
