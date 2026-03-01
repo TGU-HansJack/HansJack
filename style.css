@@ -7547,6 +7547,15 @@ html.hj-login-modal-open .hj-login-modal {
         max-height: min(68vh, 560px);
     }
 
+    /* Embedded scene is not fullscreen app shell, so reset safe-area offsets. */
+    :is(.hj-article-content, .hj-comment-content) .hj-excalidraw-editor .excalidraw.excalidraw--mobile {
+        --sat: 0px;
+        --sal: 0px;
+        --sar: 0px;
+        --sab: 0px;
+        --editor-container-padding: 0.5rem;
+    }
+
     /* Force desktop-style footer on narrow screens in preview mode. */
     :is(.hj-article-content, .hj-comment-content) .hj-excalidraw-editor .excalidraw.excalidraw--mobile .App-bottom-bar,
     :is(.hj-article-content, .hj-comment-content) .hj-excalidraw-editor .excalidraw.excalidraw--mobile footer.App-toolbar {
