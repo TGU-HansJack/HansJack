@@ -1,0 +1,12 @@
+SourceFont=E:\typecho1.3\SourceHanSerifCN.ttf
+CoreCharset=E:\typecho1.3\blog\usr\themes\HansJack\assets\fonts\SourceHanSerifCN\subset-800\charset-core.txt
+AllCharset=E:\typecho1.3\blog\usr\themes\HansJack\assets\fonts\SourceHanSerifCN\subset\charset-all-cjk.txt
+FallbackCharset=E:\typecho1.3\blog\usr\themes\HansJack\assets\fonts\SourceHanSerifCN\subset-800\charset-fallback.txt
+CoreChars=920
+FallbackChars=468
+CoreWoff2=E:\typecho1.3\blog\usr\themes\HansJack\assets\fonts\SourceHanSerifCN\subset-800\core.woff2
+CoreWoff2Bytes=346728
+FallbackWoff2=E:\typecho1.3\blog\usr\themes\HansJack\assets\fonts\SourceHanSerifCN\subset-800\fallback.woff2
+FallbackWoff2Bytes=184216
+TotalSubsetBytes=530944
+SubsetCss=E:\typecho1.3\blog\usr\themes\HansJack\assets\fonts\SourceHanSerifCN\subset-800\subset-font.css

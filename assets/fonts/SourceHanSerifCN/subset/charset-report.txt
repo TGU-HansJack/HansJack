@@ -1,0 +1,10 @@
+﻿InputFile=E:\typecho1.3\20260302_052612_www.hansjack.com_131a64d1.dat
+DetectedEncoding=UTF-8
+FileBytes=150453
+TotalCjkChars=15516
+UniqueCjkChars=1268
+TopChars=1268
+TopCoveragePercent=100
+OutputCharsetCore=E:\typecho1.3\blog\usr\themes\HansJack\assets\fonts\SourceHanSerifCN\subset\charset-core.txt
+OutputCharsetAll=E:\typecho1.3\blog\usr\themes\HansJack\assets\fonts\SourceHanSerifCN\subset\charset-all-cjk.txt
+OutputFrequencyCsv=E:\typecho1.3\blog\usr\themes\HansJack\assets\fonts\SourceHanSerifCN\subset\char-frequency.csv

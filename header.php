@@ -4,6 +4,7 @@
 <?php
 $themeConfig = hansJackBuildThemeConfig($this->options);
 $hjSerifFontEnabled = hansJackSerifFontEnabled($this->options);
+$hjSubsetFontEnabled = hansJackSubsetFontEnabled($this->options);
 
 // Read persisted theme choice early (cookie), so the initial HTML can render without a light flash in dark mode.
 $hjThemeCookie = '';
@@ -50,7 +51,10 @@ if ($hjSerifFontEnabled) {
 }
 
 $hjThemeStyleHref = hansJackAssetUrl($this->options, 'style.css');
-$hjSerifFontCssHref = hansJackAssetUrl($this->options, 'assets/fonts/SourceHanSerifCN/result.css');
+$hjSerifFontCssAsset = $hjSubsetFontEnabled
+    ? 'assets/fonts/SourceHanSerifCN/subset-800/subset-font.css'
+    : 'assets/fonts/SourceHanSerifCN/result.css';
+$hjSerifFontCssHref = hansJackAssetUrl($this->options, $hjSerifFontCssAsset);
 $hjKatexCssHref = hansJackAssetUrl($this->options, 'assets/vendor/katex/katex.min.css');
 
 $hjCustomCss = trim((string) ($this->options->hjCustomCss ?? ''));

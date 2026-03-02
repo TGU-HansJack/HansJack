@@ -68,6 +68,18 @@ function themeConfig($form)
     );
     $form->addInput($serifFontEnabled);
 
+    $subsetFontEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'hjSubsetFontEnabled',
+        [
+            '1' => _t('开启'),
+            '0' => _t('关闭'),
+        ],
+        '1',
+        _t('启用子集字体'),
+        _t('开启时优先加载子集字体（core/fallback）；关闭时回退为旧版 result.css 字体。')
+    );
+    $form->addInput($subsetFontEnabled);
+
     $githubOauthEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
         'hjGithubOauthEnabled',
         [
@@ -1750,6 +1762,12 @@ function hansJackLandingHitokotoEnabled(Options $options): bool
 function hansJackSerifFontEnabled(Options $options): bool
 {
     $raw = strtolower(trim((string) ($options->hjSerifFontEnabled ?? '1')));
+    return in_array($raw, ['1', 'on', 'true', 'yes'], true);
+}
+
+function hansJackSubsetFontEnabled(Options $options): bool
+{
+    $raw = strtolower(trim((string) ($options->hjSubsetFontEnabled ?? '1')));
     return in_array($raw, ['1', 'on', 'true', 'yes'], true);
 }
 
