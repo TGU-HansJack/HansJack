@@ -486,6 +486,21 @@ if ($hjCustomJavaScript !== '') {
                 return;
             }
 
+            for (var t = 0; t < targets.length; t++) {
+                var targetCode = targets[t];
+                if (!targetCode || !targetCode.closest) {
+                    continue;
+                }
+                var targetPre = targetCode.closest("pre");
+                if (!targetPre || !targetPre.classList) {
+                    continue;
+                }
+                try {
+                    targetPre.classList.add("hj-excalidraw-pending");
+                    targetPre.setAttribute("data-hj-excalidraw-pending", "1");
+                } catch (e) {}
+            }
+
             function parseScene(rawText) {
                 var text = String(rawText || "").replace(/^\uFEFF/, "").trim();
                 if (!text) {
@@ -533,6 +548,8 @@ if ($hjCustomJavaScript !== '') {
                     return;
                 }
                 try {
+                    preEl.classList.remove("hj-excalidraw-pending");
+                    preEl.removeAttribute("data-hj-excalidraw-pending");
                     preEl.classList.add("hj-excalidraw-unavailable");
                     if (reason) {
                         preEl.setAttribute("data-hj-excalidraw-error", reason);
@@ -629,7 +646,7 @@ if ($hjCustomJavaScript !== '') {
                 figure.style.width = "100%";
                 figure.style.maxWidth = "100%";
                 figure.style.boxSizing = "border-box";
-                figure.style.border = "1px solid #000";
+                figure.style.border = "1px solid #d9d9d9";
                 figure.style.borderRadius = "4px";
                 figure.style.background = "transparent";
                 figure.style.overflow = "hidden";

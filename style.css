@@ -7522,13 +7522,28 @@ html.hj-login-modal-open .hj-login-modal {
     }
 }
 
+:is(.hj-article-content, .hj-comment-content) pre > code.language-excalidraw,
+:is(.hj-article-content, .hj-comment-content) pre > code.lang-excalidraw,
+:is(.hj-article-content, .hj-comment-content) pre > code[data-language="excalidraw" i],
+:is(.hj-article-content, .hj-comment-content) pre > code[data-lang="excalidraw" i] {
+    visibility: hidden;
+}
+
+:is(.hj-article-content, .hj-comment-content) pre:has(> code.language-excalidraw),
+:is(.hj-article-content, .hj-comment-content) pre:has(> code.lang-excalidraw),
+:is(.hj-article-content, .hj-comment-content) pre:has(> code[data-language="excalidraw" i]),
+:is(.hj-article-content, .hj-comment-content) pre:has(> code[data-lang="excalidraw" i]),
+:is(.hj-article-content, .hj-comment-content) pre.hj-excalidraw-pending {
+    display: none;
+}
+
 :is(.hj-article-content, .hj-comment-content) .hj-excalidraw-block {
     display: block;
     margin: 1rem 0;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    border: 1px solid #000;
+    border: 1px solid #d9d9d9;
     border-radius: 4px;
     background: transparent;
     overflow: hidden;
@@ -7590,7 +7605,12 @@ html.hj-login-modal-open .hj-login-modal {
 }
 
 :is(.hj-article-content, .hj-comment-content) pre.hj-excalidraw-unavailable {
+    display: block !important;
     border: 1px dashed var(--hj-line-day);
+}
+
+:is(.hj-article-content, .hj-comment-content) pre.hj-excalidraw-unavailable > code {
+    visibility: visible;
 }
 
 .page-navigator {
