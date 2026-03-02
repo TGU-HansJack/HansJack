@@ -3,6 +3,7 @@
 } ?>
 <?php
 $themeConfig = hansJackBuildThemeConfig($this->options);
+$hjSerifFontEnabled = hansJackSerifFontEnabled($this->options);
 
 // Read persisted theme choice early (cookie), so the initial HTML can render without a light flash in dark mode.
 $hjThemeCookie = '';
@@ -40,10 +41,12 @@ if ($hjNeedsContentEnhance) {
 }
 
 $hjNeedsSerifFontAssets = false;
-try {
-    $hjNeedsSerifFontAssets = $this->is('post') || $this->is('page');
-} catch (\Throwable $e) {
-    $hjNeedsSerifFontAssets = false;
+if ($hjSerifFontEnabled) {
+    try {
+        $hjNeedsSerifFontAssets = $this->is('post') || $this->is('page');
+    } catch (\Throwable $e) {
+        $hjNeedsSerifFontAssets = false;
+    }
 }
 
 $hjThemeStyleHref = hansJackAssetUrl($this->options, 'style.css');
@@ -221,6 +224,14 @@ if ($hjCustomCss !== '') {
         <noscript><link rel="stylesheet" href="<?php echo hansJackEscape($hjSerifFontCssHref); ?>"></noscript>
     <?php endif; ?>
     <link rel="stylesheet" href="<?php echo hansJackEscape($hjThemeStyleHref); ?>">
+    <?php if (!$hjSerifFontEnabled): ?>
+    <style id="hj-font-fallback-style">
+        :root {
+            --hj-font-main: unset;
+            --hj-font-ui: unset;
+        }
+    </style>
+    <?php endif; ?>
     <?php $this->header(); ?>
     <?php if ($hjCustomCss !== ''): ?>
     <style id="hj-custom-css">

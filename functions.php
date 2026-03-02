@@ -56,6 +56,18 @@ function themeConfig($form)
     );
     $form->addInput($landingHitokotoEnabled);
 
+    $serifFontEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'hjSerifFontEnabled',
+        [
+            '1' => _t('开启'),
+            '0' => _t('关闭'),
+        ],
+        '1',
+        _t('内置字体文件'),
+        _t('开启时在文章和独立页面按需加载内置字体文件；关闭后不加载字体文件并改用浏览器默认字体。')
+    );
+    $form->addInput($serifFontEnabled);
+
     $githubOauthEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
         'hjGithubOauthEnabled',
         [
@@ -1732,6 +1744,12 @@ function hansJackGithubOauthEnabled(Options $options): bool
 function hansJackLandingHitokotoEnabled(Options $options): bool
 {
     $raw = strtolower(trim((string) ($options->hjLandingHitokotoEnabled ?? '1')));
+    return in_array($raw, ['1', 'on', 'true', 'yes'], true);
+}
+
+function hansJackSerifFontEnabled(Options $options): bool
+{
+    $raw = strtolower(trim((string) ($options->hjSerifFontEnabled ?? '1')));
     return in_array($raw, ['1', 'on', 'true', 'yes'], true);
 }
 
