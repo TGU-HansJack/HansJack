@@ -9,7 +9,8 @@ param(
     [string]$AllCharsetFile,
 
     [string]$OutputDir = "",
-    [string]$PythonCommand = "python"
+    [string]$PythonCommand = "python",
+    [int]$InstanceWeight = 400
 )
 
 Set-StrictMode -Version Latest
@@ -28,6 +29,112 @@ function Resolve-ExistingPath {
     return (Resolve-Path -LiteralPath $Path).Path
 }
 
+function Is-CjkCodePoint {
+    param(
+        [int]$CodePoint
+    )
+
+    return (
+        ($CodePoint -ge 0x3400 -and $CodePoint -le 0x4DBF) -or
+        ($CodePoint -ge 0x4E00 -and $CodePoint -le 0x9FFF) -or
+        ($CodePoint -ge 0xF900 -and $CodePoint -le 0xFAFF)
+    )
+}
+
+function Get-UniqueChars {
+    param(
+        [string]$Text
+    )
+
+    $set = New-Object "System.Collections.Generic.HashSet[string]"
+    $ordered = New-Object "System.Collections.Generic.List[string]"
+
+    foreach ($ch in $Text.ToCharArray()) {
+        $s = [string]$ch
+        if ($set.Add($s)) {
+            $ordered.Add($s)
+        }
+    }
+
+    return ,$ordered.ToArray()
+}
+
+function Convert-CharsToUnicodeRange {
+    param(
+        [string[]]$Chars
+    )
+
+    if (-not $Chars -or $Chars.Count -eq 0) {
+        return ""
+    }
+
+    $codeSet = New-Object "System.Collections.Generic.HashSet[int]"
+    foreach ($ch in $Chars) {
+        if ([string]::IsNullOrEmpty($ch)) {
+            continue
+        }
+        [void]$codeSet.Add([int][char]$ch)
+    }
+
+    if ($codeSet.Count -eq 0) {
+        return ""
+    }
+
+    $codes = @($codeSet) | Sort-Object
+    $ranges = New-Object "System.Collections.Generic.List[string]"
+
+    $start = $codes[0]
+    $prev = $codes[0]
+
+    for ($i = 1; $i -lt $codes.Count; $i++) {
+        $curr = [int]$codes[$i]
+        if ($curr -eq ($prev + 1)) {
+            $prev = $curr
+            continue
+        }
+
+        if ($start -eq $prev) {
+            $ranges.Add(("U+{0}" -f $start.ToString("X")))
+        } else {
+            $ranges.Add(("U+{0}-{1}" -f @($start.ToString("X"), $prev.ToString("X"))))
+        }
+
+        $start = $curr
+        $prev = $curr
+    }
+
+    if ($start -eq $prev) {
+        $ranges.Add(("U+{0}" -f $start.ToString("X")))
+    } else {
+        $ranges.Add(("U+{0}-{1}" -f @($start.ToString("X"), $prev.ToString("X"))))
+    }
+
+    return ($ranges -join ",")
+}
+
+function Invoke-FontSubset {
+    param(
+        [string]$PythonCommand,
+        [string]$SourceFontPath,
+        [string]$OutputFilePath,
+        [string]$TextFilePath,
+        [string[]]$CommonArgs
+    )
+
+    $args = @(
+        "-m",
+        "fontTools.subset",
+        $SourceFontPath,
+        "--output-file=$OutputFilePath",
+        "--text-file=$TextFilePath"
+    ) + $CommonArgs
+
+    & $PythonCommand @args
+    if ($LASTEXITCODE -ne 0) {
+        throw "Subset build failed ($OutputFilePath) with exit code $LASTEXITCODE"
+    }
+}
+
 $sourceFontPath = Resolve-ExistingPath -Path $SourceFont
 $coreCharsetPath = Resolve-ExistingPath -Path $CoreCharsetFile
 $allCharsetPath = Resolve-ExistingPath -Path $AllCharsetFile
@@ -44,6 +151,53 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 $coreText = [System.IO.File]::ReadAllText($coreCharsetPath, $utf8)
 $allText = [System.IO.File]::ReadAllText($allCharsetPath, $utf8)
+
+$subsetSourceFontPath = $sourceFontPath
+$fontWeightDescriptor = "250 900"
+$instanceFontPath = ""
+if ($InstanceWeight -gt 0) {
+    $instanceFontPath = Join-Path $outputDirFull ("source-wght-{0}.ttf" -f $InstanceWeight)
+    $instanceArgs = @(
+        "-m",
+        "fontTools.varLib.instancer",
+        $sourceFontPath,
+        ("wght={0}" -f $InstanceWeight),
+        "--output",
+        $instanceFontPath
+    )
+    & $PythonCommand @instanceArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Font instancer failed with exit code $LASTEXITCODE"
+    }
+    if (-not (Test-Path -LiteralPath $instanceFontPath)) {
+        throw "Instanced font not found: $instanceFontPath"
+    }
+    $subsetSourceFontPath = $instanceFontPath
+    $fontWeightDescriptor = [string]$InstanceWeight
+}
+
+$coreUniqueChars = Get-UniqueChars -Text $coreText
+$coreCjkChars = New-Object "System.Collections.Generic.List[string]"
+$coreMiscChars = New-Object "System.Collections.Generic.List[string]"
+foreach ($ch in $coreUniqueChars) {
+    if ([string]::IsNullOrEmpty($ch)) {
+        continue
+    }
+    $cp = [int][char]$ch
+    if (Is-CjkCodePoint -CodePoint $cp) {
+        $coreCjkChars.Add($ch)
+    } else {
+        $coreMiscChars.Add($ch)
+    }
+}
+
+$coreCjkText = $coreCjkChars -join ""
+$coreMiscText = $coreMiscChars -join ""
+
+$coreCjkCharsetPath = Join-Path $outputDirFull "charset-core-cjk.txt"
+$coreMiscCharsetPath = Join-Path $outputDirFull "charset-core-misc.txt"
+[System.IO.File]::WriteAllText($coreCjkCharsetPath, $coreCjkText, $utf8NoBom)
+[System.IO.File]::WriteAllText($coreMiscCharsetPath, $coreMiscText, $utf8NoBom)
 
 $coreSet = New-Object "System.Collections.Generic.HashSet[string]"
 foreach ($ch in $coreText.ToCharArray()) {
@@ -76,77 +230,118 @@ $commonSubsetArgs = @(
     "--no-hinting"
 )
 
-$coreWoff2Path = Join-Path $outputDirFull "core.woff2"
+$coreCjkWoff2Path = Join-Path $outputDirFull "core-cjk.woff2"
+$coreMiscWoff2Path = Join-Path $outputDirFull "core-misc.woff2"
 $fallbackWoff2Path = Join-Path $outputDirFull "fallback.woff2"
 
-$coreArgs = @(
-    "-m",
-    "fontTools.subset",
-    $sourceFontPath,
-    "--output-file=$coreWoff2Path",
-    "--text-file=$coreCharsetPath"
-) + $commonSubsetArgs
-
-& $PythonCommand @coreArgs
-if ($LASTEXITCODE -ne 0) {
-    throw "Core subset build failed with exit code $LASTEXITCODE"
+if ($coreCjkChars.Count -gt 0) {
+    Invoke-FontSubset `
+        -PythonCommand $PythonCommand `
+        -SourceFontPath $subsetSourceFontPath `
+        -OutputFilePath $coreCjkWoff2Path `
+        -TextFilePath $coreCjkCharsetPath `
+        -CommonArgs $commonSubsetArgs
 }
 
-$fallbackArgs = @(
-    "-m",
-    "fontTools.subset",
-    $sourceFontPath,
-    "--output-file=$fallbackWoff2Path",
-    "--text-file=$fallbackCharsetPath"
-) + $commonSubsetArgs
+if ($coreMiscChars.Count -gt 0) {
+    Invoke-FontSubset `
+        -PythonCommand $PythonCommand `
+        -SourceFontPath $subsetSourceFontPath `
+        -OutputFilePath $coreMiscWoff2Path `
+        -TextFilePath $coreMiscCharsetPath `
+        -CommonArgs $commonSubsetArgs
+}
 
-& $PythonCommand @fallbackArgs
-if ($LASTEXITCODE -ne 0) {
-    throw "Fallback subset build failed with exit code $LASTEXITCODE"
+if ($fallbackText.Length -gt 0) {
+    Invoke-FontSubset `
+        -PythonCommand $PythonCommand `
+        -SourceFontPath $subsetSourceFontPath `
+        -OutputFilePath $fallbackWoff2Path `
+        -TextFilePath $fallbackCharsetPath `
+        -CommonArgs $commonSubsetArgs
 }
 
 $subsetCssPath = Join-Path $outputDirFull "subset-font.css"
-$subsetCss = @'
-@font-face {
-    font-family: "HJ Source Han Serif Core";
-    src: url("./core.woff2") format("woff2");
-    font-style: normal;
-    font-weight: 250 900;
-    font-display: swap;
+[System.Collections.Generic.List[string]]$cssLines = @()
+if ($coreCjkChars.Count -gt 0) {
+    $cssLines.Add("@font-face {")
+    $cssLines.Add("    font-family: `"HJ Source Han Serif Core`";")
+    $cssLines.Add("    src: url(`"./core-cjk.woff2`") format(`"woff2`");")
+    $cssLines.Add("    font-style: normal;")
+    $cssLines.Add("    font-weight: $fontWeightDescriptor;")
+    $cssLines.Add("    font-display: swap;")
+    $cssLines.Add("    unicode-range: $(Convert-CharsToUnicodeRange -Chars $coreCjkChars.ToArray());")
+    $cssLines.Add("}")
+    $cssLines.Add("")
 }
 
-@font-face {
-    font-family: "HJ Source Han Serif Fallback";
-    src: url("./fallback.woff2") format("woff2");
-    font-style: normal;
-    font-weight: 250 900;
-    font-display: swap;
+if ($coreMiscChars.Count -gt 0) {
+    $cssLines.Add("@font-face {")
+    $cssLines.Add("    font-family: `"HJ Source Han Serif Core`";")
+    $cssLines.Add("    src: url(`"./core-misc.woff2`") format(`"woff2`");")
+    $cssLines.Add("    font-style: normal;")
+    $cssLines.Add("    font-weight: $fontWeightDescriptor;")
+    $cssLines.Add("    font-display: swap;")
+    $cssLines.Add("    unicode-range: $(Convert-CharsToUnicodeRange -Chars $coreMiscChars.ToArray());")
+    $cssLines.Add("}")
+    $cssLines.Add("")
 }
-'@
+
+$fallbackUniqueChars = Get-UniqueChars -Text $fallbackText
+if ($fallbackUniqueChars.Count -gt 0) {
+    $cssLines.Add("@font-face {")
+    $cssLines.Add("    font-family: `"HJ Source Han Serif Fallback`";")
+    $cssLines.Add("    src: url(`"./fallback.woff2`") format(`"woff2`");")
+    $cssLines.Add("    font-style: normal;")
+    $cssLines.Add("    font-weight: $fontWeightDescriptor;")
+    $cssLines.Add("    font-display: swap;")
+    $cssLines.Add("    unicode-range: $(Convert-CharsToUnicodeRange -Chars $fallbackUniqueChars);")
+    $cssLines.Add("}")
+}
+
+$subsetCss = ($cssLines -join [Environment]::NewLine)
 [System.IO.File]::WriteAllText($subsetCssPath, $subsetCss, $utf8NoBom)
 
-$coreBytes = (Get-Item -LiteralPath $coreWoff2Path).Length
-$fallbackBytes = (Get-Item -LiteralPath $fallbackWoff2Path).Length
+$coreCjkBytes = if (Test-Path -LiteralPath $coreCjkWoff2Path) { (Get-Item -LiteralPath $coreCjkWoff2Path).Length } else { 0 }
+$coreMiscBytes = if (Test-Path -LiteralPath $coreMiscWoff2Path) { (Get-Item -LiteralPath $coreMiscWoff2Path).Length } else { 0 }
+$fallbackBytes = if (Test-Path -LiteralPath $fallbackWoff2Path) { (Get-Item -LiteralPath $fallbackWoff2Path).Length } else { 0 }
 
 $reportPath = Join-Path $outputDirFull "subset-build-report.txt"
 $reportLines = @(
     "SourceFont=$sourceFontPath",
+    "SubsetSourceFont=$subsetSourceFontPath",
+    "InstanceWeight=$InstanceWeight",
     "CoreCharset=$coreCharsetPath",
+    "CoreCjkCharset=$coreCjkCharsetPath",
+    "CoreMiscCharset=$coreMiscCharsetPath",
     "AllCharset=$allCharsetPath",
     "FallbackCharset=$fallbackCharsetPath",
     "CoreChars=$($coreText.Length)",
+    "CoreCjkChars=$($coreCjkText.Length)",
+    "CoreMiscChars=$($coreMiscText.Length)",
     "FallbackChars=$($fallbackText.Length)",
-    "CoreWoff2=$coreWoff2Path",
-    "CoreWoff2Bytes=$coreBytes",
+    "CoreCjkWoff2=$coreCjkWoff2Path",
+    "CoreCjkWoff2Bytes=$coreCjkBytes",
+    "CoreMiscWoff2=$coreMiscWoff2Path",
+    "CoreMiscWoff2Bytes=$coreMiscBytes",
     "FallbackWoff2=$fallbackWoff2Path",
     "FallbackWoff2Bytes=$fallbackBytes",
-    "TotalSubsetBytes=$($coreBytes + $fallbackBytes)",
+    "TotalSubsetBytes=$($coreCjkBytes + $coreMiscBytes + $fallbackBytes)",
     "SubsetCss=$subsetCssPath"
 )
 [System.IO.File]::WriteAllLines($reportPath, $reportLines, $utf8NoBom)
 
+if (-not [string]::IsNullOrWhiteSpace($instanceFontPath) -and (Test-Path -LiteralPath $instanceFontPath)) {
+    try {
+        Remove-Item -LiteralPath $instanceFontPath -Force -ErrorAction Stop
+    } catch {
+        # Keep build successful even if temp instance cleanup fails.
+    }
+}
+
 Write-Output "OK"
-Write-Output "Core woff2: $coreWoff2Path ($coreBytes bytes)"
+Write-Output "Core CJK woff2: $coreCjkWoff2Path ($coreCjkBytes bytes)"
+Write-Output "Core Misc woff2: $coreMiscWoff2Path ($coreMiscBytes bytes)"
 Write-Output "Fallback woff2: $fallbackWoff2Path ($fallbackBytes bytes)"
 Write-Output "Subset css: $subsetCssPath"
 Write-Output "Report: $reportPath"
