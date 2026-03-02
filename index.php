@@ -18,7 +18,7 @@ $themeConfig = hansJackBuildThemeConfig($this->options);
 
 $brandName = '';
 $welcomeText = '';
-$faviconUrl = '';
+$landingAvatarUrl = '';
 $blogUrl = '';
 $memoUrl = '';
 $blogSlug = 'posts';
@@ -41,9 +41,12 @@ if ($this->is('index')) {
         $welcomeText = trim('欢迎来到 ' . $brandName);
     }
 
-    ob_start();
-    $this->options->siteUrl('favicon.ico');
-    $faviconUrl = trim((string) ob_get_clean());
+    $landingAvatarUrl = hansJackAssetUrl($this->options, 'logo.avif');
+    if ($landingAvatarUrl === '') {
+        ob_start();
+        $this->options->siteUrl('favicon.ico');
+        $landingAvatarUrl = trim((string) ob_get_clean());
+    }
 
     $blogUrl = (string) (($themeConfig['links']['blog'] ?? '') ?: '');
     $memoUrl = (string) (($themeConfig['links']['memo'] ?? '') ?: '');
@@ -301,7 +304,7 @@ if ($this->is('index')) {
                 <div class="hj-landing-right">
                     <div class="hj-landing-avatar" aria-hidden="true">
                         <img
-                            src="<?php echo hansJackEscape($faviconUrl); ?>"
+                            src="<?php echo hansJackEscape($landingAvatarUrl); ?>"
                             alt=""
                             width="256"
                             height="256"
