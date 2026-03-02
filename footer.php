@@ -250,11 +250,6 @@ if ($hjCustomJavaScript !== '') {
 <script src="<?php echo hansJackEscape(hansJackAssetUrl($this->options, 'assets/js/hj-footer-global-pre.js')); ?>"></script>
 
 <?php if ($this->is('post') || $this->is('page')): ?>
-    <?php if ($hjNeedsKatexAssets): ?>
-        <script src="<?php echo hansJackEscape(hansJackAssetUrl($this->options, 'assets/vendor/katex/katex.min.js')); ?>"></script>
-        <script src="<?php echo hansJackEscape(hansJackAssetUrl($this->options, 'assets/vendor/katex/contrib/mhchem.min.js')); ?>"></script>
-        <script src="<?php echo hansJackEscape(hansJackAssetUrl($this->options, 'assets/vendor/katex/contrib/auto-render.min.js')); ?>"></script>
-    <?php endif; ?>
     <script>
         (function () {
             var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
@@ -354,8 +349,9 @@ if ($hjCustomJavaScript !== '') {
             }
 
             function loadScriptOnce(src, done) {
+                var doneFn = typeof done === "function" ? done : function () {};
                 if (!src) {
-                    done();
+                    doneFn();
                     return;
                 }
 
@@ -364,24 +360,24 @@ if ($hjCustomJavaScript !== '') {
                 var existing = document.querySelector(selector);
                 if (existing) {
                     if (existing.getAttribute("data-hj-hljs-loaded") === "1") {
-                        done();
+                        doneFn();
                         return;
                     }
 
-                    existing.addEventListener("load", done);
-                    existing.addEventListener("error", done);
+                    existing.addEventListener("load", doneFn, { once: true });
+                    existing.addEventListener("error", doneFn, { once: true });
                     return;
                 }
 
                 var script = document.createElement("script");
                 script.src = src;
-                script.async = false;
+                script.async = true;
                 script.setAttribute("data-hj-hljs-js", key);
                 script.onload = function () {
                     script.setAttribute("data-hj-hljs-loaded", "1");
-                    done();
+                    doneFn();
                 };
-                script.onerror = done;
+                script.onerror = doneFn;
                 document.head.appendChild(script);
             }
 
@@ -587,7 +583,7 @@ if ($hjCustomJavaScript !== '') {
                 var script = document.createElement("script");
                 script.src = src;
                 script.type = scriptMode === "module" ? "module" : "text/javascript";
-                script.async = false;
+                script.async = true;
                 script.setAttribute("data-hj-excalidraw-js", key);
                 script.setAttribute("data-hj-excalidraw-mode", scriptMode);
                 script.onload = function () {
@@ -881,8 +877,9 @@ if ($hjCustomJavaScript !== '') {
             }
 
             function loadScriptOnce(src, done) {
+                var doneFn = typeof done === "function" ? done : function () {};
                 if (!src) {
-                    done();
+                    doneFn();
                     return;
                 }
 
@@ -891,24 +888,24 @@ if ($hjCustomJavaScript !== '') {
                 var existing = document.querySelector(selector);
                 if (existing) {
                     if (existing.getAttribute("data-hj-katex-loaded") === "1") {
-                        done();
+                        doneFn();
                         return;
                     }
 
-                    existing.addEventListener("load", done);
-                    existing.addEventListener("error", done);
+                    existing.addEventListener("load", doneFn, { once: true });
+                    existing.addEventListener("error", doneFn, { once: true });
                     return;
                 }
 
                 var script = document.createElement("script");
                 script.src = src;
-                script.async = false;
+                script.async = true;
                 script.setAttribute("data-hj-katex-js", key);
                 script.onload = function () {
                     script.setAttribute("data-hj-katex-loaded", "1");
-                    done();
+                    doneFn();
                 };
-                script.onerror = done;
+                script.onerror = doneFn;
                 document.head.appendChild(script);
             }
 
