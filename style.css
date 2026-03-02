@@ -16,6 +16,7 @@
     --hj-desktop-width: 86%;
     --hj-font-main: "Source Han Serif CN VF", "Source Han Serif SC", "Source Han Serif CN", "Songti SC", "SimSun", Georgia, serif;
     --hj-font-ui: var(--hj-font-main);
+    --hj-font-brand: "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", Georgia, serif;
 
     --hj-surface-day: rgba(255, 255, 253, 0.82);
     --hj-surface-night: rgba(24, 24, 22, 0.82);
@@ -238,7 +239,7 @@ img {
     align-items: center;
     height: 100%;
     gap: 0.42em;
-    font-family: var(--hj-font-ui);
+    font-family: var(--hj-font-brand);
     font-weight: 700;
     font-size: 1.4rem;
     line-height: 1.2;
