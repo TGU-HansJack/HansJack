@@ -905,6 +905,109 @@
                 } catch (e) {}
             }
 
+            function findFootnoteTargetById(id) {
+                var node = null;
+                try {
+                    node = document.getElementById(id);
+                } catch (e) {
+                    node = null;
+                }
+                if (node) {
+                    return node;
+                }
+                try {
+                    if (window.CSS && CSS.escape) {
+                        node = content.querySelector("#" + CSS.escape(id));
+                    }
+                } catch (e) {
+                    node = null;
+                }
+                return node;
+            }
+
+            var footnoteLinks = content.querySelectorAll('sup[id^="fnref-"] > a.footnote-ref[href^="#fn-"]');
+            for (var i = 0; i < footnoteLinks.length; i++) {
+                var footnoteLink = footnoteLinks[i];
+                if (!footnoteLink || !footnoteLink.getAttribute) {
+                    continue;
+                }
+
+                var href = String(footnoteLink.getAttribute("href") || "").trim();
+                if (href.indexOf("#") !== 0 || href.length <= 1) {
+                    continue;
+                }
+
+                var targetId = href.slice(1).trim();
+                if (!targetId) {
+                    continue;
+                }
+
+                var footnoteItem = findFootnoteTargetById(targetId);
+                if (!footnoteItem) {
+                    continue;
+                }
+
+                var footnoteClone = null;
+                try {
+                    footnoteClone = footnoteItem.cloneNode(true);
+                } catch (e) {
+                    footnoteClone = null;
+                }
+                if (!footnoteClone) {
+                    continue;
+                }
+
+                var backrefs = footnoteClone.querySelectorAll('a.footnote-backref, a[href^="#fnref-"]');
+                for (var j = 0; j < backrefs.length; j++) {
+                    var backref = backrefs[j];
+                    if (!backref || !backref.parentNode) {
+                        continue;
+                    }
+                    try {
+                        backref.parentNode.removeChild(backref);
+                    } catch (e) {}
+                }
+
+                var dupIdNodes = footnoteClone.querySelectorAll("[id]");
+                for (var k = 0; k < dupIdNodes.length; k++) {
+                    try {
+                        dupIdNodes[k].removeAttribute("id");
+                    } catch (e) {}
+                }
+
+                var footnoteTipHtml = String(footnoteClone.innerHTML || "").trim();
+                if (!footnoteTipHtml) {
+                    continue;
+                }
+
+                var footnoteSup = footnoteLink.parentNode;
+                if (!footnoteSup || String(footnoteSup.tagName || "").toUpperCase() !== "SUP" || !footnoteSup.classList) {
+                    continue;
+                }
+
+                var oldTipNodes = footnoteSup.querySelectorAll(".hj-footnote-tip");
+                for (var m = 0; m < oldTipNodes.length; m++) {
+                    var oldTipNode = oldTipNodes[m];
+                    if (!oldTipNode || !oldTipNode.parentNode) {
+                        continue;
+                    }
+                    try {
+                        oldTipNode.parentNode.removeChild(oldTipNode);
+                    } catch (e) {}
+                }
+
+                var tipNode = document.createElement("span");
+                tipNode.className = "hj-footnote-tip";
+                tipNode.setAttribute("role", "tooltip");
+                tipNode.innerHTML = footnoteTipHtml;
+
+                try {
+                    footnoteSup.classList.add("hj-footnote-tooltip");
+                    footnoteSup.setAttribute("data-hj-footnote-tip", "1");
+                    footnoteSup.appendChild(tipNode);
+                } catch (e) {}
+            }
+
             // Tooltip/Spoiler interactions on touch devices: click to toggle, click outside to close.
             var useClick = false;
             try {
@@ -919,11 +1022,15 @@
             var toggles = [];
             var tooltips = content.querySelectorAll(".hj-term-tooltip[data-hj-term]");
             var spoilers = content.querySelectorAll(".hj-term-spoiler");
+            var footnoteTips = content.querySelectorAll("sup.hj-footnote-tooltip[data-hj-footnote-tip]");
             for (var i = 0; i < tooltips.length; i++) {
                 toggles.push(tooltips[i]);
             }
             for (var j = 0; j < spoilers.length; j++) {
                 toggles.push(spoilers[j]);
+            }
+            for (var k = 0; k < footnoteTips.length; k++) {
+                toggles.push(footnoteTips[k]);
             }
             if (toggles.length === 0) {
                 return;
@@ -948,6 +1055,60 @@
                             isOpen = el.classList.contains("is-open");
                         } catch (err) {
                             isOpen = false;
+                        }
+
+                        var isFootnoteToggle = false;
+                        try {
+                            isFootnoteToggle = el.classList.contains("hj-footnote-tooltip");
+                        } catch (err) {
+                            isFootnoteToggle = false;
+                        }
+
+                        if (isFootnoteToggle) {
+                            var clickedFootnoteLink = false;
+                            var clickedTipLink = false;
+                            try {
+                                var rawTarget = e && e.target ? e.target : null;
+                                clickedFootnoteLink = !!(
+                                    rawTarget &&
+                                    rawTarget.closest &&
+                                    rawTarget.closest('a.footnote-ref[href^="#fn-"]')
+                                );
+                                clickedTipLink = !!(
+                                    rawTarget &&
+                                    rawTarget.closest &&
+                                    rawTarget.closest("span.hj-footnote-tip a[href]")
+                                );
+                            } catch (err) {
+                                clickedFootnoteLink = false;
+                                clickedTipLink = false;
+                            }
+
+                            if (!isOpen) {
+                                if (e && e.preventDefault) {
+                                    e.preventDefault();
+                                }
+                                if (e && e.stopPropagation) {
+                                    e.stopPropagation();
+                                }
+                                closeAll();
+                                try {
+                                    el.classList.add("is-open");
+                                } catch (err) {}
+                                return;
+                            }
+
+                            closeAll();
+                            if (clickedFootnoteLink || clickedTipLink) {
+                                return;
+                            }
+                            if (e && e.preventDefault) {
+                                e.preventDefault();
+                            }
+                            if (e && e.stopPropagation) {
+                                e.stopPropagation();
+                            }
+                            return;
                         }
 
                         var isLinkToggle = false;

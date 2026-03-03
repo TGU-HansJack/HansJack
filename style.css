@@ -6739,6 +6739,97 @@ html.hj-login-modal-open .hj-login-modal {
     background-image: none;
 }
 
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip {
+    position: relative;
+    z-index: 2;
+}
+
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translateX(-50%);
+    width: 1.8rem;
+    height: 0.32rem;
+    background: transparent;
+}
+
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% - 0.02rem);
+    transform: translate(-50%, 0.16rem);
+    box-sizing: border-box;
+    display: block;
+    width: max-content;
+    max-width: min(18.5rem, 78vw);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    border-radius: 4px;
+    padding: 0.42rem 0.56rem;
+    background: var(--hj-day-black);
+    color: var(--hj-day-white);
+    font-family: var(--hj-font-ui);
+    font-size: 0.72rem;
+    line-height: 1.2;
+    text-align: left;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: auto;
+    z-index: 20;
+    transition: opacity 0.14s ease, transform 0.14s ease, visibility 0s linear 0.14s;
+}
+
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip:hover > .hj-footnote-tip,
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip:focus-within > .hj-footnote-tip,
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip.is-open > .hj-footnote-tip {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+    transition-delay: 0s, 0s, 0s;
+}
+
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip p {
+    margin: 0;
+}
+
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip p + p {
+    margin-top: 0.18rem;
+}
+
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip ul,
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip ol {
+    margin: 0.18rem 0 0;
+    padding-left: 1rem;
+}
+
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip li + li {
+    margin-top: 0.22rem;
+}
+
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip a {
+    color: inherit;
+}
+
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip a::after {
+    content: none;
+    background-image: none;
+    background-color: transparent;
+    -webkit-mask-image: none;
+    mask-image: none;
+}
+
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip a:hover,
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip a:focus-visible {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.12em;
+    text-decoration-color: currentColor;
+}
+
 :is(.hj-article-content, .hj-comment-content) ol > li[id^="fn-"]::marker {
     content: "[" counter(list-item) "] ";
     color: inherit;
@@ -8433,6 +8524,12 @@ html.hj-login-modal-open .hj-login-modal {
         color: var(--hj-muted-night);
     }
 
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip {
+        background: rgba(221, 221, 219, 0.96);
+        color: var(--hj-night-black);
+        box-shadow: none;
+    }
+
     html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) a,
     html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) a:visited {
         color: var(--hj-muted-night);
@@ -8581,6 +8678,12 @@ html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) a:visited {
 
 html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) > li {
     color: var(--hj-muted-night);
+}
+
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip {
+    background: rgba(221, 221, 219, 0.96);
+    color: var(--hj-night-black);
+    box-shadow: none;
 }
 
 html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) a,
