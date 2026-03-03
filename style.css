@@ -5429,6 +5429,9 @@ html.hj-theme-dark .hj-fab-reward-backdrop {
 
 .hj-comments .hj-comments-head-title {
     min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.38rem;
     font-family: var(--hj-font-ui);
     font-size: 0.92rem;
     font-weight: 700;
@@ -5436,6 +5439,19 @@ html.hj-theme-dark .hj-fab-reward-backdrop {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.hj-comments .hj-comments-head-title-icon {
+    display: inline-flex;
+    width: 1.05em;
+    height: 1.05em;
+    flex: 0 0 auto;
+}
+
+.hj-comments .hj-comments-head-title-icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
 }
 
 .hj-comments .hj-comments-head-actions {
