@@ -44,7 +44,7 @@ if ($needsContentEnhance) {
 $needsSerifFontAssets = false;
 if ($serifFontEnabled) {
     try {
-        $needsSerifFontAssets = $this->is('post') || $this->is('page');
+        $needsSerifFontAssets = $this->is('index') || $this->is('post') || $this->is('page');
     } catch (\Throwable $e) {
         $needsSerifFontAssets = false;
     }
