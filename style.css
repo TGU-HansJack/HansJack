@@ -7279,6 +7279,22 @@ html.login-modal-open .login-modal {
     margin: 0;
 }
 
+:is(.article-content, .comment-content) img.medium-zoom-image {
+    cursor: zoom-in;
+}
+
+:is(.article-content, .comment-content) img.medium-zoom-image.medium-zoom-image--opened {
+    cursor: zoom-out;
+}
+
+.medium-zoom-overlay {
+    z-index: 9990;
+}
+
+.medium-zoom-image--opened {
+    z-index: 9991;
+}
+
 :is(.article-content, .comment-content) img.lazy-blurup {
     filter: blur(14px);
     transform: scale(1.02);

@@ -758,6 +758,7 @@ if ($customJavaScript !== '') {
             });
         })();
     </script>
+    <script src="<?php echo escape(assetUrl($this->options, 'assets/vendor/medium-zoom/medium-zoom.min.js')); ?>"></script>
     <script src="<?php echo escape(assetUrl($this->options, 'assets/js/content-static.js')); ?>"></script>
     <script>
         (function () {

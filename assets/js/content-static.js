@@ -144,6 +144,67 @@
             }
         })();
 
+/* block 17.5 */
+(function () {
+            if (typeof window === "undefined" || typeof window.mediumZoom !== "function") {
+                return;
+            }
+
+            var images = Array.prototype.slice.call(document.querySelectorAll(".article-content img, .comment-content img"));
+            if (!images || images.length === 0) {
+                return;
+            }
+
+            var zoomTargets = images.filter(function (img) {
+                if (!img || !img.getAttribute || !img.closest) {
+                    return false;
+                }
+
+                if (!String(img.getAttribute("src") || "").trim()) {
+                    return false;
+                }
+
+                if (
+                    img.classList &&
+                    (
+                        img.classList.contains("avatar") ||
+                        img.classList.contains("emoji") ||
+                        img.classList.contains("emotionIcon") ||
+                        img.classList.contains("medium-zoom-ignore") ||
+                        img.classList.contains("no-zoom")
+                    )
+                ) {
+                    return false;
+                }
+
+                if (img.closest("a[href]")) {
+                    return false;
+                }
+
+                if (
+                    img.closest(".comment-author, .comment-avatar, .avatar-frame, .links-avatar, .emoji-picker, .OwO, .excalidraw-block")
+                ) {
+                    return false;
+                }
+
+                if (img.classList && !img.classList.contains("medium-zoom-image")) {
+                    img.classList.add("medium-zoom-image");
+                }
+
+                return true;
+            });
+
+            if (!zoomTargets || zoomTargets.length === 0) {
+                return;
+            }
+
+            try {
+                window.mediumZoom(zoomTargets, {
+                    background: "rgba(0, 0, 0, 0.267)"
+                });
+            } catch (e) {}
+        })();
+
 /* block 18 */
 (function () {
             var contents = Array.prototype.slice.call(document.querySelectorAll(".article-content, .comment-content"));
