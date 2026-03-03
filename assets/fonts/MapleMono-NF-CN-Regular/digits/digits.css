@@ -1,0 +1,8 @@
+@font-face {
+    font-family: "Maple Mono NF CN Digits";
+    src: url("./digits.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    unicode-range: U+20, U+2D, U+2F, U+30-39, U+3A, U+FF0D, U+FF0F, U+FF10-FF19, U+FF1A;
+}

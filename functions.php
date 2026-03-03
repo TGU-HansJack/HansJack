@@ -56,6 +56,15 @@ function themeConfig($form)
     );
     $form->addInput($landingHitokotoEnabled);
 
+    $landingWelcomeText = new \Typecho\Widget\Helper\Form\Element\Textarea(
+        'landingWelcomeText',
+        null,
+        '',
+        _t('首页欢迎词'),
+        _t('显示在首页头像左侧，支持换行；留空则使用默认文案。')
+    );
+    $form->addInput($landingWelcomeText);
+
     $serifFontEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
         'serifFontEnabled',
         [
@@ -2575,6 +2584,7 @@ function buildThemeConfig(Options $options): array
 
     return [
         'brandName' => $brandName,
+        'welcomeText' => text((string) ($options->landingWelcomeText ?? ($options->welcomeTitle ?? '')), ''),
         'landingHitokotoEnabled' => landingHitokotoEnabled($options),
         'links' => $links,
         'navItems' => [

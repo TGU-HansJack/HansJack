@@ -4,7 +4,6 @@
 <?php
 $themeConfig = buildThemeConfig($this->options);
 $serifFontEnabled = serifFontEnabled($this->options);
-$subsetFontEnabled = subsetFontEnabled($this->options);
 
 // Read persisted theme choice early (cookie), so the initial HTML can render without a light flash in dark mode.
 $themeCookie = '';
@@ -50,12 +49,19 @@ if ($serifFontEnabled) {
     }
 }
 
+$needsLandingWelcomeFont = false;
+try {
+    $needsLandingWelcomeFont = $this->is('index');
+} catch (\Throwable $e) {
+    $needsLandingWelcomeFont = false;
+}
+
 $themeStyleHref = assetUrl($this->options, 'style.css');
-$serifFontCssAsset = $subsetFontEnabled
-    ? 'assets/fonts/SourceHanSerifCN/subset-800/subset-font.css'
-    : 'assets/fonts/SourceHanSerifCN/result.css';
+$serifFontCssAsset = 'assets/fonts/NotoSerifSC-ExtraLight/subset-800/subset-font.css';
 $serifFontCssHref = assetUrl($this->options, $serifFontCssAsset);
+$digitFontCssHref = assetUrl($this->options, 'assets/fonts/MapleMono-NF-CN-Regular/digits/digits.css');
 $katexCssHref = assetUrl($this->options, 'assets/vendor/katex/katex.min.css');
+$playwriteMxCssHref = assetUrl($this->options, 'assets/fonts/PlaywriteMX/playwrite-mx.css');
 
 $customCss = trim((string) ($this->options->customCss ?? ''));
 if ($customCss !== '') {
@@ -226,6 +232,12 @@ if ($customCss !== '') {
     <?php if ($needsSerifFontAssets): ?>
         <link rel="preload" as="style" href="<?php echo escape($serifFontCssHref); ?>" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="<?php echo escape($serifFontCssHref); ?>"></noscript>
+        <link rel="preload" as="style" href="<?php echo escape($digitFontCssHref); ?>" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="<?php echo escape($digitFontCssHref); ?>"></noscript>
+    <?php endif; ?>
+    <?php if ($needsLandingWelcomeFont): ?>
+        <link rel="preload" as="style" href="<?php echo escape($playwriteMxCssHref); ?>" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="<?php echo escape($playwriteMxCssHref); ?>"></noscript>
     <?php endif; ?>
     <link rel="stylesheet" href="<?php echo escape($themeStyleHref); ?>">
     <?php if (!$serifFontEnabled): ?>

@@ -14,9 +14,9 @@
     --day-text: var(--day-black);
     --night-text: var(--night-white);
     --desktop-width: 86%;
-    --font-main: "Source Han Serif Core", "Source Han Serif Fallback", "Source Han Serif CN VF", "Source Han Serif SC", "Source Han Serif CN", "Songti SC", "SimSun", Georgia, serif;
+    --font-main: "Noto Serif SC XL Core", "Noto Serif SC XL Fallback", "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
     --font-ui: var(--font-main);
-    --font-brand: "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", Georgia, serif;
+    --font-brand: var(--font-main);
 
     --surface-day: rgba(255, 255, 253, 0.82);
     --surface-night: rgba(24, 24, 22, 0.82);
@@ -1213,51 +1213,24 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     min-width: 0;
 }
 
-.landing-terminal {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size: clamp(1.1rem, 2.6vw, 2.15rem);
-    line-height: 1.28;
+.landing-welcome {
+    margin: 0;
+    margin-right: auto;
+    max-width: min(36ch, 100%);
+    font-family: "LXGW WenKai", "Ma Shan Zheng", "HanziPen SC", "STKaiti", "KaiTi", cursive;
+    font-weight: 400;
+    font-size: clamp(1.25rem, 2.3vw, 1.9rem);
+    line-height: 1.75;
     letter-spacing: 0.01em;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
 }
 
-.landing-prompt {
-    font-size: 0.78em;
-    letter-spacing: 0.12em;
-    text-transform: lowercase;
-    color: var(--muted-day);
-    margin-bottom: 0.55rem;
-}
-
-.landing-typing {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.28em;
-    flex-wrap: wrap;
-}
-
-.landing-typing-text {
-    font-weight: 700;
-    min-height: 1em;
-}
-
-.landing-cursor {
-    width: 0.7ch;
-    height: 1em;
-    background: currentColor;
-    display: inline-block;
-    transform: translateY(0.12em);
-    animation: cursor-blink 1s steps(1, end) infinite;
-}
-
-@keyframes cursor-blink {
-    0%,
-    49% {
-        opacity: 1;
-    }
-    50%,
-    100% {
-        opacity: 0;
-    }
+.landing-welcome.is-english {
+    font-family: "Playwrite MX", "Comic Sans MS", cursive;
+    font-weight: 100;
+    letter-spacing: 0.015em;
 }
 
 .landing-right {
@@ -1357,8 +1330,13 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 }
 
 .landing-insights {
-    margin-top: auto;
-    margin-bottom: 0.55rem;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0.35rem 0;
 }
 
 .landing-insights-footer {
@@ -1637,7 +1615,7 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 
 @media (max-width: 768px) {
     .landing-insights {
-        margin-top: auto;
+        margin-top: 0;
     }
 
     .landing-heatmap-pop {
@@ -1986,7 +1964,7 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 .posts-date {
     display: block;
     margin-top: -0.08rem;
-    font-family: var(--font-ui);
+    font-family: "Maple Mono NF CN Digits", var(--font-ui);
     font-size: 0.74rem;
     line-height: 1.25;
     color: var(--muted-day);
@@ -8625,7 +8603,6 @@ html.theme-dark .card-meta,
 html.theme-dark .card-summary,
 html.theme-dark .article-meta,
 html.theme-dark .footer p,
-html.theme-dark .landing-prompt,
 html.theme-dark .hitokoto-text,
 html.theme-dark .landing-latest-tag,
 html.theme-dark .landing-latest-time,

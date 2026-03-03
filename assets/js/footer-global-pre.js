@@ -24,31 +24,15 @@
 
 /* block 2 */
 (function () {
-        var typingNode = document.querySelector(".landing-typing-text[data-text]");
-        if (typingNode) {
-            var fullText = typingNode.getAttribute("data-text") || "";
-            var prefersReduced = false;
-            try {
-                prefersReduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-            } catch (e) {
-                prefersReduced = false;
-            }
-
-            if (prefersReduced) {
-                typingNode.textContent = fullText;
+        var welcomeNode = document.querySelector(".landing-welcome");
+        if (welcomeNode && welcomeNode.classList) {
+            var welcomeText = String(welcomeNode.textContent || "").trim();
+            var hasLatin = /[A-Za-z]/.test(welcomeText);
+            var hasCjk = /[\u3400-\u9FFF\uF900-\uFAFF]/.test(welcomeText);
+            if (hasLatin && !hasCjk) {
+                welcomeNode.classList.add("is-english");
             } else {
-                typingNode.textContent = "";
-                var index = 0;
-                var delay = 30;
-                function tick() {
-                    if (index >= fullText.length) {
-                        return;
-                    }
-                    typingNode.textContent += fullText.charAt(index);
-                    index += 1;
-                    window.setTimeout(tick, delay);
-                }
-                window.setTimeout(tick, 240);
+                welcomeNode.classList.remove("is-english");
             }
         }
 

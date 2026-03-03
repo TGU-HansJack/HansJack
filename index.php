@@ -36,7 +36,7 @@ if ($this->is('index')) {
         $brandName = trim((string) ob_get_clean());
     }
 
-    $welcomeText = trim((string) ($themeConfig['welcomeTitle'] ?? ''));
+    $welcomeText = trim((string) ($themeConfig['welcomeText'] ?? ''));
     if ($welcomeText === '') {
         $welcomeText = trim('欢迎来到 ' . $brandName);
     }
@@ -293,13 +293,7 @@ if ($this->is('index')) {
         <section class="landing" aria-label="<?php _e('欢迎'); ?>">
             <div class="landing-main">
                 <div class="landing-left">
-                    <div class="landing-terminal" role="region" aria-label="<?php _e('欢迎词'); ?>">
-                        <div class="landing-prompt" aria-hidden="true">site@typecho:~$</div>
-                        <div class="landing-typing" aria-label="<?php echo escape($welcomeText); ?>">
-                            <span class="landing-typing-text" data-text="<?php echo escape($welcomeText); ?>"></span>
-                            <span class="landing-cursor" aria-hidden="true"></span>
-                        </div>
-                    </div>
+                    <article class="landing-welcome" role="region" aria-label="<?php _e('欢迎词'); ?>"><?php echo escape($welcomeText); ?></article>
                 </div>
                 <div class="landing-right">
                     <div class="landing-avatar" aria-hidden="true">

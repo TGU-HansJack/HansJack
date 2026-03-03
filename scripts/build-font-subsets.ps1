@@ -10,7 +10,10 @@ param(
 
     [string]$OutputDir = "",
     [string]$PythonCommand = "python",
-    [int]$InstanceWeight = 400
+    [int]$InstanceWeight = 400,
+    [string]$CoreFontFamily = "Source Han Serif Core",
+    [string]$FallbackFontFamily = "Source Han Serif Fallback",
+    [string]$StaticFontWeight = "400"
 )
 
 Set-StrictMode -Version Latest
@@ -153,7 +156,7 @@ $coreText = [System.IO.File]::ReadAllText($coreCharsetPath, $utf8)
 $allText = [System.IO.File]::ReadAllText($allCharsetPath, $utf8)
 
 $subsetSourceFontPath = $sourceFontPath
-$fontWeightDescriptor = "250 900"
+$fontWeightDescriptor = $StaticFontWeight
 $instanceFontPath = ""
 if ($InstanceWeight -gt 0) {
     $instanceFontPath = Join-Path $outputDirFull ("source-wght-{0}.ttf" -f $InstanceWeight)
@@ -265,7 +268,7 @@ $subsetCssPath = Join-Path $outputDirFull "subset-font.css"
 [System.Collections.Generic.List[string]]$cssLines = @()
 if ($coreCjkChars.Count -gt 0) {
     $cssLines.Add("@font-face {")
-    $cssLines.Add("    font-family: `"Source Han Serif Core`";")
+    $cssLines.Add(("    font-family: `"{0}`";" -f $CoreFontFamily))
     $cssLines.Add("    src: url(`"./core-cjk.woff2`") format(`"woff2`");")
     $cssLines.Add("    font-style: normal;")
     $cssLines.Add("    font-weight: $fontWeightDescriptor;")
@@ -277,7 +280,7 @@ if ($coreCjkChars.Count -gt 0) {
 
 if ($coreMiscChars.Count -gt 0) {
     $cssLines.Add("@font-face {")
-    $cssLines.Add("    font-family: `"Source Han Serif Core`";")
+    $cssLines.Add(("    font-family: `"{0}`";" -f $CoreFontFamily))
     $cssLines.Add("    src: url(`"./core-misc.woff2`") format(`"woff2`");")
     $cssLines.Add("    font-style: normal;")
     $cssLines.Add("    font-weight: $fontWeightDescriptor;")
@@ -290,7 +293,7 @@ if ($coreMiscChars.Count -gt 0) {
 $fallbackUniqueChars = Get-UniqueChars -Text $fallbackText
 if ($fallbackUniqueChars.Count -gt 0) {
     $cssLines.Add("@font-face {")
-    $cssLines.Add("    font-family: `"Source Han Serif Fallback`";")
+    $cssLines.Add(("    font-family: `"{0}`";" -f $FallbackFontFamily))
     $cssLines.Add("    src: url(`"./fallback.woff2`") format(`"woff2`");")
     $cssLines.Add("    font-style: normal;")
     $cssLines.Add("    font-weight: $fontWeightDescriptor;")
