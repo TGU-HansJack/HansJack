@@ -162,23 +162,14 @@ img {
 }
 
 .shell {
-    width: 50%;
+    /*
+     * Desktop baseline is 50%; when viewport gets narrower (e.g. browser zoom in),
+     * width increases smoothly up to --desktop-width before the mobile breakpoint.
+     */
+    width: clamp(50%, calc(50% + 1176px - 84vw), var(--desktop-width));
     margin: 0 auto;
     padding: 0 0.8rem;
     max-width: 100%;
-}
-
-@media (max-width: 1400px) {
-    .shell {
-        /* Narrower desktop: shrink the side whitespace first. */
-        width: 78%;
-    }
-}
-
-@media (max-width: 1200px) {
-    .shell {
-        width: var(--desktop-width);
-    }
 }
 
 @media (max-width: 980px) {
