@@ -6751,14 +6751,14 @@ html.hj-login-modal-open .hj-login-modal {
     bottom: 100%;
     transform: translateX(-50%);
     width: 1.8rem;
-    height: 0.32rem;
+    height: 0.44rem;
     background: transparent;
 }
 
 :is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip {
     position: absolute;
     left: 50%;
-    bottom: calc(100% - 0.02rem);
+    bottom: calc(100% + 0.08rem);
     transform: translate(-50%, 0.16rem);
     box-sizing: border-box;
     display: block;
@@ -6769,8 +6769,10 @@ html.hj-login-modal-open .hj-login-modal {
     word-break: break-word;
     border-radius: 4px;
     padding: 0.42rem 0.56rem;
-    background: var(--hj-day-black);
-    color: var(--hj-day-white);
+    --hj-footnote-tip-bg: var(--hj-day-black);
+    --hj-footnote-tip-fg: var(--hj-day-white);
+    background: var(--hj-footnote-tip-bg);
+    color: var(--hj-footnote-tip-fg);
     font-family: var(--hj-font-ui);
     font-size: 0.72rem;
     line-height: 1.2;
@@ -6781,6 +6783,20 @@ html.hj-login-modal-open .hj-login-modal {
     pointer-events: auto;
     z-index: 20;
     transition: opacity 0.14s ease, transform 0.14s ease, visibility 0s linear 0.14s;
+}
+
+:is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid var(--hj-footnote-tip-bg);
+    pointer-events: none;
 }
 
 :is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip:hover > .hj-footnote-tip,
@@ -8525,9 +8541,15 @@ html.hj-login-modal-open .hj-login-modal {
     }
 
     html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip {
-        background: rgba(221, 221, 219, 0.96);
-        color: var(--hj-night-black);
+        --hj-footnote-tip-bg: rgba(221, 221, 219, 0.96);
+        --hj-footnote-tip-fg: var(--hj-night-black);
         box-shadow: none;
+    }
+
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip a,
+    html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip a:visited {
+        color: var(--hj-night-black);
+        text-decoration-color: rgba(14, 14, 12, 0.42);
     }
 
     html:not(.hj-theme-light) :is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) a,
@@ -8681,9 +8703,15 @@ html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) ol:has(> li[id^
 }
 
 html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip {
-    background: rgba(221, 221, 219, 0.96);
-    color: var(--hj-night-black);
+    --hj-footnote-tip-bg: rgba(221, 221, 219, 0.96);
+    --hj-footnote-tip-fg: var(--hj-night-black);
     box-shadow: none;
+}
+
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip a,
+html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) sup.hj-footnote-tooltip > .hj-footnote-tip a:visited {
+    color: var(--hj-night-black);
+    text-decoration-color: rgba(14, 14, 12, 0.42);
 }
 
 html.hj-theme-dark :is(.hj-article-content, .hj-comment-content) ol:has(> li[id^="fn-"]) a,
