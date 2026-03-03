@@ -1615,11 +1615,16 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
         flex-wrap: wrap;
     }
 
+    .landing-heatmap-grid {
+        width: min(var(--landing-heatmap-width), 100%);
+        max-width: min(var(--landing-heatmap-width), 100%);
+    }
+
     .landing-latest {
         flex-basis: auto;
         min-width: 0;
-        max-width: 100%;
-        width: min(var(--landing-latest-width), 100%);
+        max-width: min(var(--landing-heatmap-width), 100%);
+        width: min(var(--landing-heatmap-width), 100%);
         height: auto;
         justify-content: flex-start;
         align-items: stretch;
