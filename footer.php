@@ -759,12 +759,6 @@ if ($hjCustomJavaScript !== '') {
         })();
     </script>
     <script src="<?php echo hansJackEscape(hansJackAssetUrl($this->options, 'assets/js/hj-content-static.js')); ?>"></script>
-    <script
-        src="<?php echo hansJackEscape(hansJackAssetUrl($this->options, 'assets/js/hj-image-viewer-loader.js')); ?>"
-        data-hj-image-viewer-loader="1"
-        data-hj-image-viewer-css="<?php echo hansJackEscape(hansJackAssetUrl($this->options, 'assets/css/hj-image-viewer.css')); ?>"
-        data-hj-image-viewer-js="<?php echo hansJackEscape(hansJackAssetUrl($this->options, 'assets/js/hj-image-viewer.js')); ?>"
-        defer></script>
     <script>
         (function () {
             var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
