@@ -21,11 +21,11 @@ $request = $this->request;
 $security = \Helper::security();
 $csrfRef = (string) $request->getRequestUrl();
 
-if (!function_exists('hansJackV3aLinksStr')) {
+if (!function_exists('v3aLinksStr')) {
     /**
      * @param mixed $value
      */
-    function hansJackV3aLinksStr($value, int $max = 255): string
+    function v3aLinksStr($value, int $max = 255): string
     {
         $s = trim((string) $value);
         if ($s === '') {
@@ -40,11 +40,11 @@ if (!function_exists('hansJackV3aLinksStr')) {
     }
 }
 
-if (!function_exists('hansJackLinksJsonExit')) {
+if (!function_exists('linksJsonExit')) {
     /**
      * @param array<string,mixed> $payload
      */
-    function hansJackLinksJsonExit(array $payload, int $statusCode = 200): void
+    function linksJsonExit(array $payload, int $statusCode = 200): void
     {
         if (!headers_sent()) {
             http_response_code($statusCode);
@@ -61,8 +61,8 @@ if (!function_exists('hansJackLinksJsonExit')) {
     }
 }
 
-if (!function_exists('hansJackLinksFeedExcerpt')) {
-    function hansJackLinksFeedExcerpt(string $value, int $max = 120): string
+if (!function_exists('linksFeedExcerpt')) {
+    function linksFeedExcerpt(string $value, int $max = 120): string
     {
         $text = trim($value);
         if ($text === '') {
@@ -92,8 +92,8 @@ if (!function_exists('hansJackLinksFeedExcerpt')) {
     }
 }
 
-if (!function_exists('hansJackLinksFeedResolveUrl')) {
-    function hansJackLinksFeedResolveUrl(string $url, string $feedUrl): string
+if (!function_exists('linksFeedResolveUrl')) {
+    function linksFeedResolveUrl(string $url, string $feedUrl): string
     {
         $url = trim($url);
         if ($url === '') {
@@ -117,11 +117,11 @@ if (!function_exists('hansJackLinksFeedResolveUrl')) {
     }
 }
 
-if (!function_exists('hansJackLinksFeedFetchBody')) {
+if (!function_exists('linksFeedFetchBody')) {
     /**
      * @return array{ok:bool,body:string,message:string}
      */
-    function hansJackLinksFeedFetchBody(string $url): array
+    function linksFeedFetchBody(string $url): array
     {
         $url = trim($url);
         if ($url === '' || filter_var($url, FILTER_VALIDATE_URL) === false) {
@@ -133,7 +133,7 @@ if (!function_exists('hansJackLinksFeedFetchBody')) {
             return ['ok' => false, 'body' => '', 'message' => '仅支持 http/https 订阅地址。'];
         }
 
-        $ua = 'HansJackFeedPreview/1.0';
+        $ua = 'ThemeFeedPreview/1.0';
 
         if (function_exists('curl_init')) {
             $ch = curl_init($url);
@@ -184,11 +184,11 @@ if (!function_exists('hansJackLinksFeedFetchBody')) {
     }
 }
 
-if (!function_exists('hansJackLinksFeedParseItems')) {
+if (!function_exists('linksFeedParseItems')) {
     /**
      * @return array<int,array{title:string,url:string,publishedAt:int,summary:string}>
      */
-    function hansJackLinksFeedParseItems(string $xml, string $feedUrl, int $limit = 8): array
+    function linksFeedParseItems(string $xml, string $feedUrl, int $limit = 8): array
     {
         $items = [];
         if (trim($xml) === '') {
@@ -212,12 +212,12 @@ if (!function_exists('hansJackLinksFeedParseItems')) {
         }
 
         $pushItem = function (string $title, string $url, string $summary, int $publishedAt) use (&$items): void {
-            $title = hansJackLinksFeedExcerpt($title, 120);
+            $title = linksFeedExcerpt($title, 120);
             if ($title === '') {
                 $title = '未命名文章';
             }
 
-            $summary = hansJackLinksFeedExcerpt($summary, 150);
+            $summary = linksFeedExcerpt($summary, 150);
             if ($summary === '') {
                 $summary = '暂无摘要';
             }
@@ -254,7 +254,7 @@ if (!function_exists('hansJackLinksFeedParseItems')) {
                     }
 
                     $publishedAt = $publishedText !== '' ? (int) strtotime($publishedText) : 0;
-                    $link = hansJackLinksFeedResolveUrl($link, $feedUrl);
+                    $link = linksFeedResolveUrl($link, $feedUrl);
                     if ($link !== '' && filter_var($link, FILTER_VALIDATE_URL) === false) {
                         $link = '';
                     }
@@ -294,7 +294,7 @@ if (!function_exists('hansJackLinksFeedParseItems')) {
                     }
                 }
 
-                $link = hansJackLinksFeedResolveUrl($link, $feedUrl);
+                $link = linksFeedResolveUrl($link, $feedUrl);
                 if ($link !== '' && filter_var($link, FILTER_VALIDATE_URL) === false) {
                     $link = '';
                 }
@@ -318,11 +318,11 @@ if (!function_exists('hansJackLinksFeedParseItems')) {
     }
 }
 
-if (!function_exists('hansJackLinksHealthCheck')) {
+if (!function_exists('linksHealthCheck')) {
     /**
      * @return array{state:string,httpCode:int,latencyMs:int,message:string}
      */
-    function hansJackLinksHealthCheck(string $url): array
+    function linksHealthCheck(string $url): array
     {
         $url = trim($url);
         if ($url === '' || filter_var($url, FILTER_VALIDATE_URL) === false) {
@@ -360,7 +360,7 @@ if (!function_exists('hansJackLinksHealthCheck')) {
                 curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
                 curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 4);
                 curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-                curl_setopt($ch, CURLOPT_USERAGENT, 'HansJackLinkHealth/1.0');
+                curl_setopt($ch, CURLOPT_USERAGENT, 'ThemeLinkHealth/1.0');
                 curl_setopt($ch, CURLOPT_HTTPHEADER, [
                     'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 ]);
@@ -404,7 +404,7 @@ if (!function_exists('hansJackLinksHealthCheck')) {
                     'timeout' => 10,
                     'follow_location' => 1,
                     'max_redirects' => 3,
-                    'header' => "User-Agent: HansJackLinkHealth/1.0\r\nRange: bytes=0-0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n",
+                    'header' => "User-Agent: ThemeLinkHealth/1.0\r\nRange: bytes=0-0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n",
                     'ignore_errors' => true,
                 ],
                 'ssl' => [
@@ -461,9 +461,9 @@ $applySettings = [
     ],
 ];
 
-$isFeedPreviewRequest = (string) ($request->get('hj_links_feed_preview') ?? '') === '1';
+$isFeedPreviewRequest = (string) ($request->get('links_feed_preview') ?? '') === '1';
 $feedPreviewLinkId = (int) ($request->get('link_id') ?? 0);
-$isHealthCheckRequest = (string) ($request->get('hj_links_health_check') ?? '') === '1';
+$isHealthCheckRequest = (string) ($request->get('links_health_check') ?? '') === '1';
 $healthCheckLinkId = (int) ($request->get('link_id') ?? 0);
 
 try {
@@ -518,7 +518,7 @@ try {
 
         if ($isFeedPreviewRequest) {
             if ($feedPreviewLinkId <= 0) {
-                hansJackLinksJsonExit([
+                linksJsonExit([
                     'ok' => false,
                     'message' => '参数错误。',
                 ], 400);
@@ -531,7 +531,7 @@ try {
             ]);
             $row = $stmt->fetch(\PDO::FETCH_ASSOC);
             if (!is_array($row)) {
-                hansJackLinksJsonExit([
+                linksJsonExit([
                     'ok' => false,
                     'message' => '未找到订阅信息。',
                 ], 404);
@@ -539,22 +539,22 @@ try {
 
             $feedUrl = trim((string) ($row['feed'] ?? ''));
             if ($feedUrl === '') {
-                hansJackLinksJsonExit([
+                linksJsonExit([
                     'ok' => false,
                     'message' => '无订阅信息。',
                 ], 404);
             }
 
-            $remote = hansJackLinksFeedFetchBody($feedUrl);
+            $remote = linksFeedFetchBody($feedUrl);
             if (empty($remote['ok'])) {
-                hansJackLinksJsonExit([
+                linksJsonExit([
                     'ok' => false,
                     'message' => (string) ($remote['message'] ?? '订阅抓取失败。'),
                 ], 502);
             }
 
-            $items = hansJackLinksFeedParseItems((string) ($remote['body'] ?? ''), $feedUrl, 8);
-            hansJackLinksJsonExit([
+            $items = linksFeedParseItems((string) ($remote['body'] ?? ''), $feedUrl, 8);
+            linksJsonExit([
                 'ok' => true,
                 'title' => trim((string) ($row['name'] ?? '')),
                 'items' => $items,
@@ -563,7 +563,7 @@ try {
 
         if ($isHealthCheckRequest) {
             if ($healthCheckLinkId <= 0) {
-                hansJackLinksJsonExit([
+                linksJsonExit([
                     'ok' => false,
                     'message' => '参数错误。',
                 ], 400);
@@ -576,15 +576,15 @@ try {
             ]);
             $row = $stmt->fetch(\PDO::FETCH_ASSOC);
             if (!is_array($row)) {
-                hansJackLinksJsonExit([
+                linksJsonExit([
                     'ok' => false,
                     'message' => '未找到链接信息。',
                 ], 404);
             }
 
             $urlRaw = trim((string) ($row['url'] ?? ''));
-            $health = hansJackLinksHealthCheck($urlRaw);
-            hansJackLinksJsonExit([
+            $health = linksHealthCheck($urlRaw);
+            linksJsonExit([
                 'ok' => true,
                 'linkId' => (int) ($row['id'] ?? 0),
                 'state' => (string) ($health['state'] ?? 'red'),
@@ -607,13 +607,13 @@ try {
                 $noticeType = 'error';
                 $noticeMessage = '提交失败。';
             } else {
-                $name = hansJackV3aLinksStr($request->get('name', ''), 100);
-                $url = hansJackV3aLinksStr($request->get('url', ''), 255);
-                $feed = hansJackV3aLinksStr($request->get('feed', ''), 500);
-                $avatar = hansJackV3aLinksStr($request->get('avatar', ''), 500);
-                $description = hansJackV3aLinksStr($request->get('description', ''), 200);
-                $email = hansJackV3aLinksStr($request->get('email', ''), 190);
-                $message = hansJackV3aLinksStr($request->get('message', ''), 500);
+                $name = v3aLinksStr($request->get('name', ''), 100);
+                $url = v3aLinksStr($request->get('url', ''), 255);
+                $feed = v3aLinksStr($request->get('feed', ''), 500);
+                $avatar = v3aLinksStr($request->get('avatar', ''), 500);
+                $description = v3aLinksStr($request->get('description', ''), 200);
+                $email = v3aLinksStr($request->get('email', ''), 190);
+                $message = v3aLinksStr($request->get('message', ''), 500);
 
                 $type = (string) ($applySettings['defaultType'] ?? 'friend');
                 if (!in_array($type, ['friend', 'collection'], true)) {
@@ -621,7 +621,7 @@ try {
                 }
 
                 if (!empty($applySettings['allowTypeSelect'])) {
-                    $t = strtolower(hansJackV3aLinksStr($request->get('type', ''), 20));
+                    $t = strtolower(v3aLinksStr($request->get('type', ''), 20));
                     if (in_array($t, ['friend', 'collection'], true) && !empty($applySettings['allowedTypes'][$t])) {
                         $type = $t;
                     }
@@ -739,13 +739,13 @@ try {
     $noticeType = 'error';
     $noticeMessage = $noticeMessage ?: ('加载失败：' . $e->getMessage());
     if ($isFeedPreviewRequest) {
-        hansJackLinksJsonExit([
+        linksJsonExit([
             'ok' => false,
             'message' => $noticeMessage,
         ], 500);
     }
     if ($isHealthCheckRequest) {
-        hansJackLinksJsonExit([
+        linksJsonExit([
             'ok' => false,
             'message' => $noticeMessage,
         ], 500);
@@ -753,14 +753,14 @@ try {
 }
 
 if ($isFeedPreviewRequest) {
-    hansJackLinksJsonExit([
+    linksJsonExit([
         'ok' => false,
         'message' => $v3aEnabled ? '暂时无法加载订阅信息。' : '未启用 Vue3Admin 插件，无法加载订阅信息。',
     ], 400);
 }
 
 if ($isHealthCheckRequest) {
-    hansJackLinksJsonExit([
+    linksJsonExit([
         'ok' => false,
         'message' => $v3aEnabled ? '暂时无法检查链接状态。' : '未启用 Vue3Admin 插件，无法检查链接状态。',
     ], 400);
@@ -768,7 +768,7 @@ if ($isHealthCheckRequest) {
 
 $siteTitleRaw = trim((string) ($this->options->title ?? ''));
 $siteTitleText = $siteTitleRaw !== '' ? $siteTitleRaw : '本站';
-$siteTitle = hansJackEscape($siteTitleText);
+$siteTitle = escape($siteTitleText);
 
 $siteInitialRaw = $siteTitleText;
 if (function_exists('mb_substr')) {
@@ -776,13 +776,13 @@ if (function_exists('mb_substr')) {
 } else {
     $siteInitialRaw = substr($siteTitleText, 0, 1);
 }
-$siteInitial = hansJackEscape($siteInitialRaw !== '' ? $siteInitialRaw : '站');
+$siteInitial = escape($siteInitialRaw !== '' ? $siteInitialRaw : '站');
 
 ob_start();
 $this->options->siteUrl();
 $siteUrlRaw = trim((string) ob_get_clean());
-$siteUrlHref = $siteUrlRaw !== '' ? hansJackEscape($siteUrlRaw) : '';
-$siteUrlText = $siteUrlRaw !== '' ? hansJackEscape(rtrim($siteUrlRaw, '/')) : '—';
+$siteUrlHref = $siteUrlRaw !== '' ? escape($siteUrlRaw) : '';
+$siteUrlText = $siteUrlRaw !== '' ? escape(rtrim($siteUrlRaw, '/')) : '—';
 
 ob_start();
 $this->options->feedUrl();
@@ -791,46 +791,46 @@ $siteFeedRaw = trim((string) ob_get_clean());
 ob_start();
 $this->options->siteUrl('favicon.ico');
 $siteFaviconRaw = trim((string) ob_get_clean());
-$siteFavicon = $siteFaviconRaw !== '' ? hansJackEscape($siteFaviconRaw) : '';
+$siteFavicon = $siteFaviconRaw !== '' ? escape($siteFaviconRaw) : '';
 
 $siteDescRaw = trim((string) ($this->options->description ?? ''));
-$siteDesc = hansJackEscape($siteDescRaw !== '' ? $siteDescRaw : '欢迎交换友情链接。');
-$siteCopyName = hansJackEscape($siteTitleText);
-$siteCopyDesc = hansJackEscape($siteDescRaw !== '' ? $siteDescRaw : '欢迎交换友情链接。');
-$siteCopyUrl = $siteUrlRaw !== '' ? hansJackEscape(rtrim($siteUrlRaw, '/')) : '';
-$siteCopyFeed = $siteFeedRaw !== '' ? hansJackEscape($siteFeedRaw) : '';
-$siteCopyAvatar = $siteFaviconRaw !== '' ? hansJackEscape($siteFaviconRaw) : '';
+$siteDesc = escape($siteDescRaw !== '' ? $siteDescRaw : '欢迎交换友情链接。');
+$siteCopyName = escape($siteTitleText);
+$siteCopyDesc = escape($siteDescRaw !== '' ? $siteDescRaw : '欢迎交换友情链接。');
+$siteCopyUrl = $siteUrlRaw !== '' ? escape(rtrim($siteUrlRaw, '/')) : '';
+$siteCopyFeed = $siteFeedRaw !== '' ? escape($siteFeedRaw) : '';
+$siteCopyAvatar = $siteFaviconRaw !== '' ? escape($siteFaviconRaw) : '';
 
 $this->need('header.php');
 ?>
 
-<main class="hj-main" role="main">
-    <article class="hj-page hj-links-page" aria-label="<?php _e('友情链接'); ?>">
-        <div class="hj-article-content">
-            <?php hansJackEchoArchiveContent($this); ?>
+<main class="main" role="main">
+    <article class="page links-page" aria-label="<?php _e('友情链接'); ?>">
+        <div class="article-content">
+            <?php echoArchiveContent($this); ?>
         </div>
 
-        <section class="hj-links" aria-label="<?php _e('友链'); ?>">
+        <section class="links" aria-label="<?php _e('友链'); ?>">
             <?php if (!$v3aEnabled): ?>
-                <p class="hj-links-empty"><?php _e('未启用 Vue3Admin 插件，无法加载友链数据。'); ?></p>
+                <p class="links-empty"><?php _e('未启用 Vue3Admin 插件，无法加载友链数据。'); ?></p>
             <?php else: ?>
                 <?php if (!empty($links)): ?>
-                    <ul class="hj-links-list" aria-label="<?php _e('友情链接列表'); ?>">
+                    <ul class="links-list" aria-label="<?php _e('友情链接列表'); ?>">
                         <?php foreach ((array) $links as $link):
                             $rawName = (string) ($link['name'] ?? '');
-                            $name = hansJackEscape($rawName);
+                            $name = escape($rawName);
                             $linkId = (int) ($link['id'] ?? 0);
-                            $url = hansJackEscape((string) ($link['url'] ?? ''));
+                            $url = escape((string) ($link['url'] ?? ''));
                             $feed = trim((string) ($link['feed'] ?? ''));
-                            $feed = $feed !== '' ? hansJackEscape($feed) : '';
-                            $desc = hansJackEscape((string) ($link['description'] ?? ''));
+                            $feed = $feed !== '' ? escape($feed) : '';
+                            $desc = escape((string) ($link['description'] ?? ''));
 
                             $avatar = trim((string) ($link['avatar'] ?? ''));
-                            $avatar = $avatar !== '' ? hansJackEscape($avatar) : '';
+                            $avatar = $avatar !== '' ? escape($avatar) : '';
 
                             $type = strtolower(trim((string) ($link['type'] ?? 'friend')));
                             $typeLabel = $type === 'collection' ? '收藏' : '朋友';
-                            $typeLabel = hansJackEscape($typeLabel);
+                            $typeLabel = escape($typeLabel);
 
                             $initial = '—';
                             $trimName = trim($rawName);
@@ -841,21 +841,21 @@ $this->need('header.php');
                                     $initial = substr($trimName, 0, 1);
                                 }
                             }
-                            $initial = hansJackEscape($initial);
+                            $initial = escape($initial);
                             $hasFeedInfo = $feed !== '' && $linkId > 0;
                             $avatarLabel = trim($trimName) !== '' ? ('查看 ' . $trimName . ' 的订阅信息') : '查看该站点的订阅信息';
-                            $avatarLabel = hansJackEscape($avatarLabel);
-                            $feedTip = hansJackEscape(_t('订阅信息'));
-                            $noFeedTip = hansJackEscape(_t('无订阅信息'));
+                            $avatarLabel = escape($avatarLabel);
+                            $feedTip = escape(_t('订阅信息'));
+                            $noFeedTip = escape(_t('无订阅信息'));
                         ?>
-                            <li class="hj-links-item" data-hj-link-type="<?php echo $typeLabel; ?>">
+                            <li class="links-item" data-link-type="<?php echo $typeLabel; ?>">
                                 <?php if ($hasFeedInfo): ?>
                                     <button
-                                        class="hj-links-avatar hj-links-avatar-btn"
+                                        class="links-avatar links-avatar-btn"
                                         type="button"
-                                        data-hj-feed-link-id="<?php echo $linkId; ?>"
-                                        data-hj-feed-link-name="<?php echo $name !== '' ? $name : '—'; ?>"
-                                        data-hj-feed-tip="<?php echo $feedTip; ?>"
+                                        data-feed-link-id="<?php echo $linkId; ?>"
+                                        data-feed-link-name="<?php echo $name !== '' ? $name : '—'; ?>"
+                                        data-feed-tip="<?php echo $feedTip; ?>"
                                         title="<?php echo $feedTip; ?>"
                                         aria-label="<?php echo $avatarLabel; ?>"
                                         aria-haspopup="dialog"
@@ -868,7 +868,7 @@ $this->need('header.php');
                                         <?php endif; ?>
                                     </button>
                                 <?php else: ?>
-                                    <div class="hj-links-avatar is-no-feed" data-hj-feed-tip="<?php echo $noFeedTip; ?>" title="<?php echo $noFeedTip; ?>" tabindex="0" aria-label="<?php echo $noFeedTip; ?>">
+                                    <div class="links-avatar is-no-feed" data-feed-tip="<?php echo $noFeedTip; ?>" title="<?php echo $noFeedTip; ?>" tabindex="0" aria-label="<?php echo $noFeedTip; ?>">
                                         <?php if ($avatar !== ''): ?>
                                             <img src="<?php echo $avatar; ?>" alt="" width="42" height="42" loading="lazy" decoding="async">
                                         <?php else: ?>
@@ -877,165 +877,165 @@ $this->need('header.php');
                                     </div>
                                 <?php endif; ?>
 
-                                <div class="hj-links-body">
-                                    <div class="hj-links-name-row">
-                                        <a class="hj-links-name" href="<?php echo $url; ?>" target="_blank" rel="noreferrer"><?php echo $name !== '' ? $name : '—'; ?></a>
+                                <div class="links-body">
+                                    <div class="links-name-row">
+                                        <a class="links-name" href="<?php echo $url; ?>" target="_blank" rel="noreferrer"><?php echo $name !== '' ? $name : '—'; ?></a>
                                         <?php if ($feed !== ''): ?>
                                             <a
-                                                class="hj-links-feed is-health-pending"
+                                                class="links-feed is-health-pending"
                                                 href="<?php echo $feed; ?>"
                                                 target="_blank"
                                                 rel="noreferrer"
                                                 aria-label="订阅链接"
                                                 title="订阅链接"
-                                                data-hj-feed-tip="订阅链接"
-                                                data-hj-link-health-id="<?php echo $linkId; ?>"
-                                                data-hj-health-state="pending"
+                                                data-feed-tip="订阅链接"
+                                                data-link-health-id="<?php echo $linkId; ?>"
+                                                data-health-state="pending"
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rss-icon lucide-rss hj-links-feed-icon" aria-hidden="true">
-                                                    <path class="hj-links-feed-wave hj-links-feed-wave-1" pathLength="1" d="M4 11a9 9 0 0 1 9 9"/>
-                                                    <path class="hj-links-feed-wave hj-links-feed-wave-2" pathLength="1" d="M4 4a16 16 0 0 1 16 16"/>
-                                                    <circle class="hj-links-feed-dot" cx="5" cy="19" r="1"/>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rss-icon lucide-rss links-feed-icon" aria-hidden="true">
+                                                    <path class="links-feed-wave links-feed-wave-1" pathLength="1" d="M4 11a9 9 0 0 1 9 9"/>
+                                                    <path class="links-feed-wave links-feed-wave-2" pathLength="1" d="M4 4a16 16 0 0 1 16 16"/>
+                                                    <circle class="links-feed-dot" cx="5" cy="19" r="1"/>
                                                 </svg>
                                             </a>
                                         <?php endif; ?>
                                     </div>
                                     <?php if ($desc !== ''): ?>
-                                        <div class="hj-links-desc"><?php echo $desc; ?></div>
+                                        <div class="links-desc"><?php echo $desc; ?></div>
                                     <?php endif; ?>
                                 </div>
                             </li>
                         <?php endforeach; ?>
                     </ul>
 
-                    <div class="hj-links-feed-popover" data-hj-links-feed-popover hidden aria-hidden="true" role="dialog" aria-modal="false" aria-label="<?php _e('订阅信息'); ?>">
-                        <div class="hj-links-feed-popover-head">
-                            <p class="hj-links-feed-popover-title" data-hj-links-feed-popover-title><?php _e('订阅信息'); ?></p>
-                            <button class="hj-links-feed-popover-close" type="button" data-hj-links-feed-popover-close aria-label="<?php _e('关闭订阅信息'); ?>">
+                    <div class="links-feed-popover" data-links-feed-popover hidden aria-hidden="true" role="dialog" aria-modal="false" aria-label="<?php _e('订阅信息'); ?>">
+                        <div class="links-feed-popover-head">
+                            <p class="links-feed-popover-title" data-links-feed-popover-title><?php _e('订阅信息'); ?></p>
+                            <button class="links-feed-popover-close" type="button" data-links-feed-popover-close aria-label="<?php _e('关闭订阅信息'); ?>">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <path d="M18 6 6 18"></path>
                                     <path d="m6 6 12 12"></path>
                                 </svg>
                             </button>
                         </div>
-                        <div class="hj-links-feed-popover-body" data-hj-links-feed-popover-body></div>
+                        <div class="links-feed-popover-body" data-links-feed-popover-body></div>
                     </div>
                 <?php else: ?>
-                    <p class="hj-links-empty"><?php _e('暂无友链'); ?></p>
+                    <p class="links-empty"><?php _e('暂无友链'); ?></p>
                 <?php endif; ?>
 
-                <div class="hj-links-apply" id="v3a-apply" aria-label="<?php _e('申请友链'); ?>">
-                    <div class="hj-links-apply-layout">
-                        <div class="hj-links-apply-main">
+                <div class="links-apply" id="v3a-apply" aria-label="<?php _e('申请友链'); ?>">
+                    <div class="links-apply-layout">
+                        <div class="links-apply-main">
                             <?php if ($noticeMessage !== ''): ?>
-                                <div class="hj-links-notice <?php echo ($noticeType === 'success') ? 'is-success' : 'is-error'; ?>">
-                                    <?php echo hansJackEscape($noticeMessage); ?>
+                                <div class="links-notice <?php echo ($noticeType === 'success') ? 'is-success' : 'is-error'; ?>">
+                                    <?php echo escape($noticeMessage); ?>
                                 </div>
                             <?php endif; ?>
 
-                            <section class="hj-links-apply-main-inner" aria-label="<?php _e('友链申请'); ?>">
-                                <article class="hj-links-step hj-links-step-check" aria-label="<?php _e('确认前置条件'); ?>">
-                                    <div class="hj-links-panel-head">
-                                        <span class="hj-links-panel-num" aria-hidden="true">1</span>
-                                        <h2 class="hj-links-panel-title"><?php _e('确认前置条件'); ?></h2>
+                            <section class="links-apply-main-inner" aria-label="<?php _e('友链申请'); ?>">
+                                <article class="links-step links-step-check" aria-label="<?php _e('确认前置条件'); ?>">
+                                    <div class="links-panel-head">
+                                        <span class="links-panel-num" aria-hidden="true">1</span>
+                                        <h2 class="links-panel-title"><?php _e('确认前置条件'); ?></h2>
                                     </div>
-                                    <div class="hj-links-checklist-wrap">
-                                        <label class="hj-links-check">
-                                            <input class="hj-links-check-input" type="checkbox">
-                                            <span class="hj-links-check-text"><?php _e('类型为「个人博客」，已运营时间不少于 60 天'); ?></span>
+                                    <div class="links-checklist-wrap">
+                                        <label class="links-check">
+                                            <input class="links-check-input" type="checkbox">
+                                            <span class="links-check-text"><?php _e('类型为「个人博客」，已运营时间不少于 60 天'); ?></span>
                                         </label>
-                                        <label class="hj-links-check">
-                                            <input class="hj-links-check-input" type="checkbox">
-                                            <span class="hj-links-check-text"><?php _e('现有文章数量 >= 5 篇，且原创文章占比 >= 90%'); ?></span>
+                                        <label class="links-check">
+                                            <input class="links-check-input" type="checkbox">
+                                            <span class="links-check-text"><?php _e('现有文章数量 >= 5 篇，且原创文章占比 >= 90%'); ?></span>
                                         </label>
-                                        <label class="hj-links-check">
-                                            <input class="hj-links-check-input" type="checkbox">
-                                            <span class="hj-links-check-text"><?php _e('网站访问流畅、内容合法合规、无过多商业广告'); ?></span>
+                                        <label class="links-check">
+                                            <input class="links-check-input" type="checkbox">
+                                            <span class="links-check-text"><?php _e('网站访问流畅、内容合法合规、无过多商业广告'); ?></span>
                                         </label>
-                                        <label class="hj-links-check">
-                                            <input class="hj-links-check-input" type="checkbox">
-                                            <span class="hj-links-check-text"><?php _e('全站支持 HTTPS 访问'); ?></span>
+                                        <label class="links-check">
+                                            <input class="links-check-input" type="checkbox">
+                                            <span class="links-check-text"><?php _e('全站支持 HTTPS 访问'); ?></span>
                                         </label>
-                                        <label class="hj-links-check">
-                                            <input class="hj-links-check-input" type="checkbox">
-                                            <span class="hj-links-check-text"><?php _e('已将本站添加为贵站的友情链接'); ?></span>
+                                        <label class="links-check">
+                                            <input class="links-check-input" type="checkbox">
+                                            <span class="links-check-text"><?php _e('已将本站添加为贵站的友情链接'); ?></span>
                                         </label>
                                     </div>
-                                    <div class="hj-links-step-actions">
-                                        <button class="hj-links-btn hj-links-confirm-btn hj-links-primary-btn" type="button" data-hj-links-confirm><?php _e('确定'); ?></button>
+                                    <div class="links-step-actions">
+                                        <button class="links-btn links-confirm-btn links-primary-btn" type="button" data-links-confirm><?php _e('确定'); ?></button>
                                     </div>
                                 </article>
 
-                                <section class="hj-links-step hj-links-step-form" aria-label="<?php _e('填写站点信息'); ?>" hidden aria-hidden="true">
-                                    <div class="hj-links-panel-head">
-                                        <span class="hj-links-panel-num" aria-hidden="true">2</span>
-                                        <h2 class="hj-links-panel-title"><?php _e('填写站点信息'); ?></h2>
+                                <section class="links-step links-step-form" aria-label="<?php _e('填写站点信息'); ?>" hidden aria-hidden="true">
+                                    <div class="links-panel-head">
+                                        <span class="links-panel-num" aria-hidden="true">2</span>
+                                        <h2 class="links-panel-title"><?php _e('填写站点信息'); ?></h2>
                                     </div>
 
-                                    <form class="hj-links-apply-form" method="post" action="<?php $this->permalink(); ?>#v3a-apply" autocomplete="on">
+                                    <form class="links-apply-form" method="post" action="<?php $this->permalink(); ?>#v3a-apply" autocomplete="on">
                                         <input type="hidden" name="v3a_do" value="apply">
                                         <input type="hidden" name="v3a_hp" value="">
-                                        <input type="hidden" name="_" value="<?php echo hansJackEscape((string) $security->getToken($csrfRef)); ?>">
-                                        <input type="hidden" name="type" value="<?php echo hansJackEscape((string) ($applySettings['defaultType'] ?? 'friend')); ?>">
+                                        <input type="hidden" name="_" value="<?php echo escape((string) $security->getToken($csrfRef)); ?>">
+                                        <input type="hidden" name="type" value="<?php echo escape((string) ($applySettings['defaultType'] ?? 'friend')); ?>">
 
-                                        <div class="hj-links-form-grid">
-                                            <label class="hj-links-form-item" for="hj-links-url">
-                                                <span class="hj-links-form-label required"><?php _e('站点地址'); ?></span>
-                                                <input type="url" id="hj-links-url" name="url" class="text" required maxlength="255" placeholder="https://your.website">
+                                        <div class="links-form-grid">
+                                            <label class="links-form-item" for="links-url">
+                                                <span class="links-form-label required"><?php _e('站点地址'); ?></span>
+                                                <input type="url" id="links-url" name="url" class="text" required maxlength="255" placeholder="https://your.website">
                                             </label>
-                                            <label class="hj-links-form-item" for="hj-links-name">
-                                                <span class="hj-links-form-label required"><?php _e('站点名称'); ?></span>
-                                                <input type="text" id="hj-links-name" name="name" class="text" required maxlength="100" placeholder="<?php _e('站点名称'); ?>">
+                                            <label class="links-form-item" for="links-name">
+                                                <span class="links-form-label required"><?php _e('站点名称'); ?></span>
+                                                <input type="text" id="links-name" name="name" class="text" required maxlength="100" placeholder="<?php _e('站点名称'); ?>">
                                             </label>
-                                            <label class="hj-links-form-item" for="hj-links-avatar">
-                                                <span class="hj-links-form-label<?php echo !empty($applySettings['required']['avatar']) ? ' required' : ''; ?>"><?php _e('站点图标'); ?></span>
-                                                <input type="url" id="hj-links-avatar" name="avatar" class="text" maxlength="500" placeholder="https://your.website/favicon.svg" <?php echo !empty($applySettings['required']['avatar']) ? 'required' : ''; ?>>
+                                            <label class="links-form-item" for="links-avatar">
+                                                <span class="links-form-label<?php echo !empty($applySettings['required']['avatar']) ? ' required' : ''; ?>"><?php _e('站点图标'); ?></span>
+                                                <input type="url" id="links-avatar" name="avatar" class="text" maxlength="500" placeholder="https://your.website/favicon.svg" <?php echo !empty($applySettings['required']['avatar']) ? 'required' : ''; ?>>
                                             </label>
-                                            <label class="hj-links-form-item" for="hj-links-feed">
-                                                <span class="hj-links-form-label"><?php _e('订阅地址'); ?></span>
-                                                <input type="url" id="hj-links-feed" name="feed" class="text" maxlength="500" placeholder="https://your.website/feed.xml">
+                                            <label class="links-form-item" for="links-feed">
+                                                <span class="links-form-label"><?php _e('订阅地址'); ?></span>
+                                                <input type="url" id="links-feed" name="feed" class="text" maxlength="500" placeholder="https://your.website/feed.xml">
                                             </label>
-                                            <label class="hj-links-form-item" for="hj-links-description">
-                                                <span class="hj-links-form-label<?php echo !empty($applySettings['required']['description']) ? ' required' : ''; ?>"><?php _e('站点描述'); ?></span>
-                                                <input type="text" id="hj-links-description" name="description" class="text" maxlength="200" placeholder="<?php _e('一句话介绍您的站点'); ?>" <?php echo !empty($applySettings['required']['description']) ? 'required' : ''; ?>>
+                                            <label class="links-form-item" for="links-description">
+                                                <span class="links-form-label<?php echo !empty($applySettings['required']['description']) ? ' required' : ''; ?>"><?php _e('站点描述'); ?></span>
+                                                <input type="text" id="links-description" name="description" class="text" maxlength="200" placeholder="<?php _e('一句话介绍您的站点'); ?>" <?php echo !empty($applySettings['required']['description']) ? 'required' : ''; ?>>
                                             </label>
-                                            <label class="hj-links-form-item" for="hj-links-email">
-                                                <span class="hj-links-form-label required"><?php _e('联系邮箱'); ?></span>
-                                                <input type="email" id="hj-links-email" name="email" class="text" maxlength="190" placeholder="<?php _e('接收申请结果及重要通知'); ?>" required>
+                                            <label class="links-form-item" for="links-email">
+                                                <span class="links-form-label required"><?php _e('联系邮箱'); ?></span>
+                                                <input type="email" id="links-email" name="email" class="text" maxlength="190" placeholder="<?php _e('接收申请结果及重要通知'); ?>" required>
                                             </label>
 
                                             <?php if (!empty($applySettings['required']['message'])): ?>
-                                                <label class="hj-links-form-item hj-links-form-item-wide" for="hj-links-message">
-                                                    <span class="hj-links-form-label required"><?php _e('留言'); ?></span>
-                                                    <input type="text" id="hj-links-message" name="message" class="text" maxlength="500" placeholder="<?php _e('可简要补充说明'); ?>" required>
+                                                <label class="links-form-item links-form-item-wide" for="links-message">
+                                                    <span class="links-form-label required"><?php _e('留言'); ?></span>
+                                                    <input type="text" id="links-message" name="message" class="text" maxlength="500" placeholder="<?php _e('可简要补充说明'); ?>" required>
                                                 </label>
                                             <?php else: ?>
                                                 <input type="hidden" name="message" value="">
                                             <?php endif; ?>
                                         </div>
 
-                                        <p class="hj-links-form-note"><?php _e('* 为必填项'); ?></p>
+                                        <p class="links-form-note"><?php _e('* 为必填项'); ?></p>
 
-                                        <div class="hj-links-step-actions">
-                                            <button type="submit" class="hj-links-btn hj-links-submit-btn hj-links-primary-btn"><?php _e('提交申请'); ?></button>
+                                        <div class="links-step-actions">
+                                            <button type="submit" class="links-btn links-submit-btn links-primary-btn"><?php _e('提交申请'); ?></button>
                                         </div>
                                     </form>
                                 </section>
                             </section>
                         </div>
 
-                        <aside class="hj-links-aside" aria-label="<?php _e('本站友链信息'); ?>">
-                            <h2 class="hj-links-aside-title"><?php _e('本站友链信息'); ?></h2>
+                        <aside class="links-aside" aria-label="<?php _e('本站友链信息'); ?>">
+                            <h2 class="links-aside-title"><?php _e('本站友链信息'); ?></h2>
 
-                            <p class="hj-links-aside-step">
-                                <span class="hj-links-aside-step-num" aria-hidden="true">1</span>
-                                <span class="hj-links-aside-step-text"><?php _e('请先于贵站友链列表中添加本站：'); ?></span>
+                            <p class="links-aside-step">
+                                <span class="links-aside-step-num" aria-hidden="true">1</span>
+                                <span class="links-aside-step-text"><?php _e('请先于贵站友链列表中添加本站：'); ?></span>
                             </p>
 
-                            <div class="hj-links-aside-site">
+                            <div class="links-aside-site">
                                 <button
                                     type="button"
-                                    class="hj-links-aside-favicon hj-links-copy-trigger<?php echo $siteCopyAvatar === '' ? ' is-disabled' : ''; ?>"
+                                    class="links-aside-favicon links-copy-trigger<?php echo $siteCopyAvatar === '' ? ' is-disabled' : ''; ?>"
                                     data-copy-text="<?php echo $siteCopyAvatar; ?>"
                                     data-copy-tip="点击复制头像链接"
                                     aria-label="<?php _e('复制头像链接'); ?>"
@@ -1047,18 +1047,18 @@ $this->need('header.php');
                                         <span><?php echo $siteInitial; ?></span>
                                     <?php endif; ?>
                                 </button>
-                                <div class="hj-links-aside-site-main">
-                                    <p class="hj-links-aside-site-title">
+                                <div class="links-aside-site-main">
+                                    <p class="links-aside-site-title">
                                         <button
                                             type="button"
-                                            class="hj-links-copy-trigger hj-links-copy-text"
+                                            class="links-copy-trigger links-copy-text"
                                             data-copy-text="<?php echo $siteCopyName; ?>"
                                             data-copy-tip="点击复制信息"
                                         ><?php echo $siteTitle; ?></button>
-                                        <span class="hj-links-aside-site-actions" aria-label="<?php _e('复制信息'); ?>">
+                                        <span class="links-aside-site-actions" aria-label="<?php _e('复制信息'); ?>">
                                             <button
                                                 type="button"
-                                                class="hj-links-copy-trigger hj-links-aside-icon-btn<?php echo $siteCopyUrl === '' ? ' is-disabled' : ''; ?>"
+                                                class="links-copy-trigger links-aside-icon-btn<?php echo $siteCopyUrl === '' ? ' is-disabled' : ''; ?>"
                                                 data-copy-text="<?php echo $siteCopyUrl; ?>"
                                                 data-copy-tip="点击复制信息"
                                                 aria-label="<?php _e('复制站点链接'); ?>"
@@ -1071,7 +1071,7 @@ $this->need('header.php');
                                             </button>
                                             <button
                                                 type="button"
-                                                class="hj-links-copy-trigger hj-links-aside-icon-btn<?php echo $siteCopyFeed === '' ? ' is-disabled' : ''; ?>"
+                                                class="links-copy-trigger links-aside-icon-btn<?php echo $siteCopyFeed === '' ? ' is-disabled' : ''; ?>"
                                                 data-copy-text="<?php echo $siteCopyFeed; ?>"
                                                 data-copy-tip="点击复制信息"
                                                 aria-label="<?php _e('复制 RSS 链接'); ?>"
@@ -1087,16 +1087,16 @@ $this->need('header.php');
                                     </p>
                                     <button
                                         type="button"
-                                        class="hj-links-copy-trigger hj-links-copy-text hj-links-aside-site-desc"
+                                        class="links-copy-trigger links-copy-text links-aside-site-desc"
                                         data-copy-text="<?php echo $siteCopyDesc; ?>"
                                         data-copy-tip="点击复制信息"
                                     ><?php echo $siteDesc; ?></button>
                                 </div>
                             </div>
 
-                            <p class="hj-links-aside-step">
-                                <span class="hj-links-aside-step-num" aria-hidden="true">2</span>
-                                <span class="hj-links-aside-step-text"><?php _e('完成后左侧进行流程申请友链'); ?></span>
+                            <p class="links-aside-step">
+                                <span class="links-aside-step-num" aria-hidden="true">2</span>
+                                <span class="links-aside-step-text"><?php _e('完成后左侧进行流程申请友链'); ?></span>
                             </p>
                         </aside>
                     </div>
@@ -1108,7 +1108,7 @@ $this->need('header.php');
 
 <script>
     (function () {
-        var nodes = document.querySelectorAll('.hj-links-copy-trigger[data-copy-text]');
+        var nodes = document.querySelectorAll('.links-copy-trigger[data-copy-text]');
         if (!nodes || nodes.length === 0) {
             return;
         }
@@ -1192,22 +1192,22 @@ $this->need('header.php');
 
 <script>
     (function () {
-        var page = document.querySelector('.hj-links-page');
+        var page = document.querySelector('.links-page');
         if (!page || !window.fetch) {
             return;
         }
 
         var avatarButtons = Array.prototype.slice.call(
-            page.querySelectorAll('.hj-links-avatar-btn[data-hj-feed-link-id]')
+            page.querySelectorAll('.links-avatar-btn[data-feed-link-id]')
         );
-        var popover = page.querySelector('[data-hj-links-feed-popover]');
+        var popover = page.querySelector('[data-links-feed-popover]');
         if (!popover || avatarButtons.length === 0) {
             return;
         }
 
-        var popoverTitle = popover.querySelector('[data-hj-links-feed-popover-title]');
-        var popoverBody = popover.querySelector('[data-hj-links-feed-popover-body]');
-        var popoverClose = popover.querySelector('[data-hj-links-feed-popover-close]');
+        var popoverTitle = popover.querySelector('[data-links-feed-popover-title]');
+        var popoverBody = popover.querySelector('[data-links-feed-popover-body]');
+        var popoverClose = popover.querySelector('[data-links-feed-popover-close]');
         if (!popoverTitle || !popoverBody) {
             return;
         }
@@ -1279,7 +1279,7 @@ $this->need('header.php');
             popoverTitle.textContent = title || '订阅信息';
             popoverBody.innerHTML = '';
             var p = document.createElement('p');
-            p.className = 'hj-links-feed-empty';
+            p.className = 'links-feed-empty';
             p.textContent = msg || '暂无订阅信息';
             popoverBody.appendChild(p);
         }
@@ -1288,7 +1288,7 @@ $this->need('header.php');
             popoverTitle.textContent = title || '订阅信息';
             popoverBody.innerHTML = '';
             var p = document.createElement('p');
-            p.className = 'hj-links-feed-loading';
+            p.className = 'links-feed-loading';
             p.textContent = '正在加载订阅信息...';
             popoverBody.appendChild(p);
         }
@@ -1306,7 +1306,7 @@ $this->need('header.php');
             }
 
             var list = document.createElement('ul');
-            list.className = 'hj-links-feed-list';
+            list.className = 'links-feed-list';
 
             items.forEach(function (item) {
                 if (!item) {
@@ -1314,14 +1314,14 @@ $this->need('header.php');
                 }
 
                 var row = document.createElement('li');
-                row.className = 'hj-links-feed-entry';
+                row.className = 'links-feed-entry';
 
                 var titleText = item.title ? String(item.title) : '未命名文章';
                 var itemUrl = item.url ? String(item.url) : '';
 
                 if (itemUrl) {
                     var a = document.createElement('a');
-                    a.className = 'hj-links-feed-entry-title';
+                    a.className = 'links-feed-entry-title';
                     a.href = itemUrl;
                     a.target = '_blank';
                     a.rel = 'noreferrer';
@@ -1329,18 +1329,18 @@ $this->need('header.php');
                     row.appendChild(a);
                 } else {
                     var span = document.createElement('span');
-                    span.className = 'hj-links-feed-entry-title';
+                    span.className = 'links-feed-entry-title';
                     span.textContent = titleText;
                     row.appendChild(span);
                 }
 
                 var time = document.createElement('span');
-                time.className = 'hj-links-feed-entry-time';
+                time.className = 'links-feed-entry-time';
                 time.textContent = formatRelativeTime(item.publishedAt);
                 row.appendChild(time);
 
                 var summary = document.createElement('p');
-                summary.className = 'hj-links-feed-entry-summary';
+                summary.className = 'links-feed-entry-summary';
                 summary.textContent = item.summary ? String(item.summary) : '暂无摘要';
                 row.appendChild(summary);
 
@@ -1388,7 +1388,7 @@ $this->need('header.php');
             }
 
             var headHeight = 44;
-            var head = popover.querySelector('.hj-links-feed-popover-head');
+            var head = popover.querySelector('.links-feed-popover-head');
             if (head) {
                 headHeight = Math.max(30, head.getBoundingClientRect().height || 44);
             }
@@ -1412,12 +1412,12 @@ $this->need('header.php');
         function buildRequestUrl(linkId) {
             var base = window.location.href.split('#')[0];
             var join = base.indexOf('?') === -1 ? '?' : '&';
-            return base + join + 'hj_links_feed_preview=1&link_id=' + encodeURIComponent(linkId);
+            return base + join + 'links_feed_preview=1&link_id=' + encodeURIComponent(linkId);
         }
 
         function loadFeed(button) {
-            var linkId = String(button.getAttribute('data-hj-feed-link-id') || '').trim();
-            var fallbackName = String(button.getAttribute('data-hj-feed-link-name') || '').trim();
+            var linkId = String(button.getAttribute('data-feed-link-id') || '').trim();
+            var fallbackName = String(button.getAttribute('data-feed-link-name') || '').trim();
             var fallbackTitle = fallbackName ? (fallbackName + ' · 订阅信息') : '订阅信息';
             if (linkId === '') {
                 renderMessage('订阅信息不存在', fallbackTitle);
@@ -1547,13 +1547,13 @@ $this->need('header.php');
 
 <script>
     (function () {
-        var page = document.querySelector('.hj-links-page');
+        var page = document.querySelector('.links-page');
         if (!page || !window.fetch) {
             return;
         }
 
         var targets = Array.prototype.slice.call(
-            page.querySelectorAll('.hj-links-feed[data-hj-link-health-id]')
+            page.querySelectorAll('.links-feed[data-link-health-id]')
         );
         if (!targets || targets.length === 0) {
             return;
@@ -1562,7 +1562,7 @@ $this->need('header.php');
         function buildUrl(linkId) {
             var base = window.location.href.split('#')[0];
             var join = base.indexOf('?') === -1 ? '?' : '&';
-            return base + join + 'hj_links_health_check=1&link_id=' + encodeURIComponent(linkId);
+            return base + join + 'links_health_check=1&link_id=' + encodeURIComponent(linkId);
         }
 
         function setState(node, state) {
@@ -1573,11 +1573,11 @@ $this->need('header.php');
 
             node.classList.remove('is-health-pending', 'is-health-green', 'is-health-yellow', 'is-health-red');
             node.classList.add('is-health-' + next);
-            node.setAttribute('data-hj-health-state', next);
+            node.setAttribute('data-health-state', next);
         }
 
         function fetchStatus(node) {
-            var idText = String(node.getAttribute('data-hj-link-health-id') || '').trim();
+            var idText = String(node.getAttribute('data-link-health-id') || '').trim();
             var linkId = parseInt(idText, 10);
             if (!isFinite(linkId) || linkId <= 0) {
                 setState(node, 'red');

@@ -1,8 +1,8 @@
-﻿/* HansJack Content Static Bundle */
+/* Theme Content Static Bundle */
 
 /* block 17 */
 (function () {
-            var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
+            var contents = Array.prototype.slice.call(document.querySelectorAll(".article-content, .comment-content"));
             if (!contents || contents.length === 0) {
                 return;
             }
@@ -46,7 +46,7 @@
                     img.setAttribute("loading", "lazy");
                 }
 
-                if (img.dataset && img.dataset.hjBlurupBound === "1") {
+                if (img.dataset && img.dataset.blurupBound === "1") {
                     if (img.complete && img.naturalWidth > 0) {
                         img.classList.add("is-loaded");
                     }
@@ -54,17 +54,17 @@
                 }
 
                 if (img.dataset) {
-                    img.dataset.hjBlurupBound = "1";
+                    img.dataset.blurupBound = "1";
                 }
 
-                img.classList.add("hj-lazy-blurup");
+                img.classList.add("lazy-blurup");
 
                 function markLoaded() {
                     img.classList.add("is-loaded");
                 }
 
                 function markError() {
-                    img.classList.remove("hj-lazy-blurup");
+                    img.classList.remove("lazy-blurup");
                     img.classList.remove("is-loaded");
                 }
 
@@ -146,7 +146,7 @@
 
 /* block 18 */
 (function () {
-            var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
+            var contents = Array.prototype.slice.call(document.querySelectorAll(".article-content, .comment-content"));
             if (!contents || contents.length === 0) {
                 return;
             }
@@ -198,7 +198,7 @@
 
             function buildSpoiler(text) {
                 var span = document.createElement("span");
-                span.className = "hj-term hj-term-spoiler spoiler";
+                span.className = "term term-spoiler spoiler";
                 span.setAttribute("tabindex", "0");
                 span.textContent = text;
                 return span;
@@ -899,8 +899,8 @@
                     continue;
                 }
                 try {
-                    a.classList.add("hj-term-tooltip");
-                    a.setAttribute("data-hj-term", tip);
+                    a.classList.add("term-tooltip");
+                    a.setAttribute("data-term", tip);
                     a.removeAttribute("title");
                 } catch (e) {}
             }
@@ -985,7 +985,7 @@
                     continue;
                 }
 
-                var oldTipNodes = footnoteSup.querySelectorAll(".hj-footnote-tip");
+                var oldTipNodes = footnoteSup.querySelectorAll(".footnote-tip");
                 for (var m = 0; m < oldTipNodes.length; m++) {
                     var oldTipNode = oldTipNodes[m];
                     if (!oldTipNode || !oldTipNode.parentNode) {
@@ -997,13 +997,13 @@
                 }
 
                 var tipNode = document.createElement("span");
-                tipNode.className = "hj-footnote-tip";
+                tipNode.className = "footnote-tip";
                 tipNode.setAttribute("role", "tooltip");
                 tipNode.innerHTML = footnoteTipHtml;
 
                 try {
-                    footnoteSup.classList.add("hj-footnote-tooltip");
-                    footnoteSup.setAttribute("data-hj-footnote-tip", "1");
+                    footnoteSup.classList.add("footnote-tooltip");
+                    footnoteSup.setAttribute("data-footnote-tip", "1");
                     footnoteSup.appendChild(tipNode);
                 } catch (e) {}
             }
@@ -1020,9 +1020,9 @@
             }
 
             var toggles = [];
-            var tooltips = content.querySelectorAll(".hj-term-tooltip[data-hj-term]");
-            var spoilers = content.querySelectorAll(".hj-term-spoiler");
-            var footnoteTips = content.querySelectorAll("sup.hj-footnote-tooltip[data-hj-footnote-tip]");
+            var tooltips = content.querySelectorAll(".term-tooltip[data-term]");
+            var spoilers = content.querySelectorAll(".term-spoiler");
+            var footnoteTips = content.querySelectorAll("sup.footnote-tooltip[data-footnote-tip]");
             for (var i = 0; i < tooltips.length; i++) {
                 toggles.push(tooltips[i]);
             }
@@ -1059,7 +1059,7 @@
 
                         var isFootnoteToggle = false;
                         try {
-                            isFootnoteToggle = el.classList.contains("hj-footnote-tooltip");
+                            isFootnoteToggle = el.classList.contains("footnote-tooltip");
                         } catch (err) {
                             isFootnoteToggle = false;
                         }
@@ -1077,7 +1077,7 @@
                                 clickedTipLink = !!(
                                     rawTarget &&
                                     rawTarget.closest &&
-                                    rawTarget.closest("span.hj-footnote-tip a[href]")
+                                    rawTarget.closest("span.footnote-tip a[href]")
                                 );
                             } catch (err) {
                                 clickedFootnoteLink = false;
@@ -1170,7 +1170,7 @@
 
 /* block 19 */
 (function () {
-            var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
+            var contents = Array.prototype.slice.call(document.querySelectorAll(".article-content, .comment-content"));
             if (!contents || contents.length === 0) {
                 return;
             }
@@ -1217,16 +1217,16 @@
                 }
                 try {
                     btn.classList.add("is-copied");
-                    btn.setAttribute("data-hj-code-tip", msg);
+                    btn.setAttribute("data-code-tip", msg);
                 } catch (e) {}
 
-                if (btn._hjCopyTimer) {
-                    clearTimeout(btn._hjCopyTimer);
+                if (btn._copyTimer) {
+                    clearTimeout(btn._copyTimer);
                 }
-                btn._hjCopyTimer = setTimeout(function () {
+                btn._copyTimer = setTimeout(function () {
                     try {
                         btn.classList.remove("is-copied");
-                        btn.setAttribute("data-hj-code-tip", "复制");
+                        btn.setAttribute("data-code-tip", "复制");
                     } catch (e) {}
                 }, 1200);
             }
@@ -1263,9 +1263,9 @@
                     return;
                 }
 
-                if (!preEl.classList.contains("hj-code-collapsed")) {
+                if (!preEl.classList.contains("code-collapsed")) {
                     try {
-                        preEl.classList.remove("hj-code-at-bottom");
+                        preEl.classList.remove("code-at-bottom");
                     } catch (e) {}
                     return;
                 }
@@ -1273,9 +1273,9 @@
                 var atBottom = isAtBottom(codeEl);
                 try {
                     if (atBottom) {
-                        preEl.classList.add("hj-code-at-bottom");
+                        preEl.classList.add("code-at-bottom");
                     } else {
-                        preEl.classList.remove("hj-code-at-bottom");
+                        preEl.classList.remove("code-at-bottom");
                     }
                 } catch (e) {}
             }
@@ -1302,13 +1302,13 @@
                         continue;
                     }
 
-                    var btn = pre.querySelector(".hj-code-copy-btn");
+                    var btn = pre.querySelector(".code-copy-btn");
                     if (!btn) {
                         btn = document.createElement("button");
                         btn.type = "button";
-                        btn.className = "hj-code-copy-btn";
+                        btn.className = "code-copy-btn";
                         btn.setAttribute("aria-label", "复制");
-                        btn.setAttribute("data-hj-code-tip", "复制");
+                        btn.setAttribute("data-code-tip", "复制");
                         btn.innerHTML =
                             '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy-icon lucide-copy" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
                         btn.addEventListener("click", function (e) {
@@ -1345,16 +1345,16 @@
                     var lineCount = countLines(code.textContent || "");
                     if (lineCount > maxLines) {
                         try {
-                            pre.classList.add("hj-code-collapsed");
+                            pre.classList.add("code-collapsed");
                         } catch (e) {}
 
-                        if (!pre.querySelector(".hj-code-fold")) {
+                        if (!pre.querySelector(".code-fold")) {
                             var fold = document.createElement("div");
-                            fold.className = "hj-code-fold";
+                            fold.className = "code-fold";
 
                             var expand = document.createElement("button");
                             expand.type = "button";
-                            expand.className = "hj-code-expand-btn";
+                            expand.className = "code-expand-btn";
                             expand.setAttribute("aria-label", "展开");
                             expand.innerHTML =
                                 '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down-to-line-icon lucide-arrow-down-to-line" aria-hidden="true"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg><span>展开</span>';
@@ -1373,8 +1373,8 @@
                                 return;
                             }
                             try {
-                                preEl.classList.remove("hj-code-collapsed");
-                                preEl.classList.remove("hj-code-at-bottom");
+                                preEl.classList.remove("code-collapsed");
+                                preEl.classList.remove("code-at-bottom");
                             } catch (err) {}
                             try {
                                 if (foldEl && foldEl.remove) {
@@ -1389,8 +1389,8 @@
                             pre.appendChild(fold);
                         }
 
-                        if (!pre._hjFoldScrollBound && code.addEventListener) {
-                            pre._hjFoldScrollBound = true;
+                        if (!pre._foldScrollBound && code.addEventListener) {
+                            pre._foldScrollBound = true;
                             var handler = (function (preEl, codeEl) {
                                 return function () {
                                     syncFoldState(preEl, codeEl);

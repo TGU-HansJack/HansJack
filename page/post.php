@@ -18,19 +18,19 @@ $categories = null;
 $tags = null;
 $postsCategorySlug = 'posts';
 $postsPageSize = 15;
-$hjListPage = 1;
+$listPage = 1;
 
 try {
-    $hjListPage = max(1, (int) $this->request->filter('int')->get('page', 1));
+    $listPage = max(1, (int) $this->request->filter('int')->get('page', 1));
 } catch (\Throwable $e) {
-    $hjListPage = 1;
+    $listPage = 1;
 }
 
 try {
     $this->widget(
-        'Widget_Archive@hj_posts',
+        'Widget_Archive@posts',
         'pageSize=' . $postsPageSize . '&type=category',
-        'slug=' . urlencode($postsCategorySlug) . '&page=' . $hjListPage,
+        'slug=' . urlencode($postsCategorySlug) . '&page=' . $listPage,
         false
     )->to($posts);
 } catch (\Throwable $e) {
@@ -49,15 +49,15 @@ try {
     $tags = null;
 }
 
-$hjPagerPrevIcon = <<<'HTML'
-<span class="hj-posts-pager-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></span>
+$pagerPrevIcon = <<<'HTML'
+<span class="posts-pager-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></span>
 HTML;
-$hjPagerNextIcon = <<<'HTML'
-<span class="hj-posts-pager-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+$pagerNextIcon = <<<'HTML'
+<span class="posts-pager-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
 HTML;
-$hjPagerTemplate = [
+$pagerTemplate = [
     'wrapTag' => 'ol',
-    'wrapClass' => 'page-navigator hj-posts-pager',
+    'wrapClass' => 'page-navigator posts-pager',
     'itemTag' => 'li',
     'textTag' => 'span',
     'currentClass' => 'current',
@@ -66,51 +66,51 @@ $hjPagerTemplate = [
 ];
 ?>
 
-<main class="hj-main" role="main">
-    <section class="hj-posts" aria-label="<?php _e('文章列表'); ?>">
-        <div class="hj-posts-layout">
-            <div class="hj-posts-main">
-                <ul class="hj-posts-list" aria-label="<?php _e('文章'); ?>">
+<main class="main" role="main">
+    <section class="posts" aria-label="<?php _e('文章列表'); ?>">
+        <div class="posts-layout">
+            <div class="posts-main">
+                <ul class="posts-list" aria-label="<?php _e('文章'); ?>">
                     <?php if ($posts && $posts->have()): ?>
                         <?php while ($posts->next()): ?>
                             <?php
-                            $hjPostCreated = 0;
-                            $hjPostModified = 0;
+                            $postCreated = 0;
+                            $postModified = 0;
                             try {
-                                $hjPostCreated = (int) ($posts->created ?? 0);
+                                $postCreated = (int) ($posts->created ?? 0);
                             } catch (\Throwable $e) {
-                                $hjPostCreated = 0;
+                                $postCreated = 0;
                             }
                             try {
-                                $hjPostModified = (int) ($posts->modified ?? 0);
+                                $postModified = (int) ($posts->modified ?? 0);
                             } catch (\Throwable $e) {
-                                $hjPostModified = 0;
+                                $postModified = 0;
                             }
 
-                            $hjPostExcerpt = '';
+                            $postExcerpt = '';
                             ob_start();
                             try {
                                 $posts->excerpt(100, '...');
                             } catch (\Throwable $e) {
                                 // Ignore.
                             }
-                            $hjPostExcerpt = (string) ob_get_clean();
-                            $hjPostExcerpt = trim((string) preg_replace('/\\s+/u', ' ', $hjPostExcerpt));
+                            $postExcerpt = (string) ob_get_clean();
+                            $postExcerpt = trim((string) preg_replace('/\\s+/u', ' ', $postExcerpt));
                             ?>
-                            <li class="hj-posts-item"
-                                data-hj-post-created="<?php echo (int) $hjPostCreated; ?>"
-                                data-hj-post-modified="<?php echo (int) $hjPostModified; ?>"
-                                data-hj-post-excerpt="<?php echo hansJackEscape($hjPostExcerpt); ?>">
-                                <div class="hj-posts-item-left">
-                                    <a class="hj-posts-title" href="<?php echo hansJackEscape($posts->permalink); ?>">
-                                        <?php echo hansJackEscape($posts->title); ?>
+                            <li class="posts-item"
+                                data-post-created="<?php echo (int) $postCreated; ?>"
+                                data-post-modified="<?php echo (int) $postModified; ?>"
+                                data-post-excerpt="<?php echo escape($postExcerpt); ?>">
+                                <div class="posts-item-left">
+                                    <a class="posts-title" href="<?php echo escape($posts->permalink); ?>">
+                                        <?php echo escape($posts->title); ?>
                                     </a>
-                                    <time class="hj-posts-date" datetime="<?php $posts->date('c'); ?>">
+                                    <time class="posts-date" datetime="<?php $posts->date('c'); ?>">
                                         <?php $posts->date('Y/m/d-H:i:s'); ?>
                                     </time>
                                 </div>
 
-                                <div class="hj-posts-item-right" aria-label="<?php _e('标签'); ?>">
+                                <div class="posts-item-right" aria-label="<?php _e('标签'); ?>">
                                     <?php
                                     $postTags = [];
                                     try {
@@ -132,7 +132,7 @@ $hjPagerTemplate = [
                                                 continue;
                                             }
                                             $i += 1;
-                                            echo '<a class="hj-posts-tag" href="' . hansJackEscape($url) . '">#' . hansJackEscape($name) . '</a>';
+                                            echo '<a class="posts-tag" href="' . escape($url) . '">#' . escape($name) . '</a>';
                                         }
                                     }
                                     ?>
@@ -140,18 +140,18 @@ $hjPagerTemplate = [
                             </li>
                         <?php endwhile; ?>
                     <?php else: ?>
-                        <li class="hj-posts-empty"><?php _e('暂无文章'); ?></li>
+                        <li class="posts-empty"><?php _e('暂无文章'); ?></li>
                     <?php endif; ?>
                 </ul>
                 <?php if ($posts): ?>
-                    <?php hansJackRenderPager($posts, $hjPagerPrevIcon, $hjPagerNextIcon, 2, '...', $postsCategorySlug); ?>
+                    <?php renderPager($posts, $pagerPrevIcon, $pagerNextIcon, 2, '...', $postsCategorySlug); ?>
                 <?php endif; ?>
             </div>
 
-            <aside class="hj-posts-aside" aria-label="<?php _e('侧栏'); ?>">
-                <div class="hj-posts-block" aria-label="<?php _e('分类'); ?>">
-                    <h2 class="hj-posts-block-title"><?php _e('分类'); ?></h2>
-                    <div class="hj-posts-links">
+            <aside class="posts-aside" aria-label="<?php _e('侧栏'); ?>">
+                <div class="posts-block" aria-label="<?php _e('分类'); ?>">
+                    <h2 class="posts-block-title"><?php _e('分类'); ?></h2>
+                    <div class="posts-links">
                         <?php
                         $seriesLinks = [];
                         if ($categories && $categories->have()) {
@@ -189,18 +189,18 @@ $hjPagerTemplate = [
 
                         if (!empty($seriesLinks)) {
                             foreach ($seriesLinks as $cat) {
-                                echo '<a class="hj-posts-link" href="' . hansJackEscape($cat['url']) . '">' . hansJackEscape($cat['name']) . '</a>';
+                                echo '<a class="posts-link" href="' . escape($cat['url']) . '">' . escape($cat['name']) . '</a>';
                             }
                         } else {
-                            echo '<span class="hj-posts-empty">' . _t('暂无分类') . '</span>';
+                            echo '<span class="posts-empty">' . _t('暂无分类') . '</span>';
                         }
                         ?>
                     </div>
                 </div>
 
-                <div class="hj-posts-block" aria-label="<?php _e('标签'); ?>">
-                    <h2 class="hj-posts-block-title"><?php _e('标签'); ?></h2>
-                    <div class="hj-posts-tags">
+                <div class="posts-block" aria-label="<?php _e('标签'); ?>">
+                    <h2 class="posts-block-title"><?php _e('标签'); ?></h2>
+                    <div class="posts-tags">
                         <?php
                         if ($tags && $tags->have()) {
                             while ($tags->next()) {
@@ -209,7 +209,7 @@ $hjPagerTemplate = [
                                 if ($name === '' || $url === '') {
                                     continue;
                                 }
-                                echo '<a class="hj-posts-tag-pill" href="' . hansJackEscape($url) . '">' . hansJackEscape($name) . '</a>';
+                                echo '<a class="posts-tag-pill" href="' . escape($url) . '">' . escape($name) . '</a>';
                             }
                         }
                         ?>

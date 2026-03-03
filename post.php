@@ -6,120 +6,120 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
 $this->need('header.php');
 ?>
 
-<main class="hj-main" role="main">
-    <article class="hj-article" data-hj-post-cid="<?php echo (int) ($this->cid ?? 0); ?>">
-        <header class="hj-article-header">
-            <h1 class="hj-article-title"><?php $this->title(); ?></h1>
+<main class="main" role="main">
+    <article class="article" data-post-cid="<?php echo (int) ($this->cid ?? 0); ?>">
+        <header class="article-header">
+            <h1 class="article-title"><?php $this->title(); ?></h1>
             <?php
             // Word count (approx): strip HTML and whitespace, then count UTF-8 characters.
-            $hjWordCount = 0;
-            $hjTokenWordCount = 0;
-            $hjCharCount = 0;
-            $hjReadMinutes = 1;
-            $hjWordCountTip = '';
+            $wordCount = 0;
+            $tokenWordCount = 0;
+            $charCount = 0;
+            $readMinutes = 1;
+            $wordCountTip = '';
             try {
-                $hjContentHtml = (string) ($this->content ?? '');
-                $hjPlain = html_entity_decode(strip_tags($hjContentHtml), ENT_QUOTES, 'UTF-8');
-                $hjPlainNoSpace = (string) preg_replace('/\\s+/u', '', $hjPlain);
-                $hjCharCount = function_exists('mb_strlen') ? mb_strlen($hjPlainNoSpace, 'UTF-8') : strlen($hjPlainNoSpace);
-                $hjWordCount = (int) $hjCharCount;
+                $contentHtml = (string) ($this->content ?? '');
+                $plain = html_entity_decode(strip_tags($contentHtml), ENT_QUOTES, 'UTF-8');
+                $plainNoSpace = (string) preg_replace('/\\s+/u', '', $plain);
+                $charCount = function_exists('mb_strlen') ? mb_strlen($plainNoSpace, 'UTF-8') : strlen($plainNoSpace);
+                $wordCount = (int) $charCount;
 
-                $hjWordMatches = [];
-                $hjMatched = preg_match_all('/[\x{4E00}-\x{9FFF}]|[A-Za-z0-9]+(?:[\'’\\-][A-Za-z0-9]+)*/u', $hjPlain, $hjWordMatches);
-                $hjTokenWordCount = $hjMatched === false ? 0 : (int) $hjMatched;
-                if ($hjTokenWordCount <= 0 && $hjCharCount > 0) {
-                    $hjTokenWordCount = (int) $hjCharCount;
+                $wordMatches = [];
+                $matched = preg_match_all('/[\x{4E00}-\x{9FFF}]|[A-Za-z0-9]+(?:[\'’\\-][A-Za-z0-9]+)*/u', $plain, $wordMatches);
+                $tokenWordCount = $matched === false ? 0 : (int) $matched;
+                if ($tokenWordCount <= 0 && $charCount > 0) {
+                    $tokenWordCount = (int) $charCount;
                 }
 
-                $hjReadByWord = $hjTokenWordCount > 0 ? ((float) $hjTokenWordCount / 220.0) : 0.0;
-                $hjReadByChar = $hjCharCount > 0 ? ((float) $hjCharCount / 300.0) : 0.0;
-                $hjReadMinutes = max(1, (int) ceil(max($hjReadByWord, $hjReadByChar)));
-                $hjWordCountTip = sprintf(
+                $readByWord = $tokenWordCount > 0 ? ((float) $tokenWordCount / 220.0) : 0.0;
+                $readByChar = $charCount > 0 ? ((float) $charCount / 300.0) : 0.0;
+                $readMinutes = max(1, (int) ceil(max($readByWord, $readByChar)));
+                $wordCountTip = sprintf(
                     _t('%1$d个词 %2$d个字符 阅读预计 %3$d分钟'),
-                    (int) $hjTokenWordCount,
-                    (int) $hjCharCount,
-                    (int) $hjReadMinutes
+                    (int) $tokenWordCount,
+                    (int) $charCount,
+                    (int) $readMinutes
                 );
             } catch (\Throwable $e) {
-                $hjWordCount = 0;
-                $hjTokenWordCount = 0;
-                $hjCharCount = 0;
-                $hjReadMinutes = 1;
-                $hjWordCountTip = sprintf(_t('%1$d个词 %2$d个字符 阅读预计 %3$d分钟'), 0, 0, 1);
+                $wordCount = 0;
+                $tokenWordCount = 0;
+                $charCount = 0;
+                $readMinutes = 1;
+                $wordCountTip = sprintf(_t('%1$d个词 %2$d个字符 阅读预计 %3$d分钟'), 0, 0, 1);
             }
 
-            $hjTags = [];
+            $tags = [];
             try {
-                $hjTags = is_array($this->tags) ? $this->tags : [];
+                $tags = is_array($this->tags) ? $this->tags : [];
             } catch (\Throwable $e) {
-                $hjTags = [];
+                $tags = [];
             }
 
             // Only show the immediate subcategory under the "posts" or "notes" root categories.
-            $hjChildCategory = null;
-            $hjPostCategories = [];
+            $childCategory = null;
+            $postCategories = [];
             try {
-                $hjPostCategories = is_array($this->categories) ? $this->categories : [];
+                $postCategories = is_array($this->categories) ? $this->categories : [];
             } catch (\Throwable $e) {
-                $hjPostCategories = [];
+                $postCategories = [];
             }
 
-            $hjPostsRootMid = 0;
-            $hjNotesRootMid = 0;
-            $hjCategoryByMid = [];
+            $postsRootMid = 0;
+            $notesRootMid = 0;
+            $categoryByMid = [];
             try {
-                $this->widget('Widget_Metas_Category_List')->to($hjCategoryList);
-                if ($hjCategoryList && $hjCategoryList->have()) {
-                    while ($hjCategoryList->next()) {
-                        $mid = (int) ($hjCategoryList->mid ?? 0);
+                $this->widget('Widget_Metas_Category_List')->to($categoryList);
+                if ($categoryList && $categoryList->have()) {
+                    while ($categoryList->next()) {
+                        $mid = (int) ($categoryList->mid ?? 0);
                         if ($mid <= 0) {
                             continue;
                         }
-                        $parent = (int) ($hjCategoryList->parent ?? 0);
-                        $slug = (string) ($hjCategoryList->slug ?? '');
-                        $hjCategoryByMid[$mid] = [
+                        $parent = (int) ($categoryList->parent ?? 0);
+                        $slug = (string) ($categoryList->slug ?? '');
+                        $categoryByMid[$mid] = [
                             'mid' => $mid,
                             'parent' => $parent,
                             'slug' => $slug,
-                            'name' => (string) ($hjCategoryList->name ?? ''),
-                            'url' => (string) ($hjCategoryList->permalink ?? ''),
+                            'name' => (string) ($categoryList->name ?? ''),
+                            'url' => (string) ($categoryList->permalink ?? ''),
                         ];
 
                         if ($slug === 'posts') {
-                            $hjPostsRootMid = $mid;
+                            $postsRootMid = $mid;
                         } elseif ($slug === 'notes') {
-                            $hjNotesRootMid = $mid;
+                            $notesRootMid = $mid;
                         }
                     }
                 }
             } catch (\Throwable $e) {
-                $hjPostsRootMid = 0;
-                $hjNotesRootMid = 0;
-                $hjCategoryByMid = [];
+                $postsRootMid = 0;
+                $notesRootMid = 0;
+                $categoryByMid = [];
             }
 
-            if (!empty($hjPostCategories) && !empty($hjCategoryByMid) && ($hjPostsRootMid || $hjNotesRootMid)) {
-                foreach ($hjPostCategories as $cat) {
+            if (!empty($postCategories) && !empty($categoryByMid) && ($postsRootMid || $notesRootMid)) {
+                foreach ($postCategories as $cat) {
                     $mid = (int) ($cat['mid'] ?? 0);
-                    if ($mid <= 0 || !isset($hjCategoryByMid[$mid])) {
+                    if ($mid <= 0 || !isset($categoryByMid[$mid])) {
                         continue;
                     }
-                    $info = $hjCategoryByMid[$mid];
+                    $info = $categoryByMid[$mid];
                     $parent = (int) ($info['parent'] ?? 0);
                     if (
-                        ($hjPostsRootMid && $parent === $hjPostsRootMid) ||
-                        ($hjNotesRootMid && $parent === $hjNotesRootMid)
+                        ($postsRootMid && $parent === $postsRootMid) ||
+                        ($notesRootMid && $parent === $notesRootMid)
                     ) {
                         if ($info['name'] !== '' && $info['url'] !== '') {
-                            $hjChildCategory = $info;
+                            $childCategory = $info;
                             break;
                         }
                     }
                 }
             }
 
-            $hjGuessPosts = [];
-            $hjNormalizeKey = static function ($value): string {
+            $guessPosts = [];
+            $normalizeKey = static function ($value): string {
                 $text = trim((string) $value);
                 if ($text === '') {
                     return '';
@@ -132,179 +132,179 @@ $this->need('header.php');
                 return strtolower($text);
             };
 
-            $hjCurrentCategoryKeys = [];
-            $hjCurrentRootCategoryKeys = [];
-            foreach ($hjPostCategories as $cat) {
+            $currentCategoryKeys = [];
+            $currentRootCategoryKeys = [];
+            foreach ($postCategories as $cat) {
                 $mid = (int) ($cat['mid'] ?? 0);
                 $slug = (string) ($cat['slug'] ?? '');
-                if ($mid > 0 && isset($hjCategoryByMid[$mid])) {
-                    $mappedSlug = trim((string) ($hjCategoryByMid[$mid]['slug'] ?? ''));
+                if ($mid > 0 && isset($categoryByMid[$mid])) {
+                    $mappedSlug = trim((string) ($categoryByMid[$mid]['slug'] ?? ''));
                     if ($mappedSlug !== '') {
                         $slug = $mappedSlug;
                     }
                 }
 
-                $slugKey = $hjNormalizeKey($slug);
+                $slugKey = $normalizeKey($slug);
                 $isRootCategory = (
-                    ($hjPostsRootMid > 0 && $mid === $hjPostsRootMid) ||
-                    ($hjNotesRootMid > 0 && $mid === $hjNotesRootMid) ||
+                    ($postsRootMid > 0 && $mid === $postsRootMid) ||
+                    ($notesRootMid > 0 && $mid === $notesRootMid) ||
                     $slugKey === 'posts' ||
                     $slugKey === 'notes'
                 );
                 if ($isRootCategory) {
                     if ($mid > 0) {
-                        $hjCurrentRootCategoryKeys['mid:' . $mid] = true;
+                        $currentRootCategoryKeys['mid:' . $mid] = true;
                     }
                     if ($slugKey !== '') {
-                        $hjCurrentRootCategoryKeys['slug:' . $slugKey] = true;
+                        $currentRootCategoryKeys['slug:' . $slugKey] = true;
                     }
                     continue;
                 }
 
                 if ($mid > 0) {
-                    $hjCurrentCategoryKeys['mid:' . $mid] = true;
+                    $currentCategoryKeys['mid:' . $mid] = true;
                 }
                 if ($slugKey !== '') {
-                    $hjCurrentCategoryKeys['slug:' . $slugKey] = true;
+                    $currentCategoryKeys['slug:' . $slugKey] = true;
                 }
             }
 
-            $hjGuessUseRootCategoryFallback = false;
-            if (empty($hjCurrentCategoryKeys) && !empty($hjCurrentRootCategoryKeys)) {
-                $hjCurrentCategoryKeys = $hjCurrentRootCategoryKeys;
-                $hjGuessUseRootCategoryFallback = true;
+            $guessUseRootCategoryFallback = false;
+            if (empty($currentCategoryKeys) && !empty($currentRootCategoryKeys)) {
+                $currentCategoryKeys = $currentRootCategoryKeys;
+                $guessUseRootCategoryFallback = true;
             }
 
-            $hjCurrentTagKeys = [];
-            foreach ($hjTags as $tag) {
+            $currentTagKeys = [];
+            foreach ($tags as $tag) {
                 $mid = (int) ($tag['mid'] ?? 0);
-                $slugKey = $hjNormalizeKey((string) ($tag['slug'] ?? ''));
-                $nameKey = $hjNormalizeKey((string) ($tag['name'] ?? ''));
+                $slugKey = $normalizeKey((string) ($tag['slug'] ?? ''));
+                $nameKey = $normalizeKey((string) ($tag['name'] ?? ''));
 
                 if ($mid > 0) {
-                    $hjCurrentTagKeys['mid:' . $mid] = true;
+                    $currentTagKeys['mid:' . $mid] = true;
                 }
                 if ($slugKey !== '') {
-                    $hjCurrentTagKeys['slug:' . $slugKey] = true;
+                    $currentTagKeys['slug:' . $slugKey] = true;
                 }
                 if ($nameKey !== '') {
-                    $hjCurrentTagKeys['name:' . $nameKey] = true;
+                    $currentTagKeys['name:' . $nameKey] = true;
                 }
             }
 
-            if (!empty($hjCurrentCategoryKeys) && !empty($hjCurrentTagKeys)) {
-                $hjGuessSource = null;
+            if (!empty($currentCategoryKeys) && !empty($currentTagKeys)) {
+                $guessSource = null;
                 try {
-                    $this->widget('Widget_Contents_Post_Recent@hj_post_guess', 'pageSize=9999', null, false)->to($hjGuessSource);
+                    $this->widget('Widget_Contents_Post_Recent@post_guess', 'pageSize=9999', null, false)->to($guessSource);
                 } catch (\Throwable $e) {
-                    $hjGuessSource = null;
+                    $guessSource = null;
                 }
 
-                if ($hjGuessSource && $hjGuessSource->have()) {
-                    $hjCurrentCid = (int) ($this->cid ?? 0);
+                if ($guessSource && $guessSource->have()) {
+                    $currentCid = (int) ($this->cid ?? 0);
 
-                    while ($hjGuessSource->next()) {
-                        if (count($hjGuessPosts) >= 3) {
+                    while ($guessSource->next()) {
+                        if (count($guessPosts) >= 3) {
                             break;
                         }
 
-                        $hjGuessCid = (int) ($hjGuessSource->cid ?? 0);
-                        if ($hjGuessCid <= 0 || ($hjCurrentCid > 0 && $hjGuessCid === $hjCurrentCid)) {
+                        $guessCid = (int) ($guessSource->cid ?? 0);
+                        if ($guessCid <= 0 || ($currentCid > 0 && $guessCid === $currentCid)) {
                             continue;
                         }
 
-                        $hjGuessCategories = [];
+                        $guessCategories = [];
                         try {
-                            $hjGuessCategories = is_array($hjGuessSource->categories) ? $hjGuessSource->categories : [];
+                            $guessCategories = is_array($guessSource->categories) ? $guessSource->categories : [];
                         } catch (\Throwable $e) {
-                            $hjGuessCategories = [];
+                            $guessCategories = [];
                         }
 
-                        $hjGuessCategoryMatched = false;
-                        foreach ($hjGuessCategories as $cat) {
+                        $guessCategoryMatched = false;
+                        foreach ($guessCategories as $cat) {
                             $catMid = (int) ($cat['mid'] ?? 0);
                             $catSlug = (string) ($cat['slug'] ?? '');
-                            if ($catMid > 0 && isset($hjCategoryByMid[$catMid])) {
-                                $mappedSlug = trim((string) ($hjCategoryByMid[$catMid]['slug'] ?? ''));
+                            if ($catMid > 0 && isset($categoryByMid[$catMid])) {
+                                $mappedSlug = trim((string) ($categoryByMid[$catMid]['slug'] ?? ''));
                                 if ($mappedSlug !== '') {
                                     $catSlug = $mappedSlug;
                                 }
                             }
 
-                            $catSlugKey = $hjNormalizeKey($catSlug);
+                            $catSlugKey = $normalizeKey($catSlug);
                             $catIsRoot = (
-                                ($hjPostsRootMid > 0 && $catMid === $hjPostsRootMid) ||
-                                ($hjNotesRootMid > 0 && $catMid === $hjNotesRootMid) ||
+                                ($postsRootMid > 0 && $catMid === $postsRootMid) ||
+                                ($notesRootMid > 0 && $catMid === $notesRootMid) ||
                                 $catSlugKey === 'posts' ||
                                 $catSlugKey === 'notes'
                             );
-                            if ($catIsRoot && !$hjGuessUseRootCategoryFallback) {
+                            if ($catIsRoot && !$guessUseRootCategoryFallback) {
                                 continue;
                             }
 
                             if (
-                                ($catMid > 0 && isset($hjCurrentCategoryKeys['mid:' . $catMid])) ||
-                                ($catSlugKey !== '' && isset($hjCurrentCategoryKeys['slug:' . $catSlugKey]))
+                                ($catMid > 0 && isset($currentCategoryKeys['mid:' . $catMid])) ||
+                                ($catSlugKey !== '' && isset($currentCategoryKeys['slug:' . $catSlugKey]))
                             ) {
-                                $hjGuessCategoryMatched = true;
+                                $guessCategoryMatched = true;
                                 break;
                             }
                         }
 
-                        if (!$hjGuessCategoryMatched) {
+                        if (!$guessCategoryMatched) {
                             continue;
                         }
 
-                        $hjGuessTags = [];
+                        $guessTags = [];
                         try {
-                            $hjGuessTags = is_array($hjGuessSource->tags) ? $hjGuessSource->tags : [];
+                            $guessTags = is_array($guessSource->tags) ? $guessSource->tags : [];
                         } catch (\Throwable $e) {
-                            $hjGuessTags = [];
+                            $guessTags = [];
                         }
 
-                        $hjGuessTagMatched = false;
-                        foreach ($hjGuessTags as $tag) {
+                        $guessTagMatched = false;
+                        foreach ($guessTags as $tag) {
                             $tagMid = (int) ($tag['mid'] ?? 0);
-                            $tagSlugKey = $hjNormalizeKey((string) ($tag['slug'] ?? ''));
-                            $tagNameKey = $hjNormalizeKey((string) ($tag['name'] ?? ''));
+                            $tagSlugKey = $normalizeKey((string) ($tag['slug'] ?? ''));
+                            $tagNameKey = $normalizeKey((string) ($tag['name'] ?? ''));
                             if (
-                                ($tagMid > 0 && isset($hjCurrentTagKeys['mid:' . $tagMid])) ||
-                                ($tagSlugKey !== '' && isset($hjCurrentTagKeys['slug:' . $tagSlugKey])) ||
-                                ($tagNameKey !== '' && isset($hjCurrentTagKeys['name:' . $tagNameKey]))
+                                ($tagMid > 0 && isset($currentTagKeys['mid:' . $tagMid])) ||
+                                ($tagSlugKey !== '' && isset($currentTagKeys['slug:' . $tagSlugKey])) ||
+                                ($tagNameKey !== '' && isset($currentTagKeys['name:' . $tagNameKey]))
                             ) {
-                                $hjGuessTagMatched = true;
+                                $guessTagMatched = true;
                                 break;
                             }
                         }
 
-                        if (!$hjGuessTagMatched) {
+                        if (!$guessTagMatched) {
                             continue;
                         }
 
-                        $hjGuessTitle = trim((string) ($hjGuessSource->title ?? ''));
-                        if ($hjGuessTitle === '') {
-                            $hjGuessTitle = _t('无标题');
+                        $guessTitle = trim((string) ($guessSource->title ?? ''));
+                        if ($guessTitle === '') {
+                            $guessTitle = _t('无标题');
                         }
 
-                        $hjGuessUrl = trim((string) ($hjGuessSource->permalink ?? ''));
-                        if ($hjGuessUrl === '') {
+                        $guessUrl = trim((string) ($guessSource->permalink ?? ''));
+                        if ($guessUrl === '') {
                             continue;
                         }
 
-                        $hjGuessExcerpt = '';
+                        $guessExcerpt = '';
                         ob_start();
                         try {
-                            $hjGuessSource->excerpt(100, '...');
+                            $guessSource->excerpt(100, '...');
                         } catch (\Throwable $e) {
                             // Ignore.
                         }
-                        $hjGuessExcerpt = (string) ob_get_clean();
-                        $hjGuessExcerpt = trim((string) preg_replace('/\\s+/u', ' ', $hjGuessExcerpt));
+                        $guessExcerpt = (string) ob_get_clean();
+                        $guessExcerpt = trim((string) preg_replace('/\\s+/u', ' ', $guessExcerpt));
 
-                        $hjGuessRenderTags = [];
-                        $hjGuessTagSeen = [];
-                        foreach ($hjGuessTags as $tag) {
-                            if (count($hjGuessRenderTags) >= 3) {
+                        $guessRenderTags = [];
+                        $guessTagSeen = [];
+                        foreach ($guessTags as $tag) {
+                            if (count($guessRenderTags) >= 3) {
                                 break;
                             }
 
@@ -314,121 +314,121 @@ $this->need('header.php');
                                 continue;
                             }
 
-                            $tagKey = $hjNormalizeKey((string) ($tag['slug'] ?? ''));
+                            $tagKey = $normalizeKey((string) ($tag['slug'] ?? ''));
                             if ($tagKey === '') {
-                                $tagKey = $hjNormalizeKey($tagName);
+                                $tagKey = $normalizeKey($tagName);
                             }
-                            if ($tagKey !== '' && isset($hjGuessTagSeen[$tagKey])) {
+                            if ($tagKey !== '' && isset($guessTagSeen[$tagKey])) {
                                 continue;
                             }
 
                             if ($tagKey !== '') {
-                                $hjGuessTagSeen[$tagKey] = true;
+                                $guessTagSeen[$tagKey] = true;
                             }
-                            $hjGuessRenderTags[] = [
+                            $guessRenderTags[] = [
                                 'name' => $tagName,
                                 'url' => $tagUrl,
                             ];
                         }
 
-                        $hjGuessCreated = (int) ($hjGuessSource->created ?? 0);
-                        $hjGuessModified = (int) ($hjGuessSource->modified ?? 0);
-                        $hjGuessPosts[] = [
-                            'title' => $hjGuessTitle,
-                            'url' => $hjGuessUrl,
-                            'created' => $hjGuessCreated,
-                            'modified' => $hjGuessModified,
-                            'dateTime' => $hjGuessCreated > 0 ? date('c', $hjGuessCreated) : '',
-                            'dateLabel' => $hjGuessCreated > 0 ? date('Y/m/d-H:i:s', $hjGuessCreated) : '',
-                            'excerpt' => $hjGuessExcerpt,
-                            'tags' => $hjGuessRenderTags,
-                            'originalIndex' => count($hjGuessPosts),
+                        $guessCreated = (int) ($guessSource->created ?? 0);
+                        $guessModified = (int) ($guessSource->modified ?? 0);
+                        $guessPosts[] = [
+                            'title' => $guessTitle,
+                            'url' => $guessUrl,
+                            'created' => $guessCreated,
+                            'modified' => $guessModified,
+                            'dateTime' => $guessCreated > 0 ? date('c', $guessCreated) : '',
+                            'dateLabel' => $guessCreated > 0 ? date('Y/m/d-H:i:s', $guessCreated) : '',
+                            'excerpt' => $guessExcerpt,
+                            'tags' => $guessRenderTags,
+                            'originalIndex' => count($guessPosts),
                         ];
                     }
                 }
             }
             ?>
-            <p class="hj-article-meta">
-                <span class="hj-article-meta-item">
-                    <span class="hj-article-meta-icon" aria-hidden="true">
+            <p class="article-meta">
+                <span class="article-meta-item">
+                    <span class="article-meta-icon" aria-hidden="true">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
                     </span>
                     <time datetime="<?php $this->date('c'); ?>"><?php $this->date('Y-m-d'); ?></time>
                 </span>
-                <?php if (!empty($hjChildCategory)): ?>
-                    <span class="hj-article-meta-item hj-article-meta-category">
-                        <span class="hj-article-meta-icon" aria-hidden="true">
+                <?php if (!empty($childCategory)): ?>
+                    <span class="article-meta-item article-meta-category">
+                        <span class="article-meta-icon" aria-hidden="true">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>
                         </span>
-                        <a class="hj-article-category" href="<?php echo hansJackEscape((string) $hjChildCategory['url']); ?>"><?php echo hansJackEscape((string) $hjChildCategory['name']); ?></a>
+                        <a class="article-category" href="<?php echo escape((string) $childCategory['url']); ?>"><?php echo escape((string) $childCategory['name']); ?></a>
                     </span>
                 <?php endif; ?>
-                <span class="hj-article-meta-item hj-article-meta-tags">
-                    <span class="hj-article-meta-icon" aria-hidden="true">
+                <span class="article-meta-item article-meta-tags">
+                    <span class="article-meta-icon" aria-hidden="true">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg>
                     </span>
-                    <?php if (!empty($hjTags)): ?>
-                        <span class="hj-article-meta-tags-list">
-                            <?php $hjTagIndex = 0; ?>
-                            <?php foreach ($hjTags as $tag): ?>
+                    <?php if (!empty($tags)): ?>
+                        <span class="article-meta-tags-list">
+                            <?php $tagIndex = 0; ?>
+                            <?php foreach ($tags as $tag): ?>
                                 <?php
                                 $name = (string) ($tag['name'] ?? '');
                                 $url = (string) ($tag['permalink'] ?? '');
                                 if ($name === '' || $url === '') {
                                     continue;
                                 }
-                                if ($hjTagIndex > 0) {
-                                    echo '<span class="hj-article-tag-sep" aria-hidden="true">; </span>';
+                                if ($tagIndex > 0) {
+                                    echo '<span class="article-tag-sep" aria-hidden="true">; </span>';
                                 }
-                                $hjTagIndex += 1;
+                                $tagIndex += 1;
                                 ?>
-                                <a class="hj-article-tag" href="<?php echo hansJackEscape($url); ?>"><?php echo hansJackEscape($name); ?></a>
+                                <a class="article-tag" href="<?php echo escape($url); ?>"><?php echo escape($name); ?></a>
                             <?php endforeach; ?>
                         </span>
                     <?php else: ?>
-                        <span class="hj-article-meta-empty"><?php _e('无标签'); ?></span>
+                        <span class="article-meta-empty"><?php _e('无标签'); ?></span>
                     <?php endif; ?>
                 </span>
                 <span
-                    class="hj-article-meta-item hj-article-meta-wordcount"
-                    data-hj-meta-tip="<?php echo hansJackEscape($hjWordCountTip); ?>"
-                    title="<?php echo hansJackEscape($hjWordCountTip); ?>"
+                    class="article-meta-item article-meta-wordcount"
+                    data-meta-tip="<?php echo escape($wordCountTip); ?>"
+                    title="<?php echo escape($wordCountTip); ?>"
                     tabindex="0"
-                    aria-label="<?php echo hansJackEscape($hjWordCountTip); ?>"
+                    aria-label="<?php echo escape($wordCountTip); ?>"
                 >
-                    <span class="hj-article-meta-icon" aria-hidden="true">
+                    <span class="article-meta-icon" aria-hidden="true">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v16"/><path d="M17 4v16"/><path d="M19 4H9.5a4.5 4.5 0 0 0 0 9H13"/></svg>
                     </span>
-                    <span class="hj-article-meta-text"><?php echo (int) $hjWordCount; ?> <?php _e('字'); ?></span>
+                    <span class="article-meta-text"><?php echo (int) $wordCount; ?> <?php _e('字'); ?></span>
                 </span>
             </p>
         </header>
-        <div class="hj-article-layout" data-hj-article-layout>
-            <div class="hj-article-content">
-                <?php hansJackEchoArchiveContent($this); ?>
+        <div class="article-layout" data-article-layout>
+            <div class="article-content">
+                <?php echoArchiveContent($this); ?>
             </div>
-            <aside class="hj-article-aside" aria-label="<?php _e('目录'); ?>">
-                <div class="hj-article-toc">
-                    <div class="hj-article-toc-header">
-                        <h2 class="hj-article-toc-title"><?php _e('目录'); ?></h2>
-                        <button class="hj-article-toc-close" type="button" aria-label="<?php _e('关闭目录'); ?>" title="<?php _e('关闭目录'); ?>">
+            <aside class="article-aside" aria-label="<?php _e('目录'); ?>">
+                <div class="article-toc">
+                    <div class="article-toc-header">
+                        <h2 class="article-toc-title"><?php _e('目录'); ?></h2>
+                        <button class="article-toc-close" type="button" aria-label="<?php _e('关闭目录'); ?>" title="<?php _e('关闭目录'); ?>">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                         </button>
                     </div>
-                    <nav class="hj-article-toc-nav" aria-label="<?php _e('文章目录'); ?>"></nav>
+                    <nav class="article-toc-nav" aria-label="<?php _e('文章目录'); ?>"></nav>
                 </div>
             </aside>
         </div>
 
         <script>
             (function () {
-                var layout = document.querySelector("[data-hj-article-layout]");
+                var layout = document.querySelector("[data-article-layout]");
                 if (!layout) {
                     return;
                 }
 
-                var content = layout.querySelector(".hj-article-content");
-                var tocNav = layout.querySelector(".hj-article-toc-nav");
+                var content = layout.querySelector(".article-content");
+                var tocNav = layout.querySelector(".article-toc-nav");
                 if (!content || !tocNav) {
                     return;
                 }
@@ -493,7 +493,7 @@ $this->need('header.php');
                 });
 
                 var rootList = document.createElement("ol");
-                rootList.className = "hj-article-toc-list";
+                rootList.className = "article-toc-list";
 
                 var stack = [{ level: 1, list: rootList }];
 
@@ -520,7 +520,7 @@ $this->need('header.php');
                             break;
                         }
                         var sub = document.createElement("ol");
-                        sub.className = "hj-article-toc-sublist";
+                        sub.className = "article-toc-sublist";
                         parentLi.appendChild(sub);
                         stack.push({ level: currentFrame().level + 1, list: sub });
                     }
@@ -531,8 +531,8 @@ $this->need('header.php');
 
                     var li = document.createElement("li");
                     var a = document.createElement("a");
-                    li.className = "hj-article-toc-item";
-                    a.className = "hj-article-toc-link";
+                    li.className = "article-toc-item";
+                    a.className = "article-toc-link";
                     a.href = "#" + h.id;
                     a.textContent = (h.textContent || "").trim();
                     li.appendChild(a);
@@ -544,7 +544,7 @@ $this->need('header.php');
                 layout.classList.add("is-has-toc");
 
                 // Scrollspy: only bold the current section in TOC while scrolling.
-                var tocLinks = Array.prototype.slice.call(tocNav.querySelectorAll("a.hj-article-toc-link"));
+                var tocLinks = Array.prototype.slice.call(tocNav.querySelectorAll("a.article-toc-link"));
                 var tocLinkById = Object.create(null);
                 tocLinks.forEach(function (a) {
                     var href = (a.getAttribute("href") || "").trim();
@@ -616,7 +616,7 @@ $this->need('header.php');
                     if (!target || !target.matches) {
                         return;
                     }
-                    if (!target.matches("a.hj-article-toc-link")) {
+                    if (!target.matches("a.article-toc-link")) {
                         return;
                     }
                     var href = (target.getAttribute("href") || "").trim();
@@ -632,18 +632,18 @@ $this->need('header.php');
             })();
         </script>
 
-        <?php if (!empty($hjGuessPosts)): ?>
-            <section class="hj-article-guess" aria-label="<?php _e('猜你想看'); ?>">
-                <hr class="hj-article-guess-divider" aria-hidden="true">
-                <div class="hj-article-guess-inner">
-                    <h2 class="hj-article-guess-title">
-                        <span class="hj-article-guess-title-icon" aria-hidden="true">
+        <?php if (!empty($guessPosts)): ?>
+            <section class="article-guess" aria-label="<?php _e('猜你想看'); ?>">
+                <hr class="article-guess-divider" aria-hidden="true">
+                <div class="article-guess-inner">
+                    <h2 class="article-guess-title">
+                        <span class="article-guess-title-icon" aria-hidden="true">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-route-icon lucide-route"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>
                         </span>
-                        <span class="hj-article-guess-title-text"><?php _e('猜你想看'); ?></span>
+                        <span class="article-guess-title-text"><?php _e('猜你想看'); ?></span>
                     </h2>
-                    <ul class="hj-article-guess-list" aria-label="<?php _e('猜你喜欢文章'); ?>">
-                        <?php foreach ($hjGuessPosts as $guess): ?>
+                    <ul class="article-guess-list" aria-label="<?php _e('猜你喜欢文章'); ?>">
+                        <?php foreach ($guessPosts as $guess): ?>
                             <?php
                             $guessTitle = trim((string) ($guess['title'] ?? ''));
                             if ($guessTitle === '') {
@@ -661,21 +661,21 @@ $this->need('header.php');
                             $guessTags = is_array($guess['tags'] ?? null) ? $guess['tags'] : [];
                             $guessOriginalIndex = (int) ($guess['originalIndex'] ?? 0);
                             ?>
-                            <li class="hj-posts-item"
-                                data-hj-post-created="<?php echo (int) $guessCreated; ?>"
-                                data-hj-post-modified="<?php echo (int) $guessModified; ?>"
-                                data-hj-post-excerpt="<?php echo hansJackEscape($guessExcerpt); ?>"
-                                data-hj-post-original-index="<?php echo (int) $guessOriginalIndex; ?>">
-                                <div class="hj-posts-item-left">
-                                    <a class="hj-posts-title" href="<?php echo hansJackEscape($guessUrl); ?>">
-                                        <?php echo hansJackEscape($guessTitle); ?>
+                            <li class="posts-item"
+                                data-post-created="<?php echo (int) $guessCreated; ?>"
+                                data-post-modified="<?php echo (int) $guessModified; ?>"
+                                data-post-excerpt="<?php echo escape($guessExcerpt); ?>"
+                                data-post-original-index="<?php echo (int) $guessOriginalIndex; ?>">
+                                <div class="posts-item-left">
+                                    <a class="posts-title" href="<?php echo escape($guessUrl); ?>">
+                                        <?php echo escape($guessTitle); ?>
                                     </a>
-                                    <time class="hj-posts-date"<?php if ($guessDateTime !== ''): ?> datetime="<?php echo hansJackEscape($guessDateTime); ?>"<?php endif; ?>>
-                                        <?php echo hansJackEscape($guessDateLabel); ?>
+                                    <time class="posts-date"<?php if ($guessDateTime !== ''): ?> datetime="<?php echo escape($guessDateTime); ?>"<?php endif; ?>>
+                                        <?php echo escape($guessDateLabel); ?>
                                     </time>
                                 </div>
 
-                                <div class="hj-posts-item-right" aria-label="<?php _e('标签'); ?>">
+                                <div class="posts-item-right" aria-label="<?php _e('标签'); ?>">
                                     <?php foreach ($guessTags as $tag): ?>
                                         <?php
                                         $tagName = trim((string) ($tag['name'] ?? ''));
@@ -684,7 +684,7 @@ $this->need('header.php');
                                             continue;
                                         }
                                         ?>
-                                        <a class="hj-posts-tag" href="<?php echo hansJackEscape($tagUrl); ?>">#<?php echo hansJackEscape($tagName); ?></a>
+                                        <a class="posts-tag" href="<?php echo escape($tagUrl); ?>">#<?php echo escape($tagName); ?></a>
                                     <?php endforeach; ?>
                                 </div>
                             </li>

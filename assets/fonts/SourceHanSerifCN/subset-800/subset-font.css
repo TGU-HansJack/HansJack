@@ -1,5 +1,5 @@
 @font-face {
-    font-family: "HJ Source Han Serif Core";
+    font-family: "Source Han Serif Core";
     src: url("./core-cjk.woff2") format("woff2");
     font-style: normal;
     font-weight: 400;
@@ -8,7 +8,7 @@
 }
 
 @font-face {
-    font-family: "HJ Source Han Serif Core";
+    font-family: "Source Han Serif Core";
     src: url("./core-misc.woff2") format("woff2");
     font-style: normal;
     font-weight: 400;
@@ -17,7 +17,7 @@
 }
 
 @font-face {
-    font-family: "HJ Source Han Serif Fallback";
+    font-family: "Source Han Serif Fallback";
     src: url("./fallback.woff2") format("woff2");
     font-style: normal;
     font-weight: 400;

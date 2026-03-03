@@ -83,7 +83,7 @@
                         font-family: "Source Han Serif CN VF", "Source Han Serif SC", "Songti SC", "SimSun", Georgia, serif;
                         line-height: 1.7;
                     }
-                    .hj-feed-wrap {
+                    .feed-wrap {
                         width: min(860px, calc(100vw - 1.6rem));
                         margin: 1.2rem auto 2rem;
                     }
@@ -189,7 +189,7 @@
                         font-size: 0.72rem;
                         line-height: 1.15;
                     }
-                    .hj-feed-empty {
+                    .feed-empty {
                         margin: 0;
                         color: var(--muted);
                         font-size: 0.9rem;
@@ -208,7 +208,7 @@
                         color: inherit;
                     }
                     @media (max-width: 740px) {
-                        .hj-feed-wrap {
+                        .feed-wrap {
                             width: calc(100vw - 1rem);
                             margin-top: 0.8rem;
                         }
@@ -235,7 +235,7 @@
                 ]]></style>
             </head>
             <body>
-                <div class="hj-feed-wrap">
+                <div class="feed-wrap">
                     <header>
                         <h1><a href="{normalize-space($siteLink)}"><xsl:value-of select="$siteTitle"/></a></h1>
                         <p><xsl:value-of select="$siteDesc"/></p>
@@ -301,7 +301,7 @@
                                 </xsl:for-each>
                             </xsl:when>
                             <xsl:otherwise>
-                                <p class="hj-feed-empty">当前订阅源暂无可展示内容。</p>
+                                <p class="feed-empty">当前订阅源暂无可展示内容。</p>
                             </xsl:otherwise>
                         </xsl:choose>
                     </main>

@@ -5,7 +5,7 @@
  * @package 寒士杰克
  * @author 寒士杰克
  * @version 0.1.0
- * @link https://www.hansjack.com
+ * @link https://example.com
  */
 
 if (!defined('__TYPECHO_ROOT_DIR__')) {
@@ -14,7 +14,7 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
 
 
 $this->need('header.php');
-$themeConfig = hansJackBuildThemeConfig($this->options);
+$themeConfig = buildThemeConfig($this->options);
 
 $brandName = '';
 $welcomeText = '';
@@ -41,7 +41,7 @@ if ($this->is('index')) {
         $welcomeText = trim('欢迎来到 ' . $brandName);
     }
 
-    $landingAvatarUrl = hansJackAssetUrl($this->options, 'logo.avif');
+    $landingAvatarUrl = assetUrl($this->options, 'logo.avif');
     if ($landingAvatarUrl === '') {
         ob_start();
         $this->options->siteUrl('favicon.ico');
@@ -76,7 +76,7 @@ if ($this->is('index')) {
     $landingPostsRootMid = 0;
     $landingMemosRootMid = 0;
     try {
-        $this->widget('Widget_Metas_Category_List@hj_landing_categories')->to($landingCategories);
+        $this->widget('Widget_Metas_Category_List@landing_categories')->to($landingCategories);
         if ($landingCategories && $landingCategories->have()) {
             while ($landingCategories->next()) {
                 $mid = (int) ($landingCategories->mid ?? 0);
@@ -104,7 +104,7 @@ if ($this->is('index')) {
 
     $landingPosts = null;
     try {
-        $this->widget('Widget_Contents_Post_Recent@hj_landing_posts', 'pageSize=9999', null, false)->to($landingPosts);
+        $this->widget('Widget_Contents_Post_Recent@landing_posts', 'pageSize=9999', null, false)->to($landingPosts);
     } catch (\Throwable $e) {
         $landingPosts = null;
     }
@@ -288,23 +288,23 @@ if ($this->is('index')) {
 }
 ?>
 
-<main class="hj-main" role="main">
+<main class="main" role="main">
     <?php if ($this->is('index')): ?>
-        <section class="hj-landing" aria-label="<?php _e('欢迎'); ?>">
-            <div class="hj-landing-main">
-                <div class="hj-landing-left">
-                    <div class="hj-landing-terminal" role="region" aria-label="<?php _e('欢迎词'); ?>">
-                        <div class="hj-landing-prompt" aria-hidden="true">site@typecho:~$</div>
-                        <div class="hj-landing-typing" aria-label="<?php echo hansJackEscape($welcomeText); ?>">
-                            <span class="hj-landing-typing-text" data-text="<?php echo hansJackEscape($welcomeText); ?>"></span>
-                            <span class="hj-landing-cursor" aria-hidden="true"></span>
+        <section class="landing" aria-label="<?php _e('欢迎'); ?>">
+            <div class="landing-main">
+                <div class="landing-left">
+                    <div class="landing-terminal" role="region" aria-label="<?php _e('欢迎词'); ?>">
+                        <div class="landing-prompt" aria-hidden="true">site@typecho:~$</div>
+                        <div class="landing-typing" aria-label="<?php echo escape($welcomeText); ?>">
+                            <span class="landing-typing-text" data-text="<?php echo escape($welcomeText); ?>"></span>
+                            <span class="landing-cursor" aria-hidden="true"></span>
                         </div>
                     </div>
                 </div>
-                <div class="hj-landing-right">
-                    <div class="hj-landing-avatar" aria-hidden="true">
+                <div class="landing-right">
+                    <div class="landing-avatar" aria-hidden="true">
                         <img
-                            src="<?php echo hansJackEscape($landingAvatarUrl); ?>"
+                            src="<?php echo escape($landingAvatarUrl); ?>"
                             alt=""
                             width="256"
                             height="256"
@@ -316,9 +316,9 @@ if ($this->is('index')) {
                 </div>
             </div>
 
-            <div class="hj-landing-insights" role="region" aria-label="<?php _e('热力图与最新内容'); ?>">
-                <footer class="hj-landing-insights-footer" style="--hj-landing-heatmap-cols: <?php echo (int) $landingHeatmapColumns; ?>;">
-                    <section class="hj-landing-heatmap-grid" aria-label="<?php echo hansJackEscape(sprintf(_t('最近 %d 天内容热力图'), (int) $landingHeatmapDays)); ?>">
+            <div class="landing-insights" role="region" aria-label="<?php _e('热力图与最新内容'); ?>">
+                <footer class="landing-insights-footer" style="--landing-heatmap-cols: <?php echo (int) $landingHeatmapColumns; ?>;">
+                    <section class="landing-heatmap-grid" aria-label="<?php echo escape(sprintf(_t('最近 %d 天内容热力图'), (int) $landingHeatmapDays)); ?>">
                         <?php foreach ($landingHeatmapSeries as $day): ?>
                             <?php
                             $dayTotal = (int) ($day['total'] ?? 0);
@@ -336,45 +336,45 @@ if ($this->is('index')) {
                             $dayOthers = is_array($day['others'] ?? null) ? $day['others'] : [];
                             $previewLimit = 3;
                             ?>
-                            <figure class="hj-landing-heatmap-item">
-                                <i class="hj-landing-heatmap-dot <?php echo hansJackEscape($dotClass); ?>" aria-hidden="true"></i>
-                                <figcaption class="hj-landing-heatmap-pop">
-                                    <time class="hj-landing-heatmap-date"><?php echo hansJackEscape((string) ($day['dateLabel'] ?? '')); ?></time>
+                            <figure class="landing-heatmap-item">
+                                <i class="landing-heatmap-dot <?php echo escape($dotClass); ?>" aria-hidden="true"></i>
+                                <figcaption class="landing-heatmap-pop">
+                                    <time class="landing-heatmap-date"><?php echo escape((string) ($day['dateLabel'] ?? '')); ?></time>
                                     <?php if ($dayTotal <= 0): ?>
-                                        <p class="hj-landing-heatmap-empty"><?php _e('无字'); ?></p>
+                                        <p class="landing-heatmap-empty"><?php _e('无字'); ?></p>
                                     <?php else: ?>
                                         <?php if (!empty($dayNotes)): ?>
-                                            <p class="hj-landing-heatmap-kind"><?php echo hansJackEscape(sprintf(_t('博文 %d 篇：'), count($dayNotes))); ?></p>
-                                            <ul class="hj-landing-heatmap-list">
+                                            <p class="landing-heatmap-kind"><?php echo escape(sprintf(_t('博文 %d 篇：'), count($dayNotes))); ?></p>
+                                            <ul class="landing-heatmap-list">
                                                 <?php foreach (array_slice($dayNotes, 0, $previewLimit) as $item): ?>
-                                                    <li><a class="hj-landing-heatmap-link" href="<?php echo hansJackEscape((string) ($item['url'] ?? '')); ?>"><?php echo hansJackEscape((string) ($item['title'] ?? '')); ?></a></li>
+                                                    <li><a class="landing-heatmap-link" href="<?php echo escape((string) ($item['url'] ?? '')); ?>"><?php echo escape((string) ($item['title'] ?? '')); ?></a></li>
                                                 <?php endforeach; ?>
                                                 <?php if (count($dayNotes) > $previewLimit): ?>
-                                                    <li class="hj-landing-heatmap-more"><?php echo hansJackEscape(sprintf(_t('另有 %d 篇'), count($dayNotes) - $previewLimit)); ?></li>
+                                                    <li class="landing-heatmap-more"><?php echo escape(sprintf(_t('另有 %d 篇'), count($dayNotes) - $previewLimit)); ?></li>
                                                 <?php endif; ?>
                                             </ul>
                                         <?php endif; ?>
 
                                         <?php if (!empty($dayMemos)): ?>
-                                            <p class="hj-landing-heatmap-kind"><?php echo hansJackEscape(sprintf(_t('手记 %d 则：'), count($dayMemos))); ?></p>
-                                            <ul class="hj-landing-heatmap-list">
+                                            <p class="landing-heatmap-kind"><?php echo escape(sprintf(_t('手记 %d 则：'), count($dayMemos))); ?></p>
+                                            <ul class="landing-heatmap-list">
                                                 <?php foreach (array_slice($dayMemos, 0, $previewLimit) as $item): ?>
-                                                    <li><a class="hj-landing-heatmap-link" href="<?php echo hansJackEscape((string) ($item['url'] ?? '')); ?>"><?php echo hansJackEscape((string) ($item['title'] ?? '')); ?></a></li>
+                                                    <li><a class="landing-heatmap-link" href="<?php echo escape((string) ($item['url'] ?? '')); ?>"><?php echo escape((string) ($item['title'] ?? '')); ?></a></li>
                                                 <?php endforeach; ?>
                                                 <?php if (count($dayMemos) > $previewLimit): ?>
-                                                    <li class="hj-landing-heatmap-more"><?php echo hansJackEscape(sprintf(_t('另有 %d 则'), count($dayMemos) - $previewLimit)); ?></li>
+                                                    <li class="landing-heatmap-more"><?php echo escape(sprintf(_t('另有 %d 则'), count($dayMemos) - $previewLimit)); ?></li>
                                                 <?php endif; ?>
                                             </ul>
                                         <?php endif; ?>
 
                                         <?php if (!empty($dayOthers)): ?>
-                                            <p class="hj-landing-heatmap-kind"><?php echo hansJackEscape(sprintf(_t('内容 %d 条：'), count($dayOthers))); ?></p>
-                                            <ul class="hj-landing-heatmap-list">
+                                            <p class="landing-heatmap-kind"><?php echo escape(sprintf(_t('内容 %d 条：'), count($dayOthers))); ?></p>
+                                            <ul class="landing-heatmap-list">
                                                 <?php foreach (array_slice($dayOthers, 0, $previewLimit) as $item): ?>
-                                                    <li><a class="hj-landing-heatmap-link" href="<?php echo hansJackEscape((string) ($item['url'] ?? '')); ?>"><?php echo hansJackEscape((string) ($item['title'] ?? '')); ?></a></li>
+                                                    <li><a class="landing-heatmap-link" href="<?php echo escape((string) ($item['url'] ?? '')); ?>"><?php echo escape((string) ($item['title'] ?? '')); ?></a></li>
                                                 <?php endforeach; ?>
                                                 <?php if (count($dayOthers) > $previewLimit): ?>
-                                                    <li class="hj-landing-heatmap-more"><?php echo hansJackEscape(sprintf(_t('另有 %d 条'), count($dayOthers) - $previewLimit)); ?></li>
+                                                    <li class="landing-heatmap-more"><?php echo escape(sprintf(_t('另有 %d 条'), count($dayOthers) - $previewLimit)); ?></li>
                                                 <?php endif; ?>
                                             </ul>
                                         <?php endif; ?>
@@ -384,7 +384,7 @@ if ($this->is('index')) {
                         <?php endforeach; ?>
                     </section>
 
-                    <blockquote class="hj-landing-latest">
+                    <blockquote class="landing-latest">
                         <h1><?php _e('最新内容'); ?></h1>
                         <?php if ($landingLatestContent !== null): ?>
                             <?php
@@ -395,16 +395,16 @@ if ($this->is('index')) {
                             $latestDatetime = (string) ($landingLatestContent['datetime'] ?? '');
                             $latestTags = is_array($landingLatestContent['tags'] ?? null) ? $landingLatestContent['tags'] : [];
                             ?>
-                            <div class="hj-landing-latest-main">
-                                <div class="hj-landing-latest-head">
+                            <div class="landing-latest-main">
+                                <div class="landing-latest-head">
                                     <?php if ($latestUrl !== ''): ?>
-                                        <a href="<?php echo hansJackEscape($latestUrl); ?>" class="hj-landing-latest-link"><?php echo hansJackEscape($latestTitle); ?></a>
+                                        <a href="<?php echo escape($latestUrl); ?>" class="landing-latest-link"><?php echo escape($latestTitle); ?></a>
                                     <?php else: ?>
-                                        <span class="hj-landing-latest-link"><?php echo hansJackEscape($latestTitle); ?></span>
+                                        <span class="landing-latest-link"><?php echo escape($latestTitle); ?></span>
                                     <?php endif; ?>
 
                                     <?php if (!empty($latestTags)): ?>
-                                        <div class="hj-landing-latest-tags">
+                                        <div class="landing-latest-tags">
                                             <?php foreach ($latestTags as $tag): ?>
                                                 <?php
                                                 $tagName = trim((string) ($tag['name'] ?? ''));
@@ -413,35 +413,35 @@ if ($this->is('index')) {
                                                     continue;
                                                 }
                                                 ?>
-                                                <a href="<?php echo hansJackEscape($tagUrl); ?>" class="hj-landing-latest-tag">#<?php echo hansJackEscape($tagName); ?></a>
+                                                <a href="<?php echo escape($tagUrl); ?>" class="landing-latest-tag">#<?php echo escape($tagName); ?></a>
                                             <?php endforeach; ?>
                                         </div>
                                     <?php endif; ?>
                                 </div>
 
                                 <?php if ($latestTimeLabel !== ''): ?>
-                                    <time datetime="<?php echo hansJackEscape($latestDatetime); ?>" class="hj-landing-latest-time" title="<?php echo hansJackEscape($latestTimeTitle); ?>"><?php echo hansJackEscape($latestTimeLabel); ?></time>
+                                    <time datetime="<?php echo escape($latestDatetime); ?>" class="landing-latest-time" title="<?php echo escape($latestTimeTitle); ?>"><?php echo escape($latestTimeLabel); ?></time>
                                 <?php endif; ?>
                             </div>
                         <?php else: ?>
-                            <p class="hj-landing-latest-empty"><?php _e('暂无内容'); ?></p>
+                            <p class="landing-latest-empty"><?php _e('暂无内容'); ?></p>
                         <?php endif; ?>
                     </blockquote>
                 </footer>
             </div>
 
-            <div class="hj-landing-bottom" role="group" aria-label="<?php _e('名言'); ?>">
+            <div class="landing-bottom" role="group" aria-label="<?php _e('名言'); ?>">
                 <?php if ($landingHitokotoEnabled): ?>
-                    <p class="hj-hitokoto-text" aria-live="polite"><?php _e('既然选择了远方，便只顾风雨兼程。'); ?></p>
+                    <p class="hitokoto-text" aria-live="polite"><?php _e('既然选择了远方，便只顾风雨兼程。'); ?></p>
                 <?php endif; ?>
-                <button class="hj-scroll-down" type="button" aria-label="<?php _e('向下滚动'); ?>" title="<?php _e('向下滚动'); ?>">
+                <button class="scroll-down" type="button" aria-label="<?php _e('向下滚动'); ?>" title="<?php _e('向下滚动'); ?>">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down-icon lucide-chevron-down" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                 </button>
             </div>
         </section>
 
         <?php if (false): ?>
-        <section class="hj-recent" id="hj-recent" aria-label="<?php _e('最近内容'); ?>">
+        <section class="recent" id="recent" aria-label="<?php _e('最近内容'); ?>">
             <?php
             $recentBlog = null;
             $recentMemo = null;
@@ -452,7 +452,7 @@ if ($this->is('index')) {
 
             try {
                 $this->widget(
-                    'Widget_Archive@hj_recent_posts',
+                    'Widget_Archive@recent_posts',
                     'pageSize=' . $recentListLimit . '&type=category',
                     'slug=' . urlencode($blogSlug),
                     false
@@ -463,7 +463,7 @@ if ($this->is('index')) {
 
             try {
                 $this->widget(
-                    'Widget_Archive@hj_recent_memo',
+                    'Widget_Archive@recent_memo',
                     'pageSize=' . $recentListLimit . '&type=category',
                     'slug=' . urlencode($memoSlug),
                     false
@@ -479,12 +479,12 @@ if ($this->is('index')) {
             }
 
             try {
-                $this->widget('Widget_Contents_Post_Recent@hj_activity_posts', 'pageSize=' . $activityPageSize, null, false)->to($activityPosts);
+                $this->widget('Widget_Contents_Post_Recent@activity_posts', 'pageSize=' . $activityPageSize, null, false)->to($activityPosts);
             } catch (\Throwable $e) {
                 $activityPosts = null;
             }
 
-            $hjActivities = [];
+            $activities = [];
             $activityCutoff = strtotime('-2 months');
             if ($activityCutoff === false) {
                 $activityCutoff = 0;
@@ -507,7 +507,7 @@ if ($this->is('index')) {
                         $activityAuthor = $brandName;
                     }
 
-                    $hjActivities[] = [
+                    $activities[] = [
                         'type' => 'publish',
                         'created' => $activityCreated,
                         'timeWord' => (string) ($activityPosts->dateWord ?? ''),
@@ -525,7 +525,7 @@ if ($this->is('index')) {
                         continue;
                     }
 
-                    $hjActivities[] = [
+                    $activities[] = [
                         'type' => ((int) ($recentComments->parent ?? 0) > 0) ? 'reply' : 'comment',
                         'created' => $activityCreated,
                         'timeWord' => (string) ($recentComments->dateWord ?? ''),
@@ -540,65 +540,65 @@ if ($this->is('index')) {
                 }
             }
 
-            usort($hjActivities, function ($a, $b) {
+            usort($activities, function ($a, $b) {
                 return ((int) ($b['created'] ?? 0)) <=> ((int) ($a['created'] ?? 0));
             });
             ?>
 
-            <div class="hj-recent-grid">
-                <div class="hj-recent-left">
-                    <div class="hj-recent-panel" aria-label="<?php _e('最近更新的文章'); ?>">
-                        <h2 class="hj-recent-title"><?php _e('最近更新的文章'); ?></h2>
-                        <ul class="hj-recent-list">
+            <div class="recent-grid">
+                <div class="recent-left">
+                    <div class="recent-panel" aria-label="<?php _e('最近更新的文章'); ?>">
+                        <h2 class="recent-title"><?php _e('最近更新的文章'); ?></h2>
+                        <ul class="recent-list">
                             <?php if ($recentBlog && $recentBlog->have()): ?>
                                 <?php $recentBlogCount = 0; ?>
                                 <?php while ($recentBlog->next()): ?>
                                     <?php if ($recentBlogCount >= $recentListLimit) { break; } ?>
-                                    <li class="hj-recent-item">
-                                        <a class="hj-recent-link" href="<?php echo hansJackEscape($recentBlog->permalink); ?>">
-                                            <span class="hj-recent-link-text"><?php echo hansJackEscape($recentBlog->title); ?></span>
+                                    <li class="recent-item">
+                                        <a class="recent-link" href="<?php echo escape($recentBlog->permalink); ?>">
+                                            <span class="recent-link-text"><?php echo escape($recentBlog->title); ?></span>
                                         </a>
-                                        <span class="hj-recent-time"><?php echo hansJackEscape($recentBlog->dateWord); ?></span>
+                                        <span class="recent-time"><?php echo escape($recentBlog->dateWord); ?></span>
                                     </li>
                                     <?php $recentBlogCount++; ?>
                                 <?php endwhile; ?>
                             <?php else: ?>
-                                <li class="hj-recent-empty"><?php _e('暂无内容'); ?></li>
+                                <li class="recent-empty"><?php _e('暂无内容'); ?></li>
                             <?php endif; ?>
                         </ul>
                         <?php if ($blogUrl !== ''): ?>
-                            <a class="hj-recent-more" href="<?php echo hansJackEscape($blogUrl); ?>">
+                            <a class="recent-more" href="<?php echo escape($blogUrl); ?>">
                                 <?php _e('还有更多'); ?>
-                                <span class="hj-recent-more-icon" aria-hidden="true">
+                                <span class="recent-more-icon" aria-hidden="true">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-arrow-right-icon lucide-circle-arrow-right"><circle cx="12" cy="12" r="10"/><path d="m12 16 4-4-4-4"/><path d="M8 12h8"/></svg>
                                 </span>
                             </a>
                         <?php endif; ?>
                     </div>
 
-                    <div class="hj-recent-panel" aria-label="<?php _e('最近更新的手记'); ?>">
-                        <h2 class="hj-recent-title"><?php _e('最近更新的手记'); ?></h2>
-                        <ul class="hj-recent-list">
+                    <div class="recent-panel" aria-label="<?php _e('最近更新的手记'); ?>">
+                        <h2 class="recent-title"><?php _e('最近更新的手记'); ?></h2>
+                        <ul class="recent-list">
                             <?php if ($recentMemo && $recentMemo->have()): ?>
                                 <?php $recentMemoCount = 0; ?>
                                 <?php while ($recentMemo->next()): ?>
                                     <?php if ($recentMemoCount >= $recentListLimit) { break; } ?>
-                                    <li class="hj-recent-item">
-                                        <a class="hj-recent-link" href="<?php echo hansJackEscape($recentMemo->permalink); ?>">
-                                            <span class="hj-recent-link-text"><?php echo hansJackEscape($recentMemo->title); ?></span>
+                                    <li class="recent-item">
+                                        <a class="recent-link" href="<?php echo escape($recentMemo->permalink); ?>">
+                                            <span class="recent-link-text"><?php echo escape($recentMemo->title); ?></span>
                                         </a>
-                                        <span class="hj-recent-time"><?php echo hansJackEscape($recentMemo->dateWord); ?></span>
+                                        <span class="recent-time"><?php echo escape($recentMemo->dateWord); ?></span>
                                     </li>
                                     <?php $recentMemoCount++; ?>
                                 <?php endwhile; ?>
                             <?php else: ?>
-                                <li class="hj-recent-empty"><?php _e('暂无内容'); ?></li>
+                                <li class="recent-empty"><?php _e('暂无内容'); ?></li>
                             <?php endif; ?>
                         </ul>
                         <?php if ($memoUrl !== ''): ?>
-                            <a class="hj-recent-more" href="<?php echo hansJackEscape($memoUrl); ?>">
+                            <a class="recent-more" href="<?php echo escape($memoUrl); ?>">
                                 <?php _e('还有更多'); ?>
-                                <span class="hj-recent-more-icon" aria-hidden="true">
+                                <span class="recent-more-icon" aria-hidden="true">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-arrow-right-icon lucide-circle-arrow-right"><circle cx="12" cy="12" r="10"/><path d="m12 16 4-4-4-4"/><path d="M8 12h8"/></svg>
                                 </span>
                             </a>
@@ -606,32 +606,32 @@ if ($this->is('index')) {
                     </div>
                 </div>
 
-                <div class="hj-recent-right">
-                    <div class="hj-activity" aria-label="<?php _e('最近发生的事'); ?>">
-                        <h2 class="hj-recent-title"><?php _e('最近发生的事'); ?></h2>
-                        <div class="hj-activity-scroll">
-                            <ul class="hj-activity-list">
-                            <?php if (!empty($hjActivities)): ?>
-                                <?php foreach ($hjActivities as $activity): ?>
+                <div class="recent-right">
+                    <div class="activity" aria-label="<?php _e('最近发生的事'); ?>">
+                        <h2 class="recent-title"><?php _e('最近发生的事'); ?></h2>
+                        <div class="activity-scroll">
+                            <ul class="activity-list">
+                            <?php if (!empty($activities)): ?>
+                                <?php foreach ($activities as $activity): ?>
                                     <?php
                                     $activityType = (string) ($activity['type'] ?? '');
                                     $isCommentActivity = in_array($activityType, ['comment', 'reply'], true);
                                     $activityTitle = (string) ($activity['title'] ?? '');
                                     $activityUrl = (string) ($activity['url'] ?? '');
                                     $activityTimeWord = (string) ($activity['timeWord'] ?? '');
-                                    $activityItemClass = 'hj-activity-item';
+                                    $activityItemClass = 'activity-item';
                                     if ($isCommentActivity) {
                                         $activityItemClass .= ' is-comment';
                                     } elseif ($activityType === 'publish') {
                                         $activityItemClass .= ' is-publish';
                                     }
                                     ?>
-                                    <li class="<?php echo hansJackEscape($activityItemClass); ?>">
+                                    <li class="<?php echo escape($activityItemClass); ?>">
                                         <?php if ($isCommentActivity || $activityType === 'publish'): ?>
-                                            <span class="hj-activity-type" aria-hidden="true"></span>
+                                            <span class="activity-type" aria-hidden="true"></span>
                                         <?php endif; ?>
-                                        <div class="hj-activity-row">
-                                            <div class="hj-activity-left">
+                                        <div class="activity-row">
+                                            <div class="activity-left">
                                                 <?php if ($isCommentActivity): ?>
                                                     <?php
                                                     $commentAuthor = trim((string) ($activity['author'] ?? ''));
@@ -640,18 +640,18 @@ if ($this->is('index')) {
                                                     $commentAuthorId = (int) ($activity['authorId'] ?? 0);
                                                     $commentOwnerId = (int) ($activity['ownerId'] ?? 0);
 
-                                                    $commentIsPrivate = hansJackIsPrivateCommentText($commentTextRaw);
+                                                    $commentIsPrivate = isPrivateCommentText($commentTextRaw);
                                                     $commentCanViewPrivate = true;
                                                     if ($commentIsPrivate) {
-                                                        $commentCanViewPrivate = hansJackCanViewPrivateComment($commentOwnerId, $commentAuthorId);
+                                                        $commentCanViewPrivate = canViewPrivateComment($commentOwnerId, $commentAuthorId);
                                                     }
 
-                                                    $commentTextSource = $commentIsPrivate ? hansJackStripPrivateCommentMarker($commentTextRaw) : $commentTextRaw;
+                                                    $commentTextSource = $commentIsPrivate ? stripPrivateCommentMarker($commentTextRaw) : $commentTextRaw;
 
                                                     $commentText = trim(strip_tags($commentTextSource));
                                                     $commentText = (string) preg_replace('/\\s+/u', ' ', $commentText);
 
-                                                    $commentBubbleClass = 'hj-activity-bubble';
+                                                    $commentBubbleClass = 'activity-bubble';
                                                     if ($commentIsPrivate) {
                                                         $commentBubbleClass .= ' is-private';
                                                         if (!$commentCanViewPrivate) {
@@ -663,36 +663,36 @@ if ($this->is('index')) {
                                                     $avatarUrl = $avatarHash !== '' ? ('http://www.gravatar.com/avatar/' . $avatarHash . '?s=32&d=retro') : '';
                                                     ?>
                                                     <?php if ($avatarUrl !== ''): ?>
-                                                        <img class="hj-activity-avatar" loading="lazy" src="<?php echo hansJackEscape($avatarUrl); ?>" alt="" width="16" height="16">
+                                                        <img class="activity-avatar" loading="lazy" src="<?php echo escape($avatarUrl); ?>" alt="" width="16" height="16">
                                                     <?php endif; ?>
                                                     <?php if ($commentAuthor !== ''): ?>
-                                                        <span class="hj-activity-name"><?php echo hansJackEscape($commentAuthor); ?></span>
+                                                        <span class="activity-name"><?php echo escape($commentAuthor); ?></span>
                                                     <?php endif; ?>
-                                                    <small class="hj-activity-small"><?php _e('在'); ?></small>
-                                                    <a class="hj-activity-post" href="<?php echo hansJackEscape($activityUrl); ?>">
-                                                        <span class="hj-activity-post-text"><b><?php echo hansJackEscape($activityTitle); ?></b></span>
+                                                    <small class="activity-small"><?php _e('在'); ?></small>
+                                                    <a class="activity-post" href="<?php echo escape($activityUrl); ?>">
+                                                        <span class="activity-post-text"><b><?php echo escape($activityTitle); ?></b></span>
                                                     </a>
-                                                    <small class="hj-activity-small"><?php _e('说：'); ?></small>
+                                                    <small class="activity-small"><?php _e('说：'); ?></small>
                                                 <?php else: ?>
-                                                    <span class="hj-activity-muted"><?php _e('发布了'); ?></span>
-                                                    <a class="hj-activity-post" href="<?php echo hansJackEscape($activityUrl); ?>">
-                                                        <span class="hj-activity-post-text"><?php echo hansJackEscape($activityTitle); ?></span>
+                                                    <span class="activity-muted"><?php _e('发布了'); ?></span>
+                                                    <a class="activity-post" href="<?php echo escape($activityUrl); ?>">
+                                                        <span class="activity-post-text"><?php echo escape($activityTitle); ?></span>
                                                     </a>
                                                 <?php endif; ?>
                                             </div>
-                                            <span class="hj-activity-time"><?php echo hansJackEscape($activityTimeWord); ?></span>
+                                            <span class="activity-time"><?php echo escape($activityTimeWord); ?></span>
                                          </div>
                                         <?php if ($isCommentActivity && ($commentText !== '' || $commentIsPrivate)): ?>
-                                            <div class="<?php echo hansJackEscape($commentBubbleClass); ?>"><?php
+                                            <div class="<?php echo escape($commentBubbleClass); ?>"><?php
                                                 if (!$commentIsPrivate || $commentCanViewPrivate) {
-                                                    echo hansJackEscape($commentText);
+                                                    echo escape($commentText);
                                                 }
                                             ?></div>
                                         <?php endif; ?>
                                     </li>
                                 <?php endforeach; ?>
                             <?php else: ?>
-                                <li class="hj-activity-empty"><?php _e('暂无动态'); ?></li>
+                                <li class="activity-empty"><?php _e('暂无动态'); ?></li>
                             <?php endif; ?>
                             </ul>
                         </div>
@@ -719,15 +719,15 @@ if ($this->is('index')) {
             $tags = null;
         }
 
-        $hjPagerPrevIcon = <<<'HTML'
-<span class="hj-posts-pager-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></span>
+        $pagerPrevIcon = <<<'HTML'
+<span class="posts-pager-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></span>
 HTML;
-        $hjPagerNextIcon = <<<'HTML'
-<span class="hj-posts-pager-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+        $pagerNextIcon = <<<'HTML'
+<span class="posts-pager-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
 HTML;
-        $hjPagerTemplate = [
+        $pagerTemplate = [
             'wrapTag' => 'ol',
-            'wrapClass' => 'page-navigator hj-posts-pager',
+            'wrapClass' => 'page-navigator posts-pager',
             'itemTag' => 'li',
             'textTag' => 'span',
             'currentClass' => 'current',
@@ -735,11 +735,11 @@ HTML;
             'nextClass' => 'next',
         ];
         ?>
-        <section class="hj-posts" aria-label="<?php _e('文章列表'); ?>">
-            <div class="hj-posts-layout">
-                <div class="hj-posts-main">
+        <section class="posts" aria-label="<?php _e('文章列表'); ?>">
+            <div class="posts-layout">
+                <div class="posts-main">
                     <?php if (!$this->is('index') && !$this->is('post') && !$this->is('category') && !$this->is('tag')): ?>
-                        <h2 class="hj-section-title"><?php $this->archiveTitle([
+                        <h2 class="section-title"><?php $this->archiveTitle([
                                 'category' => _t('分类 %s'),
                                 'search'   => _t('搜索 %s'),
                                 'tag'      => _t('标签 %s'),
@@ -748,42 +748,42 @@ HTML;
                     <?php endif; ?>
 
                     <?php if ($this->have()): ?>
-                        <ul class="hj-posts-list" aria-label="<?php _e('文章'); ?>">
+                        <ul class="posts-list" aria-label="<?php _e('文章'); ?>">
                             <?php while ($this->next()): ?>
                                 <?php
-                                $hjPostCreated = 0;
-                                $hjPostModified = 0;
+                                $postCreated = 0;
+                                $postModified = 0;
                                 try {
-                                    $hjPostCreated = (int) ($this->created ?? 0);
+                                    $postCreated = (int) ($this->created ?? 0);
                                 } catch (\Throwable $e) {
-                                    $hjPostCreated = 0;
+                                    $postCreated = 0;
                                 }
                                 try {
-                                    $hjPostModified = (int) ($this->modified ?? 0);
+                                    $postModified = (int) ($this->modified ?? 0);
                                 } catch (\Throwable $e) {
-                                    $hjPostModified = 0;
+                                    $postModified = 0;
                                 }
 
-                                $hjPostExcerpt = '';
+                                $postExcerpt = '';
                                 ob_start();
                                 try {
                                     $this->excerpt(100, '...');
                                 } catch (\Throwable $e) {
                                     // Ignore.
                                 }
-                                $hjPostExcerpt = (string) ob_get_clean();
-                                $hjPostExcerpt = trim((string) preg_replace('/\\s+/u', ' ', $hjPostExcerpt));
+                                $postExcerpt = (string) ob_get_clean();
+                                $postExcerpt = trim((string) preg_replace('/\\s+/u', ' ', $postExcerpt));
                                 ?>
-                                <li class="hj-posts-item"
-                                    data-hj-post-created="<?php echo (int) $hjPostCreated; ?>"
-                                    data-hj-post-modified="<?php echo (int) $hjPostModified; ?>"
-                                    data-hj-post-excerpt="<?php echo hansJackEscape($hjPostExcerpt); ?>">
-                                    <div class="hj-posts-item-left">
-                                        <a class="hj-posts-title" href="<?php $this->permalink(); ?>"><?php $this->title(); ?></a>
-                                        <time class="hj-posts-date" datetime="<?php $this->date('c'); ?>"><?php $this->date('Y/m/d-H:i:s'); ?></time>
+                                <li class="posts-item"
+                                    data-post-created="<?php echo (int) $postCreated; ?>"
+                                    data-post-modified="<?php echo (int) $postModified; ?>"
+                                    data-post-excerpt="<?php echo escape($postExcerpt); ?>">
+                                    <div class="posts-item-left">
+                                        <a class="posts-title" href="<?php $this->permalink(); ?>"><?php $this->title(); ?></a>
+                                        <time class="posts-date" datetime="<?php $this->date('c'); ?>"><?php $this->date('Y/m/d-H:i:s'); ?></time>
                                     </div>
 
-                                    <div class="hj-posts-item-right" aria-label="<?php _e('标签'); ?>">
+                                    <div class="posts-item-right" aria-label="<?php _e('标签'); ?>">
                                         <?php
                                         $postTags = [];
                                         try {
@@ -805,7 +805,7 @@ HTML;
                                                     continue;
                                                 }
                                                 $i += 1;
-                                                echo '<a class="hj-posts-tag" href="' . hansJackEscape($url) . '">#' . hansJackEscape($name) . '</a>';
+                                                echo '<a class="posts-tag" href="' . escape($url) . '">#' . escape($name) . '</a>';
                                             }
                                         }
                                         ?>
@@ -814,19 +814,19 @@ HTML;
                             <?php endwhile; ?>
                         </ul>
                     <?php else: ?>
-                        <ul class="hj-posts-list" aria-label="<?php _e('文章'); ?>">
-                            <li class="hj-posts-empty"><?php _e('暂无内容'); ?></li>
+                        <ul class="posts-list" aria-label="<?php _e('文章'); ?>">
+                            <li class="posts-empty"><?php _e('暂无内容'); ?></li>
                         </ul>
                     <?php endif; ?>
 
-                    <?php hansJackRenderPager($this, $hjPagerPrevIcon, $hjPagerNextIcon, 2, '...'); ?>
+                    <?php renderPager($this, $pagerPrevIcon, $pagerNextIcon, 2, '...'); ?>
                 </div>
 
-                <aside class="hj-posts-aside" aria-label="<?php _e('侧栏'); ?>">
+                <aside class="posts-aside" aria-label="<?php _e('侧栏'); ?>">
                     <?php if (!$this->is('category')): ?>
-                        <div class="hj-posts-block" aria-label="<?php _e('分类'); ?>">
-                            <h2 class="hj-posts-block-title"><?php _e('分类'); ?></h2>
-                            <div class="hj-posts-links">
+                        <div class="posts-block" aria-label="<?php _e('分类'); ?>">
+                            <h2 class="posts-block-title"><?php _e('分类'); ?></h2>
+                            <div class="posts-links">
                                 <?php
                                 $seriesLinks = [];
                                 if ($categories && $categories->have()) {
@@ -864,10 +864,10 @@ HTML;
 
                                 if (!empty($seriesLinks)) {
                                     foreach ($seriesLinks as $cat) {
-                                        echo '<a class="hj-posts-link" href="' . hansJackEscape($cat['url']) . '">' . hansJackEscape($cat['name']) . '</a>';
+                                        echo '<a class="posts-link" href="' . escape($cat['url']) . '">' . escape($cat['name']) . '</a>';
                                     }
                                 } else {
-                                    echo '<span class="hj-posts-empty">' . _t('暂无分类') . '</span>';
+                                    echo '<span class="posts-empty">' . _t('暂无分类') . '</span>';
                                 }
                                 ?>
                             </div>
@@ -875,9 +875,9 @@ HTML;
                     <?php endif; ?>
 
                     <?php if (!$this->is('tag')): ?>
-                        <div class="hj-posts-block" aria-label="<?php _e('标签'); ?>">
-                            <h2 class="hj-posts-block-title"><?php _e('标签'); ?></h2>
-                            <div class="hj-posts-tags">
+                        <div class="posts-block" aria-label="<?php _e('标签'); ?>">
+                            <h2 class="posts-block-title"><?php _e('标签'); ?></h2>
+                            <div class="posts-tags">
                                 <?php
                                 if ($tags && $tags->have()) {
                                     while ($tags->next()) {
@@ -886,7 +886,7 @@ HTML;
                                         if ($name === '' || $url === '') {
                                             continue;
                                         }
-                                        echo '<a class="hj-posts-tag-pill" href="' . hansJackEscape($url) . '">' . hansJackEscape($name) . '</a>';
+                                        echo '<a class="posts-tag-pill" href="' . escape($url) . '">' . escape($name) . '</a>';
                                     }
                                 }
                                 ?>

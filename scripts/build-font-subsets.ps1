@@ -265,7 +265,7 @@ $subsetCssPath = Join-Path $outputDirFull "subset-font.css"
 [System.Collections.Generic.List[string]]$cssLines = @()
 if ($coreCjkChars.Count -gt 0) {
     $cssLines.Add("@font-face {")
-    $cssLines.Add("    font-family: `"HJ Source Han Serif Core`";")
+    $cssLines.Add("    font-family: `"Source Han Serif Core`";")
     $cssLines.Add("    src: url(`"./core-cjk.woff2`") format(`"woff2`");")
     $cssLines.Add("    font-style: normal;")
     $cssLines.Add("    font-weight: $fontWeightDescriptor;")
@@ -277,7 +277,7 @@ if ($coreCjkChars.Count -gt 0) {
 
 if ($coreMiscChars.Count -gt 0) {
     $cssLines.Add("@font-face {")
-    $cssLines.Add("    font-family: `"HJ Source Han Serif Core`";")
+    $cssLines.Add("    font-family: `"Source Han Serif Core`";")
     $cssLines.Add("    src: url(`"./core-misc.woff2`") format(`"woff2`");")
     $cssLines.Add("    font-style: normal;")
     $cssLines.Add("    font-weight: $fontWeightDescriptor;")
@@ -290,7 +290,7 @@ if ($coreMiscChars.Count -gt 0) {
 $fallbackUniqueChars = Get-UniqueChars -Text $fallbackText
 if ($fallbackUniqueChars.Count -gt 0) {
     $cssLines.Add("@font-face {")
-    $cssLines.Add("    font-family: `"HJ Source Han Serif Fallback`";")
+    $cssLines.Add("    font-family: `"Source Han Serif Fallback`";")
     $cssLines.Add("    src: url(`"./fallback.woff2`") format(`"woff2`");")
     $cssLines.Add("    font-style: normal;")
     $cssLines.Add("    font-weight: $fontWeightDescriptor;")

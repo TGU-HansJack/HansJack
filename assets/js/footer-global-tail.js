@@ -1,8 +1,8 @@
-﻿/* HansJack Footer Global Tail Bundle */
+/* Theme Footer Global Tail Bundle */
 
 /* block 22 */
 (function () {
-        var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
+        var contents = Array.prototype.slice.call(document.querySelectorAll(".article-content, .comment-content"));
         if (!contents || contents.length === 0) {
             return;
         }
@@ -381,7 +381,7 @@
                     continue;
                 }
 
-                if (table.closest && table.closest(".hj-table-split")) {
+                if (table.closest && table.closest(".table-split")) {
                     continue;
                 }
                 if (hasComplexSpan(table)) {
@@ -401,8 +401,8 @@
                 }
 
                 var splitRoot = document.createElement("div");
-                splitRoot.className = "hj-table-split";
-                splitRoot.setAttribute("data-hj-table-split", "1");
+                splitRoot.className = "table-split";
+                splitRoot.setAttribute("data-table-split", "1");
 
                 var baseCaption = "";
                 if (table.caption) {
@@ -423,10 +423,10 @@
                     }
 
                     var item = document.createElement("section");
-                    item.className = "hj-table-split-item";
+                    item.className = "table-split-item";
 
                     var label = document.createElement("p");
-                    label.className = "hj-table-split-label";
+                    label.className = "table-split-label";
                     label.textContent = buildPartLabel(baseCaption, part, partTotal, startCol, endCol);
 
                     item.appendChild(label);
@@ -448,7 +448,7 @@
 
 /* block 23 */
 (function () {
-        var contents = Array.prototype.slice.call(document.querySelectorAll(".hj-article-content, .hj-comment-content"));
+        var contents = Array.prototype.slice.call(document.querySelectorAll(".article-content, .comment-content"));
         if (!contents || contents.length === 0) {
             return;
         }
@@ -464,9 +464,9 @@
 
             function setLinkKind(kind) {
                 try {
-                    a.classList.toggle("hj-link-mail", kind === "mail");
-                    a.classList.toggle("hj-link-internal", kind === "internal");
-                    a.classList.toggle("hj-link-external", kind === "external");
+                    a.classList.toggle("link-mail", kind === "mail");
+                    a.classList.toggle("link-internal", kind === "internal");
+                    a.classList.toggle("link-external", kind === "external");
                 } catch (e) {}
             }
 
@@ -535,20 +535,20 @@
             return;
         }
 
-        var isPostPage = !!(body.classList && body.classList.contains("hj-page-post"));
-        var isListPage = !isPostPage && !!document.querySelector(".hj-posts-list");
+        var isPostPage = !!(body.classList && body.classList.contains("page-post"));
+        var isListPage = !isPostPage && !!document.querySelector(".posts-list");
         if (!isPostPage && !isListPage) {
             return;
         }
 
         var postCid = 0;
         if (isPostPage) {
-            var postNode = document.querySelector("[data-hj-post-cid]");
+            var postNode = document.querySelector("[data-post-cid]");
             if (!postNode) {
                 return;
             }
 
-            postCid = parseInt(postNode.getAttribute("data-hj-post-cid") || "0", 10);
+            postCid = parseInt(postNode.getAttribute("data-post-cid") || "0", 10);
             if (!Number.isFinite(postCid) || postCid <= 0) {
                 return;
             }
@@ -564,7 +564,7 @@
         var baselineVersion = "";
         var toastRoot = null;
         var toastDuration = 4000;
-        var toastStorageKey = "hj_live_reload_toast";
+        var toastStorageKey = "live_reload_toast";
         var toastHideTimer = 0;
         var requestTimeout = 4500;
 
@@ -593,7 +593,7 @@
 
             try {
                 url.hash = "";
-                url.searchParams.set("hj_live_version", "1");
+                url.searchParams.set("live_version", "1");
                 url.searchParams.set("scope", isPostPage ? "post" : "list");
                 if (isPostPage) {
                     url.searchParams.set("cid", String(postCid));
@@ -615,7 +615,7 @@
 
             try {
                 toastRoot = document.createElement("div");
-                toastRoot.className = "hj-live-toast-area";
+                toastRoot.className = "live-toast-area";
                 toastRoot.setAttribute("aria-live", "polite");
                 toastRoot.setAttribute("aria-atomic", "true");
                 body.appendChild(toastRoot);
@@ -691,7 +691,7 @@
         }
 
         function resolveLatestPostHref(title) {
-            var links = Array.prototype.slice.call(document.querySelectorAll(".hj-posts-list .hj-posts-title[href]"));
+            var links = Array.prototype.slice.call(document.querySelectorAll(".posts-list .posts-title[href]"));
             if (!links || links.length === 0) {
                 return "";
             }
@@ -768,21 +768,21 @@
                 : { message: String(payload || ""), kind: "text" };
 
             var toast = document.createElement("div");
-            toast.className = "hj-live-toast";
+            toast.className = "live-toast";
 
             var icon = document.createElement("span");
-            icon.className = "hj-live-toast-icon";
+            icon.className = "live-toast-icon";
             icon.setAttribute("aria-hidden", "true");
             icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-fading-arrow-up-icon lucide-circle-fading-arrow-up"><path d="M12 2a10 10 0 0 1 7.38 16.75"></path><path d="m16 12-4-4-4 4"></path><path d="M12 16V8"></path><path d="M2.5 8.875a10 10 0 0 0-.5 3"></path><path d="M2.83 16a10 10 0 0 0 2.43 3.4"></path><path d="M4.636 5.235a10 10 0 0 1 .891-.857"></path><path d="M8.644 21.42a10 10 0 0 0 7.631-.38"></path></svg>';
             toast.appendChild(icon);
 
             var msg = document.createElement("p");
-            msg.className = "hj-live-toast-text";
+            msg.className = "live-toast-text";
             if (data.kind === "list" && String(data.title || "").trim() !== "") {
                 var title = String(data.title || "").trim();
                 msg.appendChild(document.createTextNode("发布新文章："));
                 var a = document.createElement("a");
-                a.className = "hj-live-toast-link";
+                a.className = "live-toast-link";
                 a.textContent = title;
                 var href = String(data.href || "").trim();
                 if (!href) {

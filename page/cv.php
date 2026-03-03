@@ -26,11 +26,11 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
     exit;
 }
 
-if (!function_exists('hansJackCvField')) {
+if (!function_exists('cvField')) {
     /**
      * @param mixed $archive
      */
-    function hansJackCvField($archive, string $key, int $max = 0): string
+    function cvField($archive, string $key, int $max = 0): string
     {
         if (!$archive) {
             return '';
@@ -60,15 +60,15 @@ if (!function_exists('hansJackCvField')) {
     }
 }
 
-if (!function_exists('hansJackCvFirstField')) {
+if (!function_exists('cvFirstField')) {
     /**
      * @param mixed $archive
      * @param string[] $keys
      */
-    function hansJackCvFirstField($archive, array $keys, int $max = 0): string
+    function cvFirstField($archive, array $keys, int $max = 0): string
     {
         foreach ($keys as $key) {
-            $v = hansJackCvField($archive, (string) $key, $max);
+            $v = cvField($archive, (string) $key, $max);
             if ($v !== '') {
                 return $v;
             }
@@ -77,8 +77,8 @@ if (!function_exists('hansJackCvFirstField')) {
     }
 }
 
-if (!function_exists('hansJackCvGitHubUrl')) {
-    function hansJackCvGitHubUrl(string $value): string
+if (!function_exists('cvGitHubUrl')) {
+    function cvGitHubUrl(string $value): string
     {
         $value = trim($value);
         if ($value === '') {
@@ -99,8 +99,8 @@ if (!function_exists('hansJackCvGitHubUrl')) {
     }
 }
 
-if (!function_exists('hansJackCvSafeUrl')) {
-    function hansJackCvSafeUrl(string $value): string
+if (!function_exists('cvSafeUrl')) {
+    function cvSafeUrl(string $value): string
     {
         $value = trim($value);
         if ($value === '') {
@@ -121,35 +121,35 @@ if (!function_exists('hansJackCvSafeUrl')) {
 
 $this->need('header.php');
 
-$avatarUrl = hansJackCvField($this, 'avatar', 800);
+$avatarUrl = cvField($this, 'avatar', 800);
 if ($avatarUrl === '') {
     ob_start();
     $this->options->siteUrl('favicon.ico');
     $avatarUrl = trim((string) ob_get_clean());
 }
 
-$avatarLink = hansJackCvFirstField($this, ['avatar_link', 'avatarLink'], 800);
-$avatarLinkHref = hansJackCvSafeUrl($avatarLink);
+$avatarLink = cvFirstField($this, ['avatar_link', 'avatarLink'], 800);
+$avatarLinkHref = cvSafeUrl($avatarLink);
 
-$fullResumeUrl = hansJackCvFirstField(
+$fullResumeUrl = cvFirstField(
     $this,
     ['full_resume', 'full_resume_url', 'full_cv', 'full_cv_url', 'resume', 'resume_url'],
     800
 );
-$fullResumeHref = hansJackCvSafeUrl($fullResumeUrl);
+$fullResumeHref = cvSafeUrl($fullResumeUrl);
 
-$cvName = hansJackCvFirstField($this, ['name', 'full_name', 'fullname'], 120);
-$cvEmail = hansJackCvFirstField($this, ['email', 'mail'], 190);
-$cvGitHubRaw = hansJackCvField($this, 'github', 200);
-$cvGitHubHref = $cvGitHubRaw !== '' ? hansJackCvGitHubUrl($cvGitHubRaw) : '';
-$cvPolitical = hansJackCvField($this, 'political', 120);
-$cvNativePlace = hansJackCvFirstField($this, ['native_place', 'nativePlace'], 120);
-$cvNation = hansJackCvFirstField($this, ['nation', 'ethnicity'], 120);
-$cvAge = hansJackCvField($this, 'age', 40);
-$cvAddress = hansJackCvField($this, 'address', 200);
-$cvEducation = hansJackCvFirstField($this, ['education', 'degree'], 200);
-$cvBlog = hansJackCvFirstField($this, ['blog', 'blog_url', 'blogUrl'], 300);
-$cvBlogHref = hansJackCvSafeUrl($cvBlog);
+$cvName = cvFirstField($this, ['name', 'full_name', 'fullname'], 120);
+$cvEmail = cvFirstField($this, ['email', 'mail'], 190);
+$cvGitHubRaw = cvField($this, 'github', 200);
+$cvGitHubHref = $cvGitHubRaw !== '' ? cvGitHubUrl($cvGitHubRaw) : '';
+$cvPolitical = cvField($this, 'political', 120);
+$cvNativePlace = cvFirstField($this, ['native_place', 'nativePlace'], 120);
+$cvNation = cvFirstField($this, ['nation', 'ethnicity'], 120);
+$cvAge = cvField($this, 'age', 40);
+$cvAddress = cvField($this, 'address', 200);
+$cvEducation = cvFirstField($this, ['education', 'degree'], 200);
+$cvBlog = cvFirstField($this, ['blog', 'blog_url', 'blogUrl'], 300);
+$cvBlogHref = cvSafeUrl($cvBlog);
 
 $metaRows = [
     ['label' => '邮箱', 'value' => $cvEmail, 'type' => 'email'],
@@ -165,25 +165,25 @@ $metaRows = [
 
 ?>
 
-<main class="hj-main" role="main">
-    <section class="hj-cv" aria-label="<?php _e('CV'); ?>">
-        <div class="hj-cv-head">
-            <div class="hj-cv-avatar" aria-label="<?php _e('头像'); ?>">
+<main class="main" role="main">
+    <section class="cv" aria-label="<?php _e('CV'); ?>">
+        <div class="cv-head">
+            <div class="cv-avatar" aria-label="<?php _e('头像'); ?>">
                 <?php if ($avatarLinkHref !== ''): ?>
-                    <a href="<?php echo hansJackEscape($avatarLinkHref); ?>" target="_blank" rel="noreferrer">
-                        <img src="<?php echo hansJackEscape($avatarUrl); ?>" alt="" width="112" height="112" loading="eager" decoding="async" fetchpriority="high">
+                    <a href="<?php echo escape($avatarLinkHref); ?>" target="_blank" rel="noreferrer">
+                        <img src="<?php echo escape($avatarUrl); ?>" alt="" width="112" height="112" loading="eager" decoding="async" fetchpriority="high">
                     </a>
                 <?php else: ?>
-                    <img src="<?php echo hansJackEscape($avatarUrl); ?>" alt="" width="112" height="112" loading="eager" decoding="async" fetchpriority="high">
+                    <img src="<?php echo escape($avatarUrl); ?>" alt="" width="112" height="112" loading="eager" decoding="async" fetchpriority="high">
                 <?php endif; ?>
             </div>
 
-            <div class="hj-cv-info">
+            <div class="cv-info">
                 <?php if ($cvName !== ''): ?>
-                    <h1 class="hj-cv-name"><?php echo hansJackEscape($cvName); ?></h1>
+                    <h1 class="cv-name"><?php echo escape($cvName); ?></h1>
                 <?php endif; ?>
 
-                <dl class="hj-cv-meta">
+                <dl class="cv-meta">
                     <?php foreach ($metaRows as $row): ?>
                         <?php
                         $label = (string) ($row['label'] ?? '');
@@ -195,23 +195,23 @@ $metaRows = [
                             continue;
                         }
                         ?>
-                        <div class="hj-cv-meta-item">
-                            <dt><?php echo hansJackEscape($label); ?></dt>
+                        <div class="cv-meta-item">
+                            <dt><?php echo escape($label); ?></dt>
                             <dd>
                                 <?php if ($type === 'email' && strpos($value, '@') !== false): ?>
-                                    <a class="hj-cv-link" href="mailto:<?php echo hansJackEscape($value); ?>"><?php echo hansJackEscape($value); ?></a>
+                                    <a class="cv-link" href="mailto:<?php echo escape($value); ?>"><?php echo escape($value); ?></a>
                                 <?php elseif ($type === 'url'): ?>
                                     <?php
                                     $url = $href !== '' ? $href : $value;
-                                    $safe = hansJackCvSafeUrl($url);
+                                    $safe = cvSafeUrl($url);
                                     ?>
                                     <?php if ($safe !== ''): ?>
-                                        <a class="hj-cv-link" href="<?php echo hansJackEscape($safe); ?>" target="_blank" rel="noreferrer"><?php echo hansJackEscape($value); ?></a>
+                                        <a class="cv-link" href="<?php echo escape($safe); ?>" target="_blank" rel="noreferrer"><?php echo escape($value); ?></a>
                                     <?php else: ?>
-                                        <?php echo hansJackEscape($value); ?>
+                                        <?php echo escape($value); ?>
                                     <?php endif; ?>
                                 <?php else: ?>
-                                    <?php echo hansJackEscape($value); ?>
+                                    <?php echo escape($value); ?>
                                 <?php endif; ?>
                             </dd>
                         </div>
@@ -220,14 +220,14 @@ $metaRows = [
             </div>
 
             <?php if ($fullResumeHref !== ''): ?>
-                <div class="hj-cv-actions">
-                    <a class="hj-cv-full-btn" href="<?php echo hansJackEscape($fullResumeHref); ?>" target="_blank" rel="noreferrer"><?php _e('完整简历'); ?></a>
+                <div class="cv-actions">
+                    <a class="cv-full-btn" href="<?php echo escape($fullResumeHref); ?>" target="_blank" rel="noreferrer"><?php _e('完整简历'); ?></a>
                 </div>
             <?php endif; ?>
         </div>
 
-        <div class="hj-article-content hj-cv-content">
-            <?php hansJackEchoArchiveContent($this); ?>
+        <div class="article-content cv-content">
+            <?php echoArchiveContent($this); ?>
         </div>
     </section>
 </main>

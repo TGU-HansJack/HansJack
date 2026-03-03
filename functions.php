@@ -18,7 +18,7 @@ function themeConfig($form)
     $options = Options::alloc();
 
     $rewardImageUrl = new \Typecho\Widget\Helper\Form\Element\Text(
-        'hjRewardImageUrl',
+        'rewardImageUrl',
         null,
         '',
         _t('赞赏码图片链接'),
@@ -27,7 +27,7 @@ function themeConfig($form)
     $form->addInput($rewardImageUrl);
 
     $afdianImageUrl = new \Typecho\Widget\Helper\Form\Element\Text(
-        'hjAfdianImageUrl',
+        'afdianImageUrl',
         null,
         '',
         _t('爱发电图片链接'),
@@ -36,7 +36,7 @@ function themeConfig($form)
     $form->addInput($afdianImageUrl);
 
     $afdianPageUrl = new \Typecho\Widget\Helper\Form\Element\Text(
-        'hjAfdianPageUrl',
+        'afdianPageUrl',
         null,
         '',
         _t('爱发电页面链接'),
@@ -45,7 +45,7 @@ function themeConfig($form)
     $form->addInput($afdianPageUrl);
 
     $landingHitokotoEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
-        'hjLandingHitokotoEnabled',
+        'landingHitokotoEnabled',
         [
             '1' => _t('开启'),
             '0' => _t('关闭'),
@@ -57,7 +57,7 @@ function themeConfig($form)
     $form->addInput($landingHitokotoEnabled);
 
     $serifFontEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
-        'hjSerifFontEnabled',
+        'serifFontEnabled',
         [
             '1' => _t('开启'),
             '0' => _t('关闭'),
@@ -69,7 +69,7 @@ function themeConfig($form)
     $form->addInput($serifFontEnabled);
 
     $subsetFontEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
-        'hjSubsetFontEnabled',
+        'subsetFontEnabled',
         [
             '1' => _t('开启'),
             '0' => _t('关闭'),
@@ -81,7 +81,7 @@ function themeConfig($form)
     $form->addInput($subsetFontEnabled);
 
     $githubOauthEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
-        'hjGithubOauthEnabled',
+        'githubOauthEnabled',
         [
             '0' => _t('关闭'),
             '1' => _t('开启'),
@@ -93,7 +93,7 @@ function themeConfig($form)
     $form->addInput($githubOauthEnabled);
 
     $githubOauthClientId = new \Typecho\Widget\Helper\Form\Element\Text(
-        'hjGithubOauthClientId',
+        'githubOauthClientId',
         null,
         '',
         _t('GitHub Client ID'),
@@ -102,7 +102,7 @@ function themeConfig($form)
     $form->addInput($githubOauthClientId);
 
     $githubOauthClientSecret = new \Typecho\Widget\Helper\Form\Element\Password(
-        'hjGithubOauthClientSecret',
+        'githubOauthClientSecret',
         null,
         '',
         _t('GitHub Client Secret'),
@@ -111,7 +111,7 @@ function themeConfig($form)
     $form->addInput($githubOauthClientSecret);
 
     $githubOauthScope = new \Typecho\Widget\Helper\Form\Element\Text(
-        'hjGithubOauthScope',
+        'githubOauthScope',
         null,
         'read:user user:email',
         _t('GitHub OAuth Scope'),
@@ -120,43 +120,43 @@ function themeConfig($form)
     $form->addInput($githubOauthScope);
 
     $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
-        'hjGithubBindUid',
+        'githubBindUid',
         null,
-        trim((string) ($options->hjGithubBindUid ?? ''))
+        trim((string) ($options->githubBindUid ?? ''))
     ));
     $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
-        'hjGithubBindId',
+        'githubBindId',
         null,
-        trim((string) ($options->hjGithubBindId ?? ''))
+        trim((string) ($options->githubBindId ?? ''))
     ));
     $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
-        'hjGithubBindLogin',
+        'githubBindLogin',
         null,
-        trim((string) ($options->hjGithubBindLogin ?? ''))
+        trim((string) ($options->githubBindLogin ?? ''))
     ));
     $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
-        'hjGithubBindAvatar',
+        'githubBindAvatar',
         null,
-        trim((string) ($options->hjGithubBindAvatar ?? ''))
+        trim((string) ($options->githubBindAvatar ?? ''))
     ));
     $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
-        'hjGithubBindEmail',
+        'githubBindEmail',
         null,
-        trim((string) ($options->hjGithubBindEmail ?? ''))
+        trim((string) ($options->githubBindEmail ?? ''))
     ));
     $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
-        'hjGithubBindAt',
+        'githubBindAt',
         null,
-        trim((string) ($options->hjGithubBindAt ?? ''))
+        trim((string) ($options->githubBindAt ?? ''))
     ));
 
-    $bindPanel = new \Typecho\Widget\Helper\Form\Element\Fake('hjGithubBindPanel', '');
+    $bindPanel = new \Typecho\Widget\Helper\Form\Element\Fake('githubBindPanel', '');
     $bindPanel->label(_t('GitHub账号绑定'));
-    $bindPanel->description(hansJackGithubBindingPanelHtml($options));
+    $bindPanel->description(githubBindingPanelHtml($options));
     $form->addInput($bindPanel);
 
     $icpBeian = new \Typecho\Widget\Helper\Form\Element\Text(
-        'hjIcpBeian',
+        'icpBeian',
         null,
         '',
         _t('ICP备案号'),
@@ -165,7 +165,7 @@ function themeConfig($form)
     $form->addInput($icpBeian);
 
     $mpsBeian = new \Typecho\Widget\Helper\Form\Element\Text(
-        'hjMpsBeian',
+        'mpsBeian',
         null,
         '',
         _t('公安备案号'),
@@ -174,7 +174,7 @@ function themeConfig($form)
     $form->addInput($mpsBeian);
 
     $footerCustomCode = new \Typecho\Widget\Helper\Form\Element\Textarea(
-        'hjFooterCustomCode',
+        'footerCustomCode',
         null,
         '',
         _t('底部自定义代码'),
@@ -183,7 +183,7 @@ function themeConfig($form)
     $form->addInput($footerCustomCode);
 
     $customCss = new \Typecho\Widget\Helper\Form\Element\Textarea(
-        'hjCustomCss',
+        'customCss',
         null,
         '',
         _t('自定义 CSS'),
@@ -192,7 +192,7 @@ function themeConfig($form)
     $form->addInput($customCss);
 
     $customJavaScript = new \Typecho\Widget\Helper\Form\Element\Textarea(
-        'hjCustomJavaScript',
+        'customJavaScript',
         null,
         '',
         _t('自定义 JavaScript'),
@@ -207,19 +207,19 @@ function themeConfig($form)
  */
 function themeInit(Archive $archive)
 {
-    hansJackHandleLiveVersionRequest($archive);
-    hansJackHandleCommentUploadRequest($archive);
-    hansJackHandleCommentEditRequest($archive);
-    hansJackHandleMemoryReactionRequest($archive);
-    hansJackHandleGithubOauthRequest($archive);
-    hansJackEnableFeedStylesheet($archive);
+    handleLiveVersionRequest($archive);
+    handleCommentUploadRequest($archive);
+    handleCommentEditRequest($archive);
+    handleMemoryReactionRequest($archive);
+    handleGithubOauthRequest($archive);
+    enableFeedStylesheet($archive);
 
     if ($archive->is('category', 'posts') || $archive->is('category', 'notes')) {
         $archive->parameter->pageSize = 15;
     }
 }
 
-function hansJackEmitJson(array $payload, int $status = 200): void
+function emitJson(array $payload, int $status = 200): void
 {
     if (!headers_sent()) {
         header('Content-Type: application/json; charset=UTF-8');
@@ -241,17 +241,17 @@ function hansJackEmitJson(array $payload, int $status = 200): void
     exit;
 }
 
-function hansJackCommentUploadJson(array $payload, int $status = 200): void
+function commentUploadJson(array $payload, int $status = 200): void
 {
-    hansJackEmitJson($payload, $status);
+    emitJson($payload, $status);
 }
 
-function hansJackHandleLiveVersionRequest(Archive $archive): void
+function handleLiveVersionRequest(Archive $archive): void
 {
     $exists = false;
     $flag = '';
     try {
-        $flag = trim((string) $archive->request->get('hj_live_version', '', $exists));
+        $flag = trim((string) $archive->request->get('live_version', '', $exists));
     } catch (\Throwable $e) {
         $exists = false;
         $flag = '';
@@ -265,7 +265,7 @@ function hansJackHandleLiveVersionRequest(Archive $archive): void
     }
 
     if ($archive->request->isPost()) {
-        hansJackEmitJson([
+        emitJson([
             'ok' => false,
             'message' => _t('请求方式不支持'),
         ], 405);
@@ -281,9 +281,9 @@ function hansJackHandleLiveVersionRequest(Archive $archive): void
         $scope = 'list';
     }
 
-    $db = hansJackGithubDb();
+    $db = githubDb();
     if (!is_object($db)) {
-        hansJackEmitJson([
+        emitJson([
             'ok' => false,
             'message' => _t('数据库不可用'),
         ], 500);
@@ -300,7 +300,7 @@ function hansJackHandleLiveVersionRequest(Archive $archive): void
         }
 
         if ($cid <= 0) {
-            hansJackEmitJson([
+            emitJson([
                 'ok' => false,
                 'message' => _t('文章编号无效'),
             ], 400);
@@ -319,7 +319,7 @@ function hansJackHandleLiveVersionRequest(Archive $archive): void
         }
 
         if (!is_object($row)) {
-            hansJackEmitJson([
+            emitJson([
                 'ok' => true,
                 'scope' => 'post',
                 'cid' => $cid,
@@ -338,7 +338,7 @@ function hansJackHandleLiveVersionRequest(Archive $archive): void
         $isPublishedPost = ($type === 'post' && $status === 'publish');
         $version = sha1('post|' . $cid . '|' . ($isPublishedPost ? 'publish' : 'hidden') . '|' . $updated);
 
-        hansJackEmitJson([
+        emitJson([
             'ok' => true,
             'scope' => 'post',
             'cid' => $cid,
@@ -389,7 +389,7 @@ function hansJackHandleLiveVersionRequest(Archive $archive): void
     $updated = max(0, $maxCreated);
     $version = sha1('list|' . $updated . '|' . $total);
 
-    hansJackEmitJson([
+    emitJson([
         'ok' => true,
         'scope' => 'list',
         'total' => $total,
@@ -400,7 +400,7 @@ function hansJackHandleLiveVersionRequest(Archive $archive): void
     ]);
 }
 
-function hansJackCurrentUserIsAdmin(): bool
+function currentUserIsAdmin(): bool
 {
     static $cached = null;
     if (is_bool($cached)) {
@@ -428,12 +428,12 @@ function hansJackCurrentUserIsAdmin(): bool
     return $cached;
 }
 
-function hansJackHandleCommentUploadRequest(Archive $archive): void
+function handleCommentUploadRequest(Archive $archive): void
 {
     $exists = false;
     $uploadFlag = '';
     try {
-        $uploadFlag = trim((string) $archive->request->get('hj_comment_upload', '', $exists));
+        $uploadFlag = trim((string) $archive->request->get('comment_upload', '', $exists));
     } catch (\Throwable $e) {
         $exists = false;
         $uploadFlag = '';
@@ -448,7 +448,7 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
     }
 
     if (!$archive->request->isPost()) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('请求方式不支持'),
         ], 405);
@@ -471,7 +471,7 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
     }
 
     if (!$isAdmin) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('仅管理员可以上传附件'),
         ], 403);
@@ -507,7 +507,7 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
     }
 
     if ($token === '' || $expectedToken === '' || !hash_equals($expectedToken, $token)) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('安全校验失败，请刷新后重试'),
         ], 403);
@@ -515,7 +515,7 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
 
     $file = $_FILES['file'] ?? null;
     if (!is_array($file)) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('未检测到上传文件'),
         ], 400);
@@ -532,7 +532,7 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
             UPLOAD_ERR_CANT_WRITE => _t('服务器无法写入上传文件'),
             UPLOAD_ERR_EXTENSION => _t('上传被服务器扩展中断'),
         ];
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => $errorMap[$errorCode] ?? _t('文件上传失败'),
         ], 400);
@@ -540,7 +540,7 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
 
     $tmpPath = trim((string) ($file['tmp_name'] ?? ''));
     if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('上传文件无效'),
         ], 400);
@@ -548,7 +548,7 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
 
     $size = (int) ($file['size'] ?? 0);
     if ($size <= 0) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('上传文件为空'),
         ], 400);
@@ -556,7 +556,7 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
 
     $maxSize = 20 * 1024 * 1024;
     if ($size > $maxSize) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('文件大小不能超过 20MB'),
         ], 400);
@@ -578,7 +578,7 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
         'mp3', 'wav', 'ogg', 'mp4', 'webm', 'mov',
     ];
     if ($ext === '' || !in_array($ext, $allowedExts, true)) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('该文件类型不允许上传'),
         ], 400);
@@ -610,7 +610,7 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
         'application/x-httpd-php',
     ];
     if (in_array($mime, $blockedMimes, true)) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('不允许上传此文件'),
         ], 400);
@@ -620,7 +620,7 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
     $saveDir = rtrim((string) __TYPECHO_ROOT_DIR__, '/\\') . DIRECTORY_SEPARATOR
         . str_replace('/', DIRECTORY_SEPARATOR, $relativeDir);
     if (!is_dir($saveDir) && !@mkdir($saveDir, 0755, true)) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('服务器无法创建上传目录'),
         ], 500);
@@ -636,7 +636,7 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
     $saveName = date('YmdHis') . '-' . $random . '.' . $ext;
     $savePath = $saveDir . DIRECTORY_SEPARATOR . $saveName;
     if (!@move_uploaded_file($tmpPath, $savePath)) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('文件保存失败，请重试'),
         ], 500);
@@ -650,7 +650,7 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
     $imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg'];
     $isImage = in_array($ext, $imageExts, true) || strpos($mime, 'image/') === 0;
 
-    hansJackCommentUploadJson([
+    commentUploadJson([
         'ok' => true,
         'url' => $fileUrl,
         'name' => $originalName,
@@ -660,12 +660,12 @@ function hansJackHandleCommentUploadRequest(Archive $archive): void
     ]);
 }
 
-function hansJackHandleCommentEditRequest(Archive $archive): void
+function handleCommentEditRequest(Archive $archive): void
 {
     $exists = false;
     $editFlag = '';
     try {
-        $editFlag = trim((string) $archive->request->get('hj_comment_edit', '', $exists));
+        $editFlag = trim((string) $archive->request->get('comment_edit', '', $exists));
     } catch (\Throwable $e) {
         $exists = false;
         $editFlag = '';
@@ -679,14 +679,14 @@ function hansJackHandleCommentEditRequest(Archive $archive): void
     }
 
     if (!$archive->request->isPost()) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('请求方式不支持'),
         ], 405);
     }
 
-    if (!hansJackCurrentUserIsAdmin()) {
-        hansJackCommentUploadJson([
+    if (!currentUserIsAdmin()) {
+        commentUploadJson([
             'ok' => false,
             'message' => _t('仅管理员可以编辑评论'),
         ], 403);
@@ -722,7 +722,7 @@ function hansJackHandleCommentEditRequest(Archive $archive): void
     }
 
     if ($token === '' || $expectedToken === '' || !hash_equals($expectedToken, $token)) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('安全校验失败，请刷新后重试'),
         ], 403);
@@ -742,7 +742,7 @@ function hansJackHandleCommentEditRequest(Archive $archive): void
     }
 
     if ($coid <= 0) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('评论编号无效'),
         ], 400);
@@ -750,15 +750,15 @@ function hansJackHandleCommentEditRequest(Archive $archive): void
 
     $text = str_replace(["\r\n", "\r"], "\n", $text);
     if (trim($text) === '') {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('评论内容不能为空'),
         ], 400);
     }
 
-    $db = hansJackGithubDb();
+    $db = githubDb();
     if (!is_object($db)) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('数据库不可用'),
         ], 500);
@@ -776,7 +776,7 @@ function hansJackHandleCommentEditRequest(Archive $archive): void
     }
 
     if (!is_object($existsRow)) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('评论不存在或已删除'),
         ], 404);
@@ -789,35 +789,31 @@ function hansJackHandleCommentEditRequest(Archive $archive): void
                 ->where('coid = ?', $coid)
         );
     } catch (\Throwable $e) {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('评论更新失败，请稍后重试'),
         ], 500);
     }
 
-    hansJackCommentUploadJson([
+    commentUploadJson([
         'ok' => true,
         'coid' => $coid,
     ]);
 }
 
-function hansJackMemoryReactionAllowedEmojis(): array
+function memoryReactionAllowedEmojis(): array
 {
     return ['👍', '❤️', '😂', '😮', '😢', '😡', '🎉', '👏', '🔥', '🤔', '👀', '🙏', '💯', '🚀'];
 }
 
-function hansJackMemoryReactionCacheFilePath(): string
+function memoryReactionCacheFilePath(): string
 {
-    $base = rtrim((string) __TYPECHO_ROOT_DIR__, '/\\');
-    return $base
-        . DIRECTORY_SEPARATOR . 'usr'
-        . DIRECTORY_SEPARATOR . 'themes'
-        . DIRECTORY_SEPARATOR . 'HansJack'
+    return __DIR__
         . DIRECTORY_SEPARATOR . 'cache'
         . DIRECTORY_SEPARATOR . 'memory-reactions.json';
 }
 
-function hansJackMemoryReactionDefaultStore(): array
+function memoryReactionDefaultStore(): array
 {
     return [
         'version' => 1,
@@ -826,9 +822,9 @@ function hansJackMemoryReactionDefaultStore(): array
     ];
 }
 
-function hansJackMemoryReactionNormalizeStore($store): array
+function memoryReactionNormalizeStore($store): array
 {
-    $normalized = hansJackMemoryReactionDefaultStore();
+    $normalized = memoryReactionDefaultStore();
     if (!is_array($store)) {
         return $normalized;
     }
@@ -874,9 +870,9 @@ function hansJackMemoryReactionNormalizeStore($store): array
     return $normalized;
 }
 
-function hansJackMemoryReactionEnsureCacheDir(): bool
+function memoryReactionEnsureCacheDir(): bool
 {
-    $dir = dirname(hansJackMemoryReactionCacheFilePath());
+    $dir = dirname(memoryReactionCacheFilePath());
     if (is_dir($dir)) {
         return true;
     }
@@ -884,16 +880,16 @@ function hansJackMemoryReactionEnsureCacheDir(): bool
     return @mkdir($dir, 0755, true);
 }
 
-function hansJackMemoryReactionReadStore(): array
+function memoryReactionReadStore(): array
 {
-    $path = hansJackMemoryReactionCacheFilePath();
+    $path = memoryReactionCacheFilePath();
     if (!is_file($path)) {
-        return hansJackMemoryReactionDefaultStore();
+        return memoryReactionDefaultStore();
     }
 
     $fp = @fopen($path, 'rb');
     if (!is_resource($fp)) {
-        return hansJackMemoryReactionDefaultStore();
+        return memoryReactionDefaultStore();
     }
 
     $raw = '';
@@ -912,14 +908,14 @@ function hansJackMemoryReactionReadStore(): array
     @fclose($fp);
 
     if ($raw === '') {
-        return hansJackMemoryReactionDefaultStore();
+        return memoryReactionDefaultStore();
     }
 
     $decoded = json_decode($raw, true);
-    return hansJackMemoryReactionNormalizeStore($decoded);
+    return memoryReactionNormalizeStore($decoded);
 }
 
-function hansJackMemoryReactionParseCoids($raw): array
+function memoryReactionParseCoids($raw): array
 {
     $parts = [];
     if (is_array($raw)) {
@@ -948,13 +944,13 @@ function hansJackMemoryReactionParseCoids($raw): array
     return array_values($map);
 }
 
-function hansJackMemoryReactionCommentCid(int $coid): int
+function memoryReactionCommentCid(int $coid): int
 {
     if ($coid <= 0) {
         return 0;
     }
 
-    $db = hansJackGithubDb();
+    $db = githubDb();
     if (!is_object($db)) {
         return 0;
     }
@@ -980,7 +976,7 @@ function hansJackMemoryReactionCommentCid(int $coid): int
     return 0;
 }
 
-function hansJackMemoryReactionIsMemoryComment(int $coid): bool
+function memoryReactionIsMemoryComment(int $coid): bool
 {
     static $cache = [];
 
@@ -991,13 +987,13 @@ function hansJackMemoryReactionIsMemoryComment(int $coid): bool
         return (bool) $cache[$coid];
     }
 
-    $cid = hansJackMemoryReactionCommentCid($coid);
+    $cid = memoryReactionCommentCid($coid);
     if ($cid <= 0) {
         $cache[$coid] = false;
         return false;
     }
 
-    $db = hansJackGithubDb();
+    $db = githubDb();
     if (!is_object($db)) {
         $cache[$coid] = false;
         return false;
@@ -1030,7 +1026,7 @@ function hansJackMemoryReactionIsMemoryComment(int $coid): bool
     return $ok;
 }
 
-function hansJackMemoryReactionClientIp(): string
+function memoryReactionClientIp(): string
 {
     $keys = [
         'HTTP_CF_CONNECTING_IP',
@@ -1064,9 +1060,9 @@ function hansJackMemoryReactionClientIp(): string
     return '';
 }
 
-function hansJackMemoryReactionClientHash(): string
+function memoryReactionClientHash(): string
 {
-    $ip = hansJackMemoryReactionClientIp();
+    $ip = memoryReactionClientIp();
     if ($ip === '') {
         $ip = trim((string) ($_SERVER['HTTP_USER_AGENT'] ?? 'unknown-client'));
     }
@@ -1074,7 +1070,7 @@ function hansJackMemoryReactionClientHash(): string
     return hash('sha256', $ip . '|' . (string) __TYPECHO_ROOT_DIR__);
 }
 
-function hansJackMemoryReactionBuildPayloads(array $store, array $coids, string $ipHash, array $allowedEmojis): array
+function memoryReactionBuildPayloads(array $store, array $coids, string $ipHash, array $allowedEmojis): array
 {
     $allowedMap = [];
     foreach ($allowedEmojis as $emoji) {
@@ -1143,12 +1139,12 @@ function hansJackMemoryReactionBuildPayloads(array $store, array $coids, string 
     return $payload;
 }
 
-function hansJackHandleMemoryReactionRequest(Archive $archive): void
+function handleMemoryReactionRequest(Archive $archive): void
 {
     $exists = false;
     $flag = '';
     try {
-        $flag = trim((string) $archive->request->get('hj_memory_reaction', '', $exists));
+        $flag = trim((string) $archive->request->get('memory_reaction', '', $exists));
     } catch (\Throwable $e) {
         $exists = false;
         $flag = '';
@@ -1161,7 +1157,7 @@ function hansJackHandleMemoryReactionRequest(Archive $archive): void
         return;
     }
 
-    $allowedEmojis = hansJackMemoryReactionAllowedEmojis();
+    $allowedEmojis = memoryReactionAllowedEmojis();
     $allowedMap = [];
     foreach ($allowedEmojis as $emoji) {
         $key = trim((string) $emoji);
@@ -1171,9 +1167,9 @@ function hansJackHandleMemoryReactionRequest(Archive $archive): void
         $allowedMap[$key] = true;
     }
 
-    $clientHash = hansJackMemoryReactionClientHash();
+    $clientHash = memoryReactionClientHash();
     if ($clientHash === '') {
-        hansJackCommentUploadJson([
+        commentUploadJson([
             'ok' => false,
             'message' => _t('无法识别客户端'),
         ], 400);
@@ -1201,36 +1197,36 @@ function hansJackHandleMemoryReactionRequest(Archive $archive): void
                 $emoji = '';
             }
 
-            if ($coid <= 0 || !hansJackMemoryReactionIsMemoryComment($coid)) {
-                hansJackCommentUploadJson([
+            if ($coid <= 0 || !memoryReactionIsMemoryComment($coid)) {
+                commentUploadJson([
                     'ok' => false,
                     'message' => _t('评论不存在或不支持互动'),
                 ], 400);
             }
             if ($emoji === '' || !isset($allowedMap[$emoji])) {
-                hansJackCommentUploadJson([
+                commentUploadJson([
                     'ok' => false,
                     'message' => _t('互动表情不合法'),
                 ], 400);
             }
 
-            if (!hansJackMemoryReactionEnsureCacheDir()) {
-                hansJackCommentUploadJson([
+            if (!memoryReactionEnsureCacheDir()) {
+                commentUploadJson([
                     'ok' => false,
                     'message' => _t('缓存目录不可写'),
                 ], 500);
             }
 
-            $path = hansJackMemoryReactionCacheFilePath();
+            $path = memoryReactionCacheFilePath();
             $fp = @fopen($path, 'c+');
             if (!is_resource($fp)) {
-                hansJackCommentUploadJson([
+                commentUploadJson([
                     'ok' => false,
                     'message' => _t('缓存文件打开失败'),
                 ], 500);
             }
 
-            $store = hansJackMemoryReactionDefaultStore();
+            $store = memoryReactionDefaultStore();
             $writeOk = false;
 
             if (@flock($fp, LOCK_EX)) {
@@ -1242,7 +1238,7 @@ function hansJackHandleMemoryReactionRequest(Archive $archive): void
 
                 if ($raw !== '') {
                     $decoded = json_decode($raw, true);
-                    $store = hansJackMemoryReactionNormalizeStore($decoded);
+                    $store = memoryReactionNormalizeStore($decoded);
                 }
 
                 $commentKey = (string) $coid;
@@ -1271,15 +1267,15 @@ function hansJackHandleMemoryReactionRequest(Archive $archive): void
             @fclose($fp);
 
             if (!$writeOk) {
-                hansJackCommentUploadJson([
+                commentUploadJson([
                     'ok' => false,
                     'message' => _t('互动写入失败，请稍后重试'),
                 ], 500);
             }
 
             @chmod($path, 0644);
-            $comments = hansJackMemoryReactionBuildPayloads($store, [$coid], $clientHash, $allowedEmojis);
-            hansJackCommentUploadJson([
+            $comments = memoryReactionBuildPayloads($store, [$coid], $clientHash, $allowedEmojis);
+            commentUploadJson([
                 'ok' => true,
                 'comments' => $comments,
                 'coids' => [(int) $coid],
@@ -1290,7 +1286,7 @@ function hansJackHandleMemoryReactionRequest(Archive $archive): void
 
     $coids = [];
     try {
-        $coids = hansJackMemoryReactionParseCoids($archive->request->get('coids', ''));
+        $coids = memoryReactionParseCoids($archive->request->get('coids', ''));
     } catch (\Throwable $e) {
         $coids = [];
     }
@@ -1313,15 +1309,15 @@ function hansJackHandleMemoryReactionRequest(Archive $archive): void
         if ($coid <= 0) {
             continue;
         }
-        if (!hansJackMemoryReactionIsMemoryComment($coid)) {
+        if (!memoryReactionIsMemoryComment($coid)) {
             continue;
         }
         $validCoids[] = $coid;
     }
 
-    $store = hansJackMemoryReactionReadStore();
-    $comments = hansJackMemoryReactionBuildPayloads($store, $validCoids, $clientHash, $allowedEmojis);
-    hansJackCommentUploadJson([
+    $store = memoryReactionReadStore();
+    $comments = memoryReactionBuildPayloads($store, $validCoids, $clientHash, $allowedEmojis);
+    commentUploadJson([
         'ok' => true,
         'comments' => $comments,
         'coids' => $validCoids,
@@ -1334,7 +1330,7 @@ function hansJackHandleMemoryReactionRequest(Archive $archive): void
  * - Browser requests (Accept: text/html): render a readable HTML feed page.
  * - Feed reader requests: keep raw XML output (no browser-side XSLT dependency).
  */
-function hansJackEnableFeedStylesheet(Archive $archive): void
+function enableFeedStylesheet(Archive $archive): void
 {
     static $registered = false;
     if ($registered) {
@@ -1352,15 +1348,15 @@ function hansJackEnableFeedStylesheet(Archive $archive): void
         return;
     }
 
-    $renderHtml = hansJackShouldRenderFeedAsHtml();
+    $renderHtml = shouldRenderFeedAsHtml();
 
     $registered = true;
     ob_start(function ($buffer) use ($renderHtml) {
-        return hansJackHandleFeedOutput((string) $buffer, $renderHtml);
+        return handleFeedOutput((string) $buffer, $renderHtml);
     });
 }
 
-function hansJackShouldRenderFeedAsHtml(): bool
+function shouldRenderFeedAsHtml(): bool
 {
     $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
     if ($method !== 'GET') {
@@ -1383,14 +1379,14 @@ function hansJackShouldRenderFeedAsHtml(): bool
     return strpos($accept, 'text/html') !== false;
 }
 
-function hansJackHandleFeedOutput(string $buffer, bool $renderHtml): string
+function handleFeedOutput(string $buffer, bool $renderHtml): string
 {
     if ($buffer === '' || strpos($buffer, '<?xml') === false) {
         return $buffer;
     }
 
     if ($renderHtml) {
-        $html = hansJackRenderFeedHtmlFromXml($buffer);
+        $html = renderFeedHtmlFromXml($buffer);
         if ($html !== '') {
             if (!headers_sent()) {
                 header('Content-Type: text/html; charset=UTF-8');
@@ -1403,12 +1399,12 @@ function hansJackHandleFeedOutput(string $buffer, bool $renderHtml): string
     return $buffer;
 }
 
-function hansJackFeedHtmlEscape(string $text): string
+function feedHtmlEscape(string $text): string
 {
     return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
 }
 
-function hansJackFeedSafeUrl(string $url, string $fallback = '#'): string
+function feedSafeUrl(string $url, string $fallback = '#'): string
 {
     $url = trim($url);
     if ($url === '') {
@@ -1426,7 +1422,7 @@ function hansJackFeedSafeUrl(string $url, string $fallback = '#'): string
     return $fallback;
 }
 
-function hansJackFeedXPathString(\DOMXPath $xp, string $expr, ?\DOMNode $ctx = null): string
+function feedXPathString(\DOMXPath $xp, string $expr, ?\DOMNode $ctx = null): string
 {
     $query = 'string(' . $expr . ')';
     $raw = $ctx ? $xp->evaluate($query, $ctx) : $xp->evaluate($query);
@@ -1436,7 +1432,7 @@ function hansJackFeedXPathString(\DOMXPath $xp, string $expr, ?\DOMNode $ctx = n
 /**
  * Parse RSS/Atom XML string and render readable HTML (no browser XSLT dependency).
  */
-function hansJackRenderFeedHtmlFromXml(string $xml): string
+function renderFeedHtmlFromXml(string $xml): string
 {
     if (!class_exists('\\DOMDocument') || !class_exists('\\DOMXPath')) {
         return '';
@@ -1475,24 +1471,24 @@ function hansJackRenderFeedHtmlFromXml(string $xml): string
     $items = [];
 
     if ($rootName === 'rss') {
-        $siteTitle = hansJackFeedXPathString($xp, '/rss/channel/title');
-        $siteLink = hansJackFeedXPathString($xp, '/rss/channel/link');
-        $siteDesc = hansJackFeedXPathString($xp, '/rss/channel/description');
-        $feedUrl = hansJackFeedXPathString($xp, "/rss/channel/atom:link[@rel='self'][1]/@href");
+        $siteTitle = feedXPathString($xp, '/rss/channel/title');
+        $siteLink = feedXPathString($xp, '/rss/channel/link');
+        $siteDesc = feedXPathString($xp, '/rss/channel/description');
+        $feedUrl = feedXPathString($xp, "/rss/channel/atom:link[@rel='self'][1]/@href");
         if ($feedUrl === '') {
             $feedUrl = $siteLink;
         }
-        $lastUpdate = hansJackFeedXPathString($xp, '/rss/channel/lastBuildDate');
+        $lastUpdate = feedXPathString($xp, '/rss/channel/lastBuildDate');
         if ($lastUpdate === '') {
-            $lastUpdate = hansJackFeedXPathString($xp, '/rss/channel/pubDate');
+            $lastUpdate = feedXPathString($xp, '/rss/channel/pubDate');
         }
 
         $nodes = $xp->query('/rss/channel/item');
         if ($nodes) {
             foreach ($nodes as $node) {
-                $title = hansJackFeedXPathString($xp, 'title', $node);
-                $link = hansJackFeedXPathString($xp, 'link', $node);
-                $time = hansJackFeedXPathString($xp, 'pubDate', $node);
+                $title = feedXPathString($xp, 'title', $node);
+                $link = feedXPathString($xp, 'link', $node);
+                $time = feedXPathString($xp, 'pubDate', $node);
 
                 $tags = [];
                 $tagNodes = $xp->query('category', $node);
@@ -1507,39 +1503,39 @@ function hansJackRenderFeedHtmlFromXml(string $xml): string
 
                 $items[] = [
                     'title' => $title !== '' ? $title : '未命名文章',
-                    'url' => hansJackFeedSafeUrl($link),
+                    'url' => feedSafeUrl($link),
                     'time' => $time !== '' ? $time : '未知时间',
                     'tags' => $tags,
                 ];
             }
         }
     } elseif ($rootName === 'feed' && $rootNs === 'http://www.w3.org/2005/atom') {
-        $siteTitle = hansJackFeedXPathString($xp, '/atom:feed/atom:title');
-        $siteLink = hansJackFeedXPathString($xp, "/atom:feed/atom:link[@rel='alternate'][1]/@href");
+        $siteTitle = feedXPathString($xp, '/atom:feed/atom:title');
+        $siteLink = feedXPathString($xp, "/atom:feed/atom:link[@rel='alternate'][1]/@href");
         if ($siteLink === '') {
-            $siteLink = hansJackFeedXPathString($xp, '/atom:feed/atom:link[1]/@href');
+            $siteLink = feedXPathString($xp, '/atom:feed/atom:link[1]/@href');
         }
-        $siteDesc = hansJackFeedXPathString($xp, '/atom:feed/atom:subtitle');
-        $feedUrl = hansJackFeedXPathString($xp, "/atom:feed/atom:link[@rel='self'][1]/@href");
+        $siteDesc = feedXPathString($xp, '/atom:feed/atom:subtitle');
+        $feedUrl = feedXPathString($xp, "/atom:feed/atom:link[@rel='self'][1]/@href");
         if ($feedUrl === '') {
-            $feedUrl = hansJackFeedXPathString($xp, '/atom:feed/atom:id');
+            $feedUrl = feedXPathString($xp, '/atom:feed/atom:id');
         }
         if ($feedUrl === '') {
             $feedUrl = $siteLink;
         }
-        $lastUpdate = hansJackFeedXPathString($xp, '/atom:feed/atom:updated');
+        $lastUpdate = feedXPathString($xp, '/atom:feed/atom:updated');
 
         $nodes = $xp->query('/atom:feed/atom:entry');
         if ($nodes) {
             foreach ($nodes as $node) {
-                $title = hansJackFeedXPathString($xp, 'atom:title', $node);
-                $link = hansJackFeedXPathString($xp, "atom:link[@rel='alternate'][1]/@href", $node);
+                $title = feedXPathString($xp, 'atom:title', $node);
+                $link = feedXPathString($xp, "atom:link[@rel='alternate'][1]/@href", $node);
                 if ($link === '') {
-                    $link = hansJackFeedXPathString($xp, 'atom:link[1]/@href', $node);
+                    $link = feedXPathString($xp, 'atom:link[1]/@href', $node);
                 }
-                $time = hansJackFeedXPathString($xp, 'atom:published', $node);
+                $time = feedXPathString($xp, 'atom:published', $node);
                 if ($time === '') {
-                    $time = hansJackFeedXPathString($xp, 'atom:updated', $node);
+                    $time = feedXPathString($xp, 'atom:updated', $node);
                 }
 
                 $tags = [];
@@ -1558,29 +1554,29 @@ function hansJackRenderFeedHtmlFromXml(string $xml): string
 
                 $items[] = [
                     'title' => $title !== '' ? $title : '未命名文章',
-                    'url' => hansJackFeedSafeUrl($link),
+                    'url' => feedSafeUrl($link),
                     'time' => $time !== '' ? $time : '未知时间',
                     'tags' => $tags,
                 ];
             }
         }
     } elseif ($rootName === 'rdf') {
-        $siteTitle = hansJackFeedXPathString($xp, '/rdf:RDF/rss1:channel/rss1:title');
-        $siteLink = hansJackFeedXPathString($xp, '/rdf:RDF/rss1:channel/rss1:link');
-        $siteDesc = hansJackFeedXPathString($xp, '/rdf:RDF/rss1:channel/rss1:description');
+        $siteTitle = feedXPathString($xp, '/rdf:RDF/rss1:channel/rss1:title');
+        $siteLink = feedXPathString($xp, '/rdf:RDF/rss1:channel/rss1:link');
+        $siteDesc = feedXPathString($xp, '/rdf:RDF/rss1:channel/rss1:description');
         $feedUrl = $siteLink;
-        $lastUpdate = hansJackFeedXPathString($xp, '/rdf:RDF/rss1:channel/dc:date');
+        $lastUpdate = feedXPathString($xp, '/rdf:RDF/rss1:channel/dc:date');
 
         $nodes = $xp->query('/rdf:RDF/rss1:item');
         if ($nodes) {
             foreach ($nodes as $node) {
-                $title = hansJackFeedXPathString($xp, 'rss1:title', $node);
-                $link = hansJackFeedXPathString($xp, 'rss1:link', $node);
-                $time = hansJackFeedXPathString($xp, 'dc:date', $node);
+                $title = feedXPathString($xp, 'rss1:title', $node);
+                $link = feedXPathString($xp, 'rss1:link', $node);
+                $time = feedXPathString($xp, 'dc:date', $node);
 
                 $items[] = [
                     'title' => $title !== '' ? $title : '未命名文章',
-                    'url' => hansJackFeedSafeUrl($link),
+                    'url' => feedSafeUrl($link),
                     'time' => $time !== '' ? $time : '未知时间',
                     'tags' => [],
                 ];
@@ -1600,14 +1596,14 @@ function hansJackRenderFeedHtmlFromXml(string $xml): string
         $lastUpdate = '未知';
     }
 
-    $siteLinkSafe = hansJackFeedSafeUrl($siteLink);
-    $feedUrlSafe = hansJackFeedSafeUrl($feedUrl, $siteLinkSafe);
+    $siteLinkSafe = feedSafeUrl($siteLink);
+    $feedUrlSafe = feedSafeUrl($feedUrl, $siteLinkSafe);
 
-    $titleEsc = hansJackFeedHtmlEscape($siteTitle);
-    $siteDescEsc = hansJackFeedHtmlEscape($siteDesc);
-    $siteLinkEsc = hansJackFeedHtmlEscape($siteLinkSafe);
-    $feedUrlEsc = hansJackFeedHtmlEscape($feedUrlSafe);
-    $lastUpdateEsc = hansJackFeedHtmlEscape($lastUpdate);
+    $titleEsc = feedHtmlEscape($siteTitle);
+    $siteDescEsc = feedHtmlEscape($siteDesc);
+    $siteLinkEsc = feedHtmlEscape($siteLinkSafe);
+    $feedUrlEsc = feedHtmlEscape($feedUrlSafe);
+    $lastUpdateEsc = feedHtmlEscape($lastUpdate);
 
     $itemHtml = '';
     foreach ($items as $index => $item) {
@@ -1615,8 +1611,8 @@ function hansJackRenderFeedHtmlFromXml(string $xml): string
         if ($titleRaw === '') {
             $titleRaw = '未命名文章';
         }
-        $itemTitle = hansJackFeedHtmlEscape($titleRaw);
-        $itemUrl = hansJackFeedHtmlEscape(hansJackFeedSafeUrl((string) ($item['url'] ?? ''), $siteLinkSafe));
+        $itemTitle = feedHtmlEscape($titleRaw);
+        $itemUrl = feedHtmlEscape(feedSafeUrl((string) ($item['url'] ?? ''), $siteLinkSafe));
 
         $itemTimeRaw = trim((string) ($item['time'] ?? ''));
         $itemTimestamp = 0;
@@ -1632,10 +1628,10 @@ function hansJackRenderFeedHtmlFromXml(string $xml): string
         $createdAttr = '';
         if ($itemTimestamp > 0) {
             $displayTime = date('Y/m/d-H:i:s', $itemTimestamp);
-            $datetimeAttr = ' datetime="' . hansJackFeedHtmlEscape(date(DATE_ATOM, $itemTimestamp)) . '"';
-            $createdAttr = ' data-hj-post-created="' . $itemTimestamp . '" data-hj-post-modified="' . $itemTimestamp . '"';
+            $datetimeAttr = ' datetime="' . feedHtmlEscape(date(DATE_ATOM, $itemTimestamp)) . '"';
+            $createdAttr = ' data-post-created="' . $itemTimestamp . '" data-post-modified="' . $itemTimestamp . '"';
         }
-        $itemTime = hansJackFeedHtmlEscape($displayTime);
+        $itemTime = feedHtmlEscape($displayTime);
 
         $tagsHtml = '';
         $tags = is_array($item['tags'] ?? null) ? $item['tags'] : [];
@@ -1644,77 +1640,77 @@ function hansJackRenderFeedHtmlFromXml(string $xml): string
             if ($tagText === '') {
                 continue;
             }
-            $tagsHtml .= '<span class="hj-posts-tag">#' . hansJackFeedHtmlEscape($tagText) . '</span>';
+            $tagsHtml .= '<span class="posts-tag">#' . feedHtmlEscape($tagText) . '</span>';
         }
 
-        $itemHtml .= '<li class="hj-posts-item"'
-            . ' data-hj-post-original-index="' . (int) $index . '"'
+        $itemHtml .= '<li class="posts-item"'
+            . ' data-post-original-index="' . (int) $index . '"'
             . $createdAttr . '>';
-        $itemHtml .= '<div class="hj-posts-item-left">';
-        $itemHtml .= '<a class="hj-posts-title" href="' . $itemUrl . '">' . $itemTitle . '</a>';
-        $itemHtml .= '<time class="hj-posts-date"' . $datetimeAttr . '>' . $itemTime . '</time>';
+        $itemHtml .= '<div class="posts-item-left">';
+        $itemHtml .= '<a class="posts-title" href="' . $itemUrl . '">' . $itemTitle . '</a>';
+        $itemHtml .= '<time class="posts-date"' . $datetimeAttr . '>' . $itemTime . '</time>';
         $itemHtml .= '</div>';
-        $itemHtml .= '<div class="hj-posts-item-right" aria-label="标签">' . $tagsHtml . '</div>';
+        $itemHtml .= '<div class="posts-item-right" aria-label="标签">' . $tagsHtml . '</div>';
         $itemHtml .= '</li>';
     }
 
     if ($itemHtml === '') {
-        $itemHtml = '<li class="hj-posts-empty">当前订阅源暂无可展示内容。</li>';
+        $itemHtml = '<li class="posts-empty">当前订阅源暂无可展示内容。</li>';
     }
 
     $options = Options::alloc();
     $theme = trim((string) ($options->theme ?? ''));
     $themeStyleHref = '';
     if ($theme !== '') {
-        $themeStyleHref = hansJackAssetUrl($options, 'style.css', $theme);
+        $themeStyleHref = assetUrl($options, 'style.css', $theme);
     }
     $themeStyleTag = '';
     if ($themeStyleHref !== '') {
-        $themeStyleTag = '<link rel="stylesheet" href="' . hansJackFeedHtmlEscape($themeStyleHref) . '">';
+        $themeStyleTag = '<link rel="stylesheet" href="' . feedHtmlEscape($themeStyleHref) . '">';
     }
 
     return '<!DOCTYPE html><html lang="zh-CN"><head>'
         . '<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<title>' . $titleEsc . ' · 订阅源</title>'
         . $themeStyleTag
-        . '<style>body{margin:0}.hj-feed-page{padding:1.1rem 0 1.8rem}.hj-feed-head{margin-bottom:.75rem}.hj-feed-head h1{margin:0 0 .3rem;font-size:clamp(1.38rem,2.7vw,2rem);line-height:1.25}.hj-feed-head p{margin:0;color:var(--hj-muted-day)}.hj-feed-note{margin-bottom:1rem}.copy-btn{position:relative;margin-left:.35rem;border:1px solid #2a2a28;border-radius:4px;background:#2a2a28;color:#fffffd;font-family:var(--hj-font-ui);font-size:.78rem;line-height:1;padding:.25rem .5rem;cursor:pointer}.copy-btn:hover,.copy-btn:focus-visible{border-color:#1f1f1d;background:#1f1f1d}.copy-btn::after{content:attr(data-copy-tip);position:absolute;left:50%;bottom:calc(100% + 6px);transform:translate(-50%,4px);padding:.14rem .42rem;border-radius:4px;background:var(--hj-nav-block-bg);color:var(--hj-nav-block-fg);font-family:var(--hj-font-ui);font-size:.72rem;line-height:1.2;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .14s ease,transform .14s ease,visibility .14s ease}.copy-btn.is-tip::after{opacity:1;visibility:visible;transform:translate(-50%,0)}.hj-feed-foot{margin-top:1.1rem;font-family:var(--hj-font-ui);font-size:.84rem;color:var(--hj-muted-day)}.hj-feed-foot p{margin:.22rem 0}@media (max-width:980px){.hj-feed-page{padding:1rem 0 1.35rem}}</style>'
-        . '</head><body class="hj-page-posts"><div class="hj-shell">'
-        . '<main class="hj-main hj-feed-page" role="main"><section class="hj-posts" aria-label="订阅文章列表">'
-        . '<div class="hj-feed-head"><h1><a href="' . $siteLinkEsc . '">' . $titleEsc . '</a></h1><p>' . $siteDescEsc . '</p></div>'
-        . '<div class="hj-posts-main"><div class="hj-article-content hj-feed-note"><blockquote><p>本页面是内容订阅源。</p><p>您可以在任何支持的阅读器中添加当前地址来订阅此内容，以便及时获取最新更新。</p><p>订阅地址: <code id="feed-url">'
+        . '<style>body{margin:0}.feed-page{padding:1.1rem 0 1.8rem}.feed-head{margin-bottom:.75rem}.feed-head h1{margin:0 0 .3rem;font-size:clamp(1.38rem,2.7vw,2rem);line-height:1.25}.feed-head p{margin:0;color:var(--muted-day)}.feed-note{margin-bottom:1rem}.copy-btn{position:relative;margin-left:.35rem;border:1px solid #2a2a28;border-radius:4px;background:#2a2a28;color:#fffffd;font-family:var(--font-ui);font-size:.78rem;line-height:1;padding:.25rem .5rem;cursor:pointer}.copy-btn:hover,.copy-btn:focus-visible{border-color:#1f1f1d;background:#1f1f1d}.copy-btn::after{content:attr(data-copy-tip);position:absolute;left:50%;bottom:calc(100% + 6px);transform:translate(-50%,4px);padding:.14rem .42rem;border-radius:4px;background:var(--nav-block-bg);color:var(--nav-block-fg);font-family:var(--font-ui);font-size:.72rem;line-height:1.2;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .14s ease,transform .14s ease,visibility .14s ease}.copy-btn.is-tip::after{opacity:1;visibility:visible;transform:translate(-50%,0)}.feed-foot{margin-top:1.1rem;font-family:var(--font-ui);font-size:.84rem;color:var(--muted-day)}.feed-foot p{margin:.22rem 0}@media (max-width:980px){.feed-page{padding:1rem 0 1.35rem}}</style>'
+        . '</head><body class="page-posts"><div class="shell">'
+        . '<main class="main feed-page" role="main"><section class="posts" aria-label="订阅文章列表">'
+        . '<div class="feed-head"><h1><a href="' . $siteLinkEsc . '">' . $titleEsc . '</a></h1><p>' . $siteDescEsc . '</p></div>'
+        . '<div class="posts-main"><div class="article-content feed-note"><blockquote><p>本页面是内容订阅源。</p><p>您可以在任何支持的阅读器中添加当前地址来订阅此内容，以便及时获取最新更新。</p><p>订阅地址: <code id="feed-url">'
         . $feedUrlEsc . '</code><button type="button" class="copy-btn" data-copy-tip="" onclick="copyFeedUrl()">复制</button></p></blockquote></div>'
-        . '<ul class="hj-posts-list" aria-label="文章">' . $itemHtml . '</ul>'
-        . '<footer class="hj-feed-foot"><p>这是订阅源页面。访问 <a href="' . $siteLinkEsc . '">' . $titleEsc
+        . '<ul class="posts-list" aria-label="文章">' . $itemHtml . '</ul>'
+        . '<footer class="feed-foot"><p>这是订阅源页面。访问 <a href="' . $siteLinkEsc . '">' . $titleEsc
         . '</a> 以获得完整的网站体验。</p><p>最后更新: ' . $lastUpdateEsc
         . '</p></footer></div></section></main></div><script>function showCopyTip(message){var btn=document.querySelector(".copy-btn");if(!btn){return;}btn.setAttribute("data-copy-tip",message||"已复制");btn.classList.add("is-tip");var timer=Number(btn.getAttribute("data-copy-tip-timer")||"0");if(timer){window.clearTimeout(timer);}var next=window.setTimeout(function(){btn.classList.remove("is-tip");btn.setAttribute("data-copy-tip","");btn.removeAttribute("data-copy-tip-timer");},1400);btn.setAttribute("data-copy-tip-timer",String(next));}function fallbackCopyText(text){var ok=false;var el=document.createElement("textarea");el.value=text;el.setAttribute("readonly","readonly");el.style.position="fixed";el.style.opacity="0";el.style.pointerEvents="none";document.body.appendChild(el);el.focus();el.select();try{ok=document.execCommand("copy");}catch(e){ok=false;}document.body.removeChild(el);return ok;}function copyFeedUrl(){var node=document.getElementById("feed-url");var text=node?(node.textContent||""):"";if(!text){showCopyTip("未获取到订阅地址");return;}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){showCopyTip("已复制");}).catch(function(){showCopyTip(fallbackCopyText(text)?"已复制":"复制失败");});return;}showCopyTip(fallbackCopyText(text)?"已复制":"复制失败");}</script></body></html>';
 }
 
-function hansJackGithubBindingPanelHtml(Options $options): string
+function githubBindingPanelHtml(Options $options): string
 {
-    $enabled = hansJackGithubOauthEnabled($options);
-    $clientId = trim((string) ($options->hjGithubOauthClientId ?? ''));
-    $clientSecret = trim((string) ($options->hjGithubOauthClientSecret ?? ''));
+    $enabled = githubOauthEnabled($options);
+    $clientId = trim((string) ($options->githubOauthClientId ?? ''));
+    $clientSecret = trim((string) ($options->githubOauthClientSecret ?? ''));
 
-    $bindLogin = trim((string) ($options->hjGithubBindLogin ?? ''));
-    $bindId = trim((string) ($options->hjGithubBindId ?? ''));
-    $bindAt = trim((string) ($options->hjGithubBindAt ?? ''));
+    $bindLogin = trim((string) ($options->githubBindLogin ?? ''));
+    $bindId = trim((string) ($options->githubBindId ?? ''));
+    $bindAt = trim((string) ($options->githubBindAt ?? ''));
 
     $bindStatus = _t('未绑定');
     if ($bindLogin !== '') {
-        $bindStatus = _t('已绑定：%s', hansJackEscape($bindLogin));
+        $bindStatus = _t('已绑定：%s', escape($bindLogin));
         if ($bindId !== '') {
-            $bindStatus .= ' · ID ' . hansJackEscape($bindId);
+            $bindStatus .= ' · ID ' . escape($bindId);
         }
         if ($bindAt !== '') {
-            $bindStatus .= ' · ' . hansJackEscape($bindAt);
+            $bindStatus .= ' · ' . escape($bindAt);
         }
     }
 
     $adminUid = 0;
-    $isAdmin = hansJackGithubCurrentAdminUid($adminUid);
+    $isAdmin = githubCurrentAdminUid($adminUid);
     $adminReturn = Common::url('options-theme.php', (string) $options->adminUrl);
-    $bindUrl = hansJackGithubOauthActionUrl('bind', ['return' => $adminReturn]);
-    $unbindUrl = hansJackGithubOauthActionUrl('unbind', ['return' => $adminReturn]);
+    $bindUrl = githubOauthActionUrl('bind', ['return' => $adminReturn]);
+    $unbindUrl = githubOauthActionUrl('unbind', ['return' => $adminReturn]);
 
     $notes = [];
     if (!$enabled) {
@@ -1727,18 +1723,18 @@ function hansJackGithubBindingPanelHtml(Options $options): string
         $notes[] = _t('请先用管理员账号登录后台后再绑定。');
     }
 
-    $html = '<div class="hj-github-bind-panel">';
+    $html = '<div class="github-bind-panel">';
     $html .= '<div>' . _t('绑定状态：') . $bindStatus . '</div>';
 
     if (!empty($notes)) {
-        $html .= '<div style="margin-top:6px;color:#b46a00;">' . implode('<br>', array_map('hansJackEscape', $notes)) . '</div>';
+        $html .= '<div style="margin-top:6px;color:#b46a00;">' . implode('<br>', array_map('escape', $notes)) . '</div>';
     }
 
     if ($isAdmin) {
         $html .= '<div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">';
-        $html .= '<a href="' . hansJackEscape($bindUrl) . '">' . _t('GitHub账号绑定') . '</a>';
+        $html .= '<a href="' . escape($bindUrl) . '">' . _t('GitHub账号绑定') . '</a>';
         if ($bindLogin !== '' || $bindId !== '') {
-            $html .= '<a href="' . hansJackEscape($unbindUrl) . '">' . _t('解除绑定') . '</a>';
+            $html .= '<a href="' . escape($unbindUrl) . '">' . _t('解除绑定') . '</a>';
         }
         $html .= '</div>';
     }
@@ -1747,31 +1743,31 @@ function hansJackGithubBindingPanelHtml(Options $options): string
     return $html;
 }
 
-function hansJackGithubOauthEnabled(Options $options): bool
+function githubOauthEnabled(Options $options): bool
 {
-    $raw = strtolower(trim((string) ($options->hjGithubOauthEnabled ?? '0')));
+    $raw = strtolower(trim((string) ($options->githubOauthEnabled ?? '0')));
     return in_array($raw, ['1', 'on', 'true', 'yes'], true);
 }
 
-function hansJackLandingHitokotoEnabled(Options $options): bool
+function landingHitokotoEnabled(Options $options): bool
 {
-    $raw = strtolower(trim((string) ($options->hjLandingHitokotoEnabled ?? '1')));
+    $raw = strtolower(trim((string) ($options->landingHitokotoEnabled ?? '1')));
     return in_array($raw, ['1', 'on', 'true', 'yes'], true);
 }
 
-function hansJackSerifFontEnabled(Options $options): bool
+function serifFontEnabled(Options $options): bool
 {
-    $raw = strtolower(trim((string) ($options->hjSerifFontEnabled ?? '1')));
+    $raw = strtolower(trim((string) ($options->serifFontEnabled ?? '1')));
     return in_array($raw, ['1', 'on', 'true', 'yes'], true);
 }
 
-function hansJackSubsetFontEnabled(Options $options): bool
+function subsetFontEnabled(Options $options): bool
 {
-    $raw = strtolower(trim((string) ($options->hjSubsetFontEnabled ?? '1')));
+    $raw = strtolower(trim((string) ($options->subsetFontEnabled ?? '1')));
     return in_array($raw, ['1', 'on', 'true', 'yes'], true);
 }
 
-function hansJackGithubCurrentAdminUid(&$uid = 0): bool
+function githubCurrentAdminUid(&$uid = 0): bool
 {
     $uid = 0;
 
@@ -1810,12 +1806,12 @@ function hansJackGithubCurrentAdminUid(&$uid = 0): bool
     return $uid > 0;
 }
 
-function hansJackGithubOauthActionUrl(string $action, array $params = []): string
+function githubOauthActionUrl(string $action, array $params = []): string
 {
     $options = Options::alloc();
     $base = (string) $options->index;
 
-    $query = ['hj_github_oauth' => trim($action)];
+    $query = ['github_oauth' => trim($action)];
     foreach ($params as $key => $value) {
         if ($key === '') {
             continue;
@@ -1840,7 +1836,7 @@ function hansJackGithubOauthActionUrl(string $action, array $params = []): strin
     return $base . $sep . $qs;
 }
 
-function hansJackGithubNormalizeReturnUrl(string $returnUrl, Options $options): string
+function githubNormalizeReturnUrl(string $returnUrl, Options $options): string
 {
     $fallback = (string) $options->siteUrl;
     $returnUrl = trim($returnUrl);
@@ -1849,7 +1845,7 @@ function hansJackGithubNormalizeReturnUrl(string $returnUrl, Options $options): 
         return $fallback;
     }
 
-    if (hansJackStartsWith($returnUrl, '/')) {
+    if (startsWith($returnUrl, '/')) {
         return Common::url(ltrim($returnUrl, '/'), (string) $options->siteUrl);
     }
 
@@ -1866,7 +1862,7 @@ function hansJackGithubNormalizeReturnUrl(string $returnUrl, Options $options): 
     return $returnUrl;
 }
 
-function hansJackGithubDb()
+function githubDb()
 {
     try {
         if (class_exists('\\Typecho\\Db')) {
@@ -1883,24 +1879,27 @@ function hansJackGithubDb()
     return null;
 }
 
-function hansJackThemeOptionStorageName(Options $options): string
+function themeOptionStorageName(Options $options): string
 {
     $theme = trim((string) ($options->theme ?? ''));
     if ($theme === '') {
-        $theme = 'HansJack';
+        $theme = trim((string) basename(__DIR__));
+        if ($theme === '') {
+            $theme = 'default';
+        }
     }
 
     return 'theme:' . $theme;
 }
 
-function hansJackThemeOptionLoad(Options $options): array
+function themeOptionLoad(Options $options): array
 {
-    $db = hansJackGithubDb();
+    $db = githubDb();
     if (!is_object($db)) {
         return [];
     }
 
-    $name = hansJackThemeOptionStorageName($options);
+    $name = themeOptionStorageName($options);
     if ($name === '') {
         return [];
     }
@@ -1936,14 +1935,14 @@ function hansJackThemeOptionLoad(Options $options): array
     return is_array($legacy) ? $legacy : [];
 }
 
-function hansJackThemeOptionSave(Options $options, array $payload): bool
+function themeOptionSave(Options $options, array $payload): bool
 {
-    $db = hansJackGithubDb();
+    $db = githubDb();
     if (!is_object($db)) {
         return false;
     }
 
-    $name = hansJackThemeOptionStorageName($options);
+    $name = themeOptionStorageName($options);
     if ($name === '') {
         return false;
     }
@@ -1984,42 +1983,42 @@ function hansJackThemeOptionSave(Options $options, array $payload): bool
     }
 }
 
-function hansJackSaveGithubBinding(Options $options, array $binding): bool
+function saveGithubBinding(Options $options, array $binding): bool
 {
-    $settings = hansJackThemeOptionLoad($options);
+    $settings = themeOptionLoad($options);
 
     foreach ($binding as $key => $value) {
         $settings[(string) $key] = trim((string) $value);
     }
 
-    return hansJackThemeOptionSave($options, $settings);
+    return themeOptionSave($options, $settings);
 }
 
-function hansJackGithubOauthStateSet(string $state, string $mode, string $returnUrl): void
+function githubOauthStateSet(string $state, string $mode, string $returnUrl): void
 {
     $expire = 600;
-    Cookie::set('__hj_github_oauth_state', $state, $expire);
-    Cookie::set('__hj_github_oauth_mode', $mode, $expire);
-    Cookie::set('__hj_github_oauth_return', $returnUrl, $expire);
+    Cookie::set('__github_oauth_state', $state, $expire);
+    Cookie::set('__github_oauth_mode', $mode, $expire);
+    Cookie::set('__github_oauth_return', $returnUrl, $expire);
 }
 
-function hansJackGithubOauthStateRead(): array
+function githubOauthStateRead(): array
 {
     return [
-        'state' => trim((string) Cookie::get('__hj_github_oauth_state', '')),
-        'mode' => trim((string) Cookie::get('__hj_github_oauth_mode', '')),
-        'return' => trim((string) Cookie::get('__hj_github_oauth_return', '')),
+        'state' => trim((string) Cookie::get('__github_oauth_state', '')),
+        'mode' => trim((string) Cookie::get('__github_oauth_mode', '')),
+        'return' => trim((string) Cookie::get('__github_oauth_return', '')),
     ];
 }
 
-function hansJackGithubOauthStateClear(): void
+function githubOauthStateClear(): void
 {
-    Cookie::delete('__hj_github_oauth_state');
-    Cookie::delete('__hj_github_oauth_mode');
-    Cookie::delete('__hj_github_oauth_return');
+    Cookie::delete('__github_oauth_state');
+    Cookie::delete('__github_oauth_mode');
+    Cookie::delete('__github_oauth_return');
 }
 
-function hansJackGithubOauthRandomState(): string
+function githubOauthRandomState(): string
 {
     try {
         return bin2hex(random_bytes(16));
@@ -2028,7 +2027,7 @@ function hansJackGithubOauthRandomState(): string
     }
 }
 
-function hansJackGithubHttpRequest(string $method, string $url, array $headers = [], string $body = ''): array
+function githubHttpRequest(string $method, string $url, array $headers = [], string $body = ''): array
 {
     $method = strtoupper(trim($method));
     if ($method === '') {
@@ -2089,10 +2088,10 @@ function hansJackGithubHttpRequest(string $method, string $url, array $headers =
     ];
 }
 
-function hansJackGithubExchangeToken(Options $options, string $code, string $state): string
+function githubExchangeToken(Options $options, string $code, string $state): string
 {
-    $clientId = trim((string) ($options->hjGithubOauthClientId ?? ''));
-    $clientSecret = trim((string) ($options->hjGithubOauthClientSecret ?? ''));
+    $clientId = trim((string) ($options->githubOauthClientId ?? ''));
+    $clientSecret = trim((string) ($options->githubOauthClientSecret ?? ''));
     if ($clientId === '' || $clientSecret === '' || $code === '') {
         return '';
     }
@@ -2102,16 +2101,16 @@ function hansJackGithubExchangeToken(Options $options, string $code, string $sta
         'client_secret' => $clientSecret,
         'code' => $code,
         'state' => $state,
-        'redirect_uri' => hansJackGithubOauthActionUrl('callback'),
+        'redirect_uri' => githubOauthActionUrl('callback'),
     ], '', '&', PHP_QUERY_RFC3986);
 
-    $resp = hansJackGithubHttpRequest(
+    $resp = githubHttpRequest(
         'POST',
         'https://github.com/login/oauth/access_token',
         [
             'Accept: application/json',
             'Content-Type: application/x-www-form-urlencoded',
-            'User-Agent: HansJack-Typecho-OAuth',
+            'User-Agent: Typecho-OAuth',
         ],
         $payload
     );
@@ -2128,19 +2127,19 @@ function hansJackGithubExchangeToken(Options $options, string $code, string $sta
     return trim((string) ($data['access_token'] ?? ''));
 }
 
-function hansJackGithubFetchUser(string $accessToken): array
+function githubFetchUser(string $accessToken): array
 {
     if ($accessToken === '') {
         return [];
     }
 
-    $resp = hansJackGithubHttpRequest(
+    $resp = githubHttpRequest(
         'GET',
         'https://api.github.com/user',
         [
             'Accept: application/vnd.github+json',
             'Authorization: Bearer ' . $accessToken,
-            'User-Agent: HansJack-Typecho-OAuth',
+            'User-Agent: Typecho-OAuth',
             'X-GitHub-Api-Version: 2022-11-28',
         ]
     );
@@ -2153,19 +2152,19 @@ function hansJackGithubFetchUser(string $accessToken): array
     return is_array($data) ? $data : [];
 }
 
-function hansJackGithubFetchEmails(string $accessToken): array
+function githubFetchEmails(string $accessToken): array
 {
     if ($accessToken === '') {
         return [];
     }
 
-    $resp = hansJackGithubHttpRequest(
+    $resp = githubHttpRequest(
         'GET',
         'https://api.github.com/user/emails',
         [
             'Accept: application/vnd.github+json',
             'Authorization: Bearer ' . $accessToken,
-            'User-Agent: HansJack-Typecho-OAuth',
+            'User-Agent: Typecho-OAuth',
             'X-GitHub-Api-Version: 2022-11-28',
         ]
     );
@@ -2178,7 +2177,7 @@ function hansJackGithubFetchEmails(string $accessToken): array
     return is_array($data) ? $data : [];
 }
 
-function hansJackGithubResolveEmail(array $user, array $emails): string
+function githubResolveEmail(array $user, array $emails): string
 {
     $userEmail = trim((string) ($user['email'] ?? ''));
     if ($userEmail !== '') {
@@ -2226,11 +2225,11 @@ function hansJackGithubResolveEmail(array $user, array $emails): string
     return '';
 }
 
-function hansJackHandleGithubOauthRequest(Archive $archive): void
+function handleGithubOauthRequest(Archive $archive): void
 {
     $action = '';
     try {
-        $action = strtolower(trim((string) $archive->request->get('hj_github_oauth', '')));
+        $action = strtolower(trim((string) $archive->request->get('github_oauth', '')));
     } catch (\Throwable $e) {
         $action = '';
     }
@@ -2251,39 +2250,39 @@ function hansJackHandleGithubOauthRequest(Archive $archive): void
     } catch (\Throwable $e) {
         $returnRaw = '';
     }
-    $returnUrl = hansJackGithubNormalizeReturnUrl($returnRaw, $options);
+    $returnUrl = githubNormalizeReturnUrl($returnRaw, $options);
 
     if ($action === 'login' || $action === 'bind') {
-        if (!hansJackGithubOauthEnabled($options)) {
+        if (!githubOauthEnabled($options)) {
             $archive->response->redirect($returnUrl);
             return;
         }
 
         if ($action === 'bind') {
             $adminUid = 0;
-            if (!hansJackGithubCurrentAdminUid($adminUid)) {
+            if (!githubCurrentAdminUid($adminUid)) {
                 $archive->response->redirect($returnUrl);
                 return;
             }
         }
 
-        $clientId = trim((string) ($options->hjGithubOauthClientId ?? ''));
+        $clientId = trim((string) ($options->githubOauthClientId ?? ''));
         if ($clientId === '') {
             $archive->response->redirect($returnUrl);
             return;
         }
 
-        $scope = trim((string) ($options->hjGithubOauthScope ?? ''));
+        $scope = trim((string) ($options->githubOauthScope ?? ''));
         if ($scope === '') {
             $scope = 'read:user user:email';
         }
 
-        $state = hansJackGithubOauthRandomState();
-        hansJackGithubOauthStateSet($state, $action, $returnUrl);
+        $state = githubOauthRandomState();
+        githubOauthStateSet($state, $action, $returnUrl);
 
         $authUrl = 'https://github.com/login/oauth/authorize?' . http_build_query([
             'client_id' => $clientId,
-            'redirect_uri' => hansJackGithubOauthActionUrl('callback'),
+            'redirect_uri' => githubOauthActionUrl('callback'),
             'scope' => $scope,
             'state' => $state,
         ], '', '&', PHP_QUERY_RFC3986);
@@ -2294,29 +2293,29 @@ function hansJackHandleGithubOauthRequest(Archive $archive): void
 
     if ($action === 'unbind') {
         $adminUid = 0;
-        if (!hansJackGithubCurrentAdminUid($adminUid)) {
+        if (!githubCurrentAdminUid($adminUid)) {
             $archive->response->redirect($returnUrl);
             return;
         }
 
-        hansJackSaveGithubBinding($options, [
-            'hjGithubBindUid' => '',
-            'hjGithubBindId' => '',
-            'hjGithubBindLogin' => '',
-            'hjGithubBindAvatar' => '',
-            'hjGithubBindEmail' => '',
-            'hjGithubBindAt' => '',
+        saveGithubBinding($options, [
+            'githubBindUid' => '',
+            'githubBindId' => '',
+            'githubBindLogin' => '',
+            'githubBindAvatar' => '',
+            'githubBindEmail' => '',
+            'githubBindAt' => '',
         ]);
         $archive->response->redirect($returnUrl);
         return;
     }
 
-    $stateData = hansJackGithubOauthStateRead();
-    hansJackGithubOauthStateClear();
+    $stateData = githubOauthStateRead();
+    githubOauthStateClear();
 
     $expectedState = trim((string) ($stateData['state'] ?? ''));
     $mode = strtolower(trim((string) ($stateData['mode'] ?? '')));
-    $stateReturn = hansJackGithubNormalizeReturnUrl((string) ($stateData['return'] ?? ''), $options);
+    $stateReturn = githubNormalizeReturnUrl((string) ($stateData['return'] ?? ''), $options);
     if ($stateReturn === '') {
         $stateReturn = $returnUrl;
     }
@@ -2336,38 +2335,38 @@ function hansJackHandleGithubOauthRequest(Archive $archive): void
         return;
     }
 
-    $accessToken = hansJackGithubExchangeToken($options, $code, $recvState);
+    $accessToken = githubExchangeToken($options, $code, $recvState);
     if ($accessToken === '') {
         $archive->response->redirect($stateReturn);
         return;
     }
 
-    $githubUser = hansJackGithubFetchUser($accessToken);
+    $githubUser = githubFetchUser($accessToken);
     if (empty($githubUser)) {
         $archive->response->redirect($stateReturn);
         return;
     }
 
-    $githubEmails = hansJackGithubFetchEmails($accessToken);
+    $githubEmails = githubFetchEmails($accessToken);
     $login = trim((string) ($githubUser['login'] ?? ''));
     $githubId = trim((string) ($githubUser['id'] ?? ''));
     $avatar = trim((string) ($githubUser['avatar_url'] ?? ''));
-    $email = hansJackGithubResolveEmail($githubUser, $githubEmails);
+    $email = githubResolveEmail($githubUser, $githubEmails);
 
     if ($mode === 'bind') {
         $adminUid = 0;
-        if (!hansJackGithubCurrentAdminUid($adminUid)) {
+        if (!githubCurrentAdminUid($adminUid)) {
             $archive->response->redirect($stateReturn);
             return;
         }
 
-        hansJackSaveGithubBinding($options, [
-            'hjGithubBindUid' => (string) $adminUid,
-            'hjGithubBindId' => $githubId,
-            'hjGithubBindLogin' => $login,
-            'hjGithubBindAvatar' => $avatar,
-            'hjGithubBindEmail' => $email,
-            'hjGithubBindAt' => date('Y-m-d H:i:s'),
+        saveGithubBinding($options, [
+            'githubBindUid' => (string) $adminUid,
+            'githubBindId' => $githubId,
+            'githubBindLogin' => $login,
+            'githubBindAvatar' => $avatar,
+            'githubBindEmail' => $email,
+            'githubBindAt' => date('Y-m-d H:i:s'),
         ]);
 
         $archive->response->redirect($stateReturn);
@@ -2381,9 +2380,9 @@ function hansJackHandleGithubOauthRequest(Archive $archive): void
 
     // If this GitHub account is bound to a local admin account,
     // perform a real Typecho login instead of guest identity fill.
-    $boundUid = (int) trim((string) ($options->hjGithubBindUid ?? '0'));
-    $boundGithubId = trim((string) ($options->hjGithubBindId ?? ''));
-    $boundGithubLogin = strtolower(trim((string) ($options->hjGithubBindLogin ?? '')));
+    $boundUid = (int) trim((string) ($options->githubBindUid ?? '0'));
+    $boundGithubId = trim((string) ($options->githubBindId ?? ''));
+    $boundGithubLogin = strtolower(trim((string) ($options->githubBindLogin ?? '')));
 
     $isBoundMatch = false;
     if ($boundUid > 0) {
@@ -2422,7 +2421,7 @@ function hansJackHandleGithubOauthRequest(Archive $archive): void
     $archive->response->redirect($stateReturn);
 }
 
-function hansJackRenderPager(
+function renderPager(
     Archive $archive,
     string $prevHtml,
     string $nextHtml,
@@ -2473,12 +2472,12 @@ function hansJackRenderPager(
         $from = max(1, $currentPage - $splitPage);
         $to = min($totalPage, $currentPage + $splitPage);
 
-        echo '<ol class="page-navigator hj-posts-pager">';
+        echo '<ol class="page-navigator posts-pager">';
 
         // Prev (always present; disabled on first page)
         if ($currentPage > 1) {
             echo '<li class="prev"><a href="'
-                . hansJackEscape($buildUrl($baseUrl, $currentPage - 1))
+                . escape($buildUrl($baseUrl, $currentPage - 1))
                 . '">' . $prevHtml . '</a></li>';
         } else {
             echo '<li class="prev is-disabled"><span aria-disabled="true" tabindex="-1">' . $prevHtml . '</span></li>';
@@ -2487,10 +2486,10 @@ function hansJackRenderPager(
         // First page + leading gap
         if ($from > 1) {
             echo '<li><a href="'
-                . hansJackEscape($buildUrl($baseUrl, 1))
+                . escape($buildUrl($baseUrl, 1))
                 . '">1</a></li>';
             if ($from > 2) {
-                echo '<li class="hj-posts-pager-gap"><span>' . hansJackEscape($splitWord) . '</span></li>';
+                echo '<li class="posts-pager-gap"><span>' . escape($splitWord) . '</span></li>';
             }
         }
 
@@ -2498,24 +2497,24 @@ function hansJackRenderPager(
         for ($i = $from; $i <= $to; $i++) {
             $cls = ($i === $currentPage) ? ' class="current"' : '';
             echo '<li' . $cls . '><a href="'
-                . hansJackEscape($buildUrl($baseUrl, $i))
+                . escape($buildUrl($baseUrl, $i))
                 . '">' . (int) $i . '</a></li>';
         }
 
         // Trailing gap + last page
         if ($to < $totalPage) {
             if ($to < $totalPage - 1) {
-                echo '<li class="hj-posts-pager-gap"><span>' . hansJackEscape($splitWord) . '</span></li>';
+                echo '<li class="posts-pager-gap"><span>' . escape($splitWord) . '</span></li>';
             }
             echo '<li><a href="'
-                . hansJackEscape($buildUrl($baseUrl, $totalPage))
+                . escape($buildUrl($baseUrl, $totalPage))
                 . '">' . (int) $totalPage . '</a></li>';
         }
 
         // Next (always present; disabled on last page)
         if ($currentPage < $totalPage) {
             echo '<li class="next"><a href="'
-                . hansJackEscape($buildUrl($baseUrl, $currentPage + 1))
+                . escape($buildUrl($baseUrl, $currentPage + 1))
                 . '">' . $nextHtml . '</a></li>';
         } else {
             echo '<li class="next is-disabled"><span aria-disabled="true" tabindex="-1">' . $nextHtml . '</span></li>';
@@ -2527,7 +2526,7 @@ function hansJackRenderPager(
 
     $template = [
         'wrapTag' => 'ol',
-        'wrapClass' => 'page-navigator hj-posts-pager',
+        'wrapClass' => 'page-navigator posts-pager',
         'itemTag' => 'li',
         'textTag' => 'span',
         'currentClass' => 'current',
@@ -2559,9 +2558,9 @@ function hansJackRenderPager(
 /**
  * 汇总主题配置（模板层调用）
  */
-function hansJackBuildThemeConfig(Options $options): array
+function buildThemeConfig(Options $options): array
 {
-    $brandName = hansJackText((string) $options->title, 'HansJack');
+    $brandName = text((string) $options->title, 'Typecho');
 
     $links = [
         'home'   => (string) $options->siteUrl,
@@ -2576,7 +2575,7 @@ function hansJackBuildThemeConfig(Options $options): array
 
     return [
         'brandName' => $brandName,
-        'landingHitokotoEnabled' => hansJackLandingHitokotoEnabled($options),
+        'landingHitokotoEnabled' => landingHitokotoEnabled($options),
         'links' => $links,
         'navItems' => [
             ['key' => 'home', 'label' => '首页', 'url' => $links['home']],
@@ -2587,13 +2586,13 @@ function hansJackBuildThemeConfig(Options $options): array
     ];
 }
 
-function hansJackText(string $value, string $fallback = ''): string
+function text(string $value, string $fallback = ''): string
 {
     $trimmed = trim($value);
     return $trimmed === '' ? $fallback : $trimmed;
 }
 
-function hansJackPercent(string $value, int $fallback = 86): int
+function percent(string $value, int $fallback = 86): int
 {
     $num = (int) trim($value);
     if ($num < 60 || $num > 100) {
@@ -2602,7 +2601,7 @@ function hansJackPercent(string $value, int $fallback = 86): int
     return $num;
 }
 
-function hansJackColor(string $value, string $fallback): string
+function color(string $value, string $fallback): string
 {
     $trimmed = trim($value);
     if (preg_match('/^#([a-fA-F0-9]{3}|[a-fA-F0-9]{6})$/', $trimmed)) {
@@ -2611,7 +2610,7 @@ function hansJackColor(string $value, string $fallback): string
     return $fallback;
 }
 
-function hansJackStartsWith(string $haystack, string $needle): bool
+function startsWith(string $haystack, string $needle): bool
 {
     if (function_exists('str_starts_with')) {
         return str_starts_with($haystack, $needle);
@@ -2624,21 +2623,21 @@ function hansJackStartsWith(string $haystack, string $needle): bool
     return substr($haystack, 0, strlen($needle)) === $needle;
 }
 
-function hansJackResolveLink(Options $options, string $value, string $fallbackPath): string
+function resolveLink(Options $options, string $value, string $fallbackPath): string
 {
     $value = trim($value);
     if ($value === '') {
         return Common::url($fallbackPath, $options->siteUrl);
     }
 
-    if (preg_match('/^(https?:)?\\/\\//i', $value) || hansJackStartsWith($value, '#') || hansJackStartsWith($value, 'mailto:') || hansJackStartsWith($value, 'tel:')) {
+    if (preg_match('/^(https?:)?\\/\\//i', $value) || startsWith($value, '#') || startsWith($value, 'mailto:') || startsWith($value, 'tel:')) {
         return $value;
     }
 
     return Common::url(ltrim($value, '/'), $options->siteUrl);
 }
 
-function hansJackAssetUrl(Options $options, string $assetPath, string $theme = ''): string
+function assetUrl(Options $options, string $assetPath, string $theme = ''): string
 {
     $assetPath = ltrim(str_replace('\\', '/', trim($assetPath)), '/');
     if ($assetPath === '') {
@@ -2678,7 +2677,7 @@ function hansJackAssetUrl(Options $options, string $assetPath, string $theme = '
     return $url . $separator . 'v=' . rawurlencode($version);
 }
 
-function hansJackNormalizeAssetUrl(Options $options, string $value): string
+function normalizeAssetUrl(Options $options, string $value): string
 {
     $value = trim($value);
     if ($value === '') {
@@ -2686,14 +2685,14 @@ function hansJackNormalizeAssetUrl(Options $options, string $value): string
     }
 
     $value = str_replace(["\r", "\n", '"', '\'', '(', ')'], '', $value);
-    if (preg_match('/^(https?:)?\\/\\//i', $value) || hansJackStartsWith($value, '/')) {
+    if (preg_match('/^(https?:)?\\/\\//i', $value) || startsWith($value, '/')) {
         return $value;
     }
 
     return Common::url(ltrim($value, '/'), $options->siteUrl);
 }
 
-function hansJackArchiveContentContainsKatexSyntax(string $content): bool
+function archiveContentContainsKatexSyntax(string $content): bool
 {
     if ($content === '') {
         return false;
@@ -2741,7 +2740,7 @@ function hansJackArchiveContentContainsKatexSyntax(string $content): bool
     return false;
 }
 
-function hansJackArchiveContentForKatex(Archive $archive): string
+function archiveContentForKatex(Archive $archive): string
 {
     try {
         return trim((string) ($archive->content ?? ''));
@@ -2750,7 +2749,7 @@ function hansJackArchiveContentForKatex(Archive $archive): string
     }
 }
 
-function hansJackShouldLoadKatexAssets(Archive $archive): bool
+function shouldLoadKatexAssets(Archive $archive): bool
 {
     $isRenderable = false;
     try {
@@ -2763,15 +2762,15 @@ function hansJackShouldLoadKatexAssets(Archive $archive): bool
         return false;
     }
 
-    $content = hansJackArchiveContentForKatex($archive);
+    $content = archiveContentForKatex($archive);
     if ($content === '') {
         return false;
     }
 
-    return hansJackArchiveContentContainsKatexSyntax($content);
+    return archiveContentContainsKatexSyntax($content);
 }
 
-function hansJackCssBackground(string $url): string
+function cssBackground(string $url): string
 {
     if ($url === '') {
         return 'none';
@@ -2781,12 +2780,12 @@ function hansJackCssBackground(string $url): string
     return "url('{$safe}')";
 }
 
-function hansJackEscape(string $value): string
+function escape(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
-function hansJackRemoveHtmlTagAttr(string $tag, string $name): string
+function removeHtmlTagAttr(string $tag, string $name): string
 {
     $name = trim($name);
     if ($name === '' || $tag === '') {
@@ -2798,15 +2797,15 @@ function hansJackRemoveHtmlTagAttr(string $tag, string $name): string
     return is_string($replaced) ? $replaced : $tag;
 }
 
-function hansJackSetHtmlTagAttr(string $tag, string $name, string $value): string
+function setHtmlTagAttr(string $tag, string $name, string $value): string
 {
     $name = trim($name);
     if ($name === '' || $tag === '') {
         return $tag;
     }
 
-    $cleaned = hansJackRemoveHtmlTagAttr($tag, $name);
-    $attr = ' ' . $name . '="' . hansJackEscape($value) . '"';
+    $cleaned = removeHtmlTagAttr($tag, $name);
+    $attr = ' ' . $name . '="' . escape($value) . '"';
 
     if (preg_match('/\s*\/>$/u', $cleaned, $match, PREG_OFFSET_CAPTURE)) {
         $pos = (int) $match[0][1];
@@ -2821,7 +2820,7 @@ function hansJackSetHtmlTagAttr(string $tag, string $name, string $value): strin
     return $cleaned . $attr;
 }
 
-function hansJackApplyImageSizeSyntaxToHtml(string $html): string
+function applyImageSizeSyntaxToHtml(string $html): string
 {
     if ($html === '' || strpos($html, '<img') === false || strpos($html, '|') === false) {
         return $html;
@@ -2848,7 +2847,7 @@ function hansJackApplyImageSizeSyntaxToHtml(string $html): string
         $width = (int) ($sizeMatch[2] ?? 0);
         $height = (int) ($sizeMatch[3] ?? 0);
 
-        $altValue = 'alt=' . $quote . hansJackEscape($altText) . $quote;
+        $altValue = 'alt=' . $quote . escape($altText) . $quote;
         $altAttrPattern = '/\balt\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/iu';
         $updated = preg_replace($altAttrPattern, $altValue, $tag, 1);
         if (!is_string($updated) || $updated === '') {
@@ -2856,15 +2855,15 @@ function hansJackApplyImageSizeSyntaxToHtml(string $html): string
         }
 
         if ($width > 0) {
-            $updated = hansJackSetHtmlTagAttr($updated, 'width', (string) $width);
+            $updated = setHtmlTagAttr($updated, 'width', (string) $width);
         } else {
-            $updated = hansJackRemoveHtmlTagAttr($updated, 'width');
+            $updated = removeHtmlTagAttr($updated, 'width');
         }
 
         if ($height > 0) {
-            $updated = hansJackSetHtmlTagAttr($updated, 'height', (string) $height);
+            $updated = setHtmlTagAttr($updated, 'height', (string) $height);
         } else {
-            $updated = hansJackRemoveHtmlTagAttr($updated, 'height');
+            $updated = removeHtmlTagAttr($updated, 'height');
         }
 
         return $updated;
@@ -2873,7 +2872,7 @@ function hansJackApplyImageSizeSyntaxToHtml(string $html): string
     return is_string($result) ? $result : $html;
 }
 
-function hansJackApplyImagePerformanceAttrsToHtml(string $html, bool $prioritizeFirst = false): string
+function applyImagePerformanceAttrsToHtml(string $html, bool $prioritizeFirst = false): string
 {
     if ($html === '' || strpos($html, '<img') === false) {
         return $html;
@@ -2900,15 +2899,15 @@ function hansJackApplyImagePerformanceAttrsToHtml(string $html, bool $prioritize
         }
 
         if (!preg_match('/\bloading\s*=/iu', $tag) && !$isDataUri) {
-            $tag = hansJackSetHtmlTagAttr($tag, 'loading', $isFirstPrioritized ? 'eager' : 'lazy');
+            $tag = setHtmlTagAttr($tag, 'loading', $isFirstPrioritized ? 'eager' : 'lazy');
         }
 
         if (!preg_match('/\bdecoding\s*=/iu', $tag)) {
-            $tag = hansJackSetHtmlTagAttr($tag, 'decoding', 'async');
+            $tag = setHtmlTagAttr($tag, 'decoding', 'async');
         }
 
         if ($isFirstPrioritized && !preg_match('/\bfetchpriority\s*=/iu', $tag)) {
-            $tag = hansJackSetHtmlTagAttr($tag, 'fetchpriority', 'high');
+            $tag = setHtmlTagAttr($tag, 'fetchpriority', 'high');
         }
 
         return $tag;
@@ -2917,7 +2916,7 @@ function hansJackApplyImagePerformanceAttrsToHtml(string $html, bool $prioritize
     return is_string($result) ? $result : $html;
 }
 
-function hansJackDomElementHasClass(\DOMElement $element, string $class): bool
+function domElementHasClass(\DOMElement $element, string $class): bool
 {
     $class = trim($class);
     if ($class === '') {
@@ -2933,10 +2932,10 @@ function hansJackDomElementHasClass(\DOMElement $element, string $class): bool
     return in_array($class, $parts, true);
 }
 
-function hansJackDomElementAddClass(\DOMElement $element, string $class): void
+function domElementAddClass(\DOMElement $element, string $class): void
 {
     $class = trim($class);
-    if ($class === '' || hansJackDomElementHasClass($element, $class)) {
+    if ($class === '' || domElementHasClass($element, $class)) {
         return;
     }
 
@@ -2949,7 +2948,7 @@ function hansJackDomElementAddClass(\DOMElement $element, string $class): void
     $element->setAttribute('class', $raw . ' ' . $class);
 }
 
-function hansJackTaskListNodeHasVisibleContent(\DOMNode $node): bool
+function taskListNodeHasVisibleContent(\DOMNode $node): bool
 {
     if ($node instanceof \DOMText) {
         return trim((string) $node->nodeValue) !== '';
@@ -2965,7 +2964,7 @@ function hansJackTaskListNodeHasVisibleContent(\DOMNode $node): bool
     }
 
     foreach ($node->childNodes as $child) {
-        if (hansJackTaskListNodeHasVisibleContent($child)) {
+        if (taskListNodeHasVisibleContent($child)) {
             return true;
         }
     }
@@ -2973,7 +2972,7 @@ function hansJackTaskListNodeHasVisibleContent(\DOMNode $node): bool
     return false;
 }
 
-function hansJackFindTaskListCheckboxElement(\DOMNode $node): ?\DOMElement
+function findTaskListCheckboxElement(\DOMNode $node): ?\DOMElement
 {
     foreach ($node->childNodes as $child) {
         if (!$child instanceof \DOMElement) {
@@ -2992,7 +2991,7 @@ function hansJackFindTaskListCheckboxElement(\DOMNode $node): ?\DOMElement
             }
         }
 
-        $hit = hansJackFindTaskListCheckboxElement($child);
+        $hit = findTaskListCheckboxElement($child);
         if ($hit instanceof \DOMElement) {
             return $hit;
         }
@@ -3001,9 +3000,9 @@ function hansJackFindTaskListCheckboxElement(\DOMNode $node): ?\DOMElement
     return null;
 }
 
-function hansJackStripTaskListCheckboxFromItem(\DOMElement $item): ?bool
+function stripTaskListCheckboxFromItem(\DOMElement $item): ?bool
 {
-    $checkbox = hansJackFindTaskListCheckboxElement($item);
+    $checkbox = findTaskListCheckboxElement($item);
     if (!$checkbox instanceof \DOMElement) {
         return null;
     }
@@ -3021,7 +3020,7 @@ function hansJackStripTaskListCheckboxFromItem(\DOMElement $item): ?bool
     return $checked;
 }
 
-function hansJackFindTaskListMarkerTextNode(\DOMNode $node): ?\DOMText
+function findTaskListMarkerTextNode(\DOMNode $node): ?\DOMText
 {
     foreach ($node->childNodes as $child) {
         if ($child instanceof \DOMText) {
@@ -3040,7 +3039,7 @@ function hansJackFindTaskListMarkerTextNode(\DOMNode $node): ?\DOMText
             continue;
         }
 
-        $hit = hansJackFindTaskListMarkerTextNode($child);
+        $hit = findTaskListMarkerTextNode($child);
         if ($hit instanceof \DOMText) {
             return $hit;
         }
@@ -3049,9 +3048,9 @@ function hansJackFindTaskListMarkerTextNode(\DOMNode $node): ?\DOMText
     return null;
 }
 
-function hansJackStripTaskListMarkerFromItem(\DOMElement $item): ?bool
+function stripTaskListMarkerFromItem(\DOMElement $item): ?bool
 {
-    $textNode = hansJackFindTaskListMarkerTextNode($item);
+    $textNode = findTaskListMarkerTextNode($item);
     if (!$textNode instanceof \DOMText) {
         return null;
     }
@@ -3070,10 +3069,10 @@ function hansJackStripTaskListMarkerFromItem(\DOMElement $item): ?bool
     return $checked;
 }
 
-function hansJackBuildTaskListIconElement(\DOMDocument $dom): \DOMElement
+function buildTaskListIconElement(\DOMDocument $dom): \DOMElement
 {
     $icon = $dom->createElement('span');
-    $icon->setAttribute('class', 'hj-task-icon');
+    $icon->setAttribute('class', 'task-icon');
     $icon->setAttribute('aria-hidden', 'true');
 
     $square = $dom->createElement('svg');
@@ -3086,7 +3085,7 @@ function hansJackBuildTaskListIconElement(\DOMDocument $dom): \DOMElement
     $square->setAttribute('stroke-width', '2');
     $square->setAttribute('stroke-linecap', 'round');
     $square->setAttribute('stroke-linejoin', 'round');
-    $square->setAttribute('class', 'lucide lucide-square-icon lucide-square hj-task-square');
+    $square->setAttribute('class', 'lucide lucide-square-icon lucide-square task-square');
 
     $squareRect = $dom->createElement('rect');
     $squareRect->setAttribute('width', '18');
@@ -3107,7 +3106,7 @@ function hansJackBuildTaskListIconElement(\DOMDocument $dom): \DOMElement
     $check->setAttribute('stroke-width', '2');
     $check->setAttribute('stroke-linecap', 'round');
     $check->setAttribute('stroke-linejoin', 'round');
-    $check->setAttribute('class', 'lucide lucide-check-icon lucide-check hj-task-check');
+    $check->setAttribute('class', 'lucide lucide-check-icon lucide-check task-check');
 
     $checkPath = $dom->createElement('path');
     $checkPath->setAttribute('d', 'M20 6 9 17l-5-5');
@@ -3117,7 +3116,7 @@ function hansJackBuildTaskListIconElement(\DOMDocument $dom): \DOMElement
     return $icon;
 }
 
-function hansJackTaskLinePayload(string $line): ?array
+function taskLinePayload(string $line): ?array
 {
     if (!preg_match('/^\s*-\s*\[([ xX])\]\s*(.*?)\s*$/u', $line, $match)) {
         return null;
@@ -3134,7 +3133,7 @@ function hansJackTaskLinePayload(string $line): ?array
     ];
 }
 
-function hansJackTaskElementHasOnlyTextAndBr(\DOMElement $element): bool
+function taskElementHasOnlyTextAndBr(\DOMElement $element): bool
 {
     foreach ($element->childNodes as $child) {
         if ($child instanceof \DOMText) {
@@ -3148,7 +3147,7 @@ function hansJackTaskElementHasOnlyTextAndBr(\DOMElement $element): bool
     return true;
 }
 
-function hansJackTaskElementToLineText(\DOMElement $element): string
+function taskElementToLineText(\DOMElement $element): string
 {
     $buffer = '';
     foreach ($element->childNodes as $child) {
@@ -3165,7 +3164,7 @@ function hansJackTaskElementToLineText(\DOMElement $element): string
     return trim($buffer);
 }
 
-function hansJackIsTaskElementBlockedByAncestor(\DOMElement $element, \DOMElement $root): bool
+function isTaskElementBlockedByAncestor(\DOMElement $element, \DOMElement $root): bool
 {
     $blockedTags = ['pre', 'code', 'script', 'style', 'textarea', 'option'];
     $parent = $element->parentNode;
@@ -3179,7 +3178,7 @@ function hansJackIsTaskElementBlockedByAncestor(\DOMElement $element, \DOMElemen
     return false;
 }
 
-function hansJackConvertPlainTaskBlocksToLists(\DOMDocument $dom, \DOMElement $root): void
+function convertPlainTaskBlocksToLists(\DOMDocument $dom, \DOMElement $root): void
 {
     $xpath = new \DOMXPath($dom);
     $blocks = $xpath->query('.//p|.//div', $root);
@@ -3195,17 +3194,17 @@ function hansJackConvertPlainTaskBlocksToLists(\DOMDocument $dom, \DOMElement $r
     }
 
     foreach ($targets as $block) {
-        if (hansJackDomElementHasClass($block, 'hj-task-main')) {
+        if (domElementHasClass($block, 'task-main')) {
             continue;
         }
-        if (hansJackIsTaskElementBlockedByAncestor($block, $root)) {
+        if (isTaskElementBlockedByAncestor($block, $root)) {
             continue;
         }
-        if (!hansJackTaskElementHasOnlyTextAndBr($block)) {
+        if (!taskElementHasOnlyTextAndBr($block)) {
             continue;
         }
 
-        $text = hansJackTaskElementToLineText($block);
+        $text = taskElementToLineText($block);
         if ($text === '') {
             continue;
         }
@@ -3217,7 +3216,7 @@ function hansJackConvertPlainTaskBlocksToLists(\DOMDocument $dom, \DOMElement $r
             if ($line === '') {
                 continue;
             }
-            $payload = hansJackTaskLinePayload($line);
+            $payload = taskLinePayload($line);
             if (!is_array($payload)) {
                 $payloads = [];
                 break;
@@ -3251,15 +3250,15 @@ function hansJackConvertPlainTaskBlocksToLists(\DOMDocument $dom, \DOMElement $r
     }
 }
 
-function hansJackNormalizeTaskListItem(\DOMElement $item): ?bool
+function normalizeTaskListItem(\DOMElement $item): ?bool
 {
-    if (hansJackDomElementHasClass($item, 'hj-task-item')) {
-        return hansJackDomElementHasClass($item, 'is-checked');
+    if (domElementHasClass($item, 'task-item')) {
+        return domElementHasClass($item, 'is-checked');
     }
 
-    $checked = hansJackStripTaskListCheckboxFromItem($item);
+    $checked = stripTaskListCheckboxFromItem($item);
     if (!is_bool($checked)) {
-        $checked = hansJackStripTaskListMarkerFromItem($item);
+        $checked = stripTaskListMarkerFromItem($item);
     }
     if (!is_bool($checked)) {
         return null;
@@ -3270,9 +3269,9 @@ function hansJackNormalizeTaskListItem(\DOMElement $item): ?bool
         return $checked;
     }
 
-    hansJackDomElementAddClass($item, 'hj-task-item');
+    domElementAddClass($item, 'task-item');
     if ($checked) {
-        hansJackDomElementAddClass($item, 'is-checked');
+        domElementAddClass($item, 'is-checked');
     }
 
     $children = [];
@@ -3285,7 +3284,7 @@ function hansJackNormalizeTaskListItem(\DOMElement $item): ?bool
     }
 
     $main = $dom->createElement('div');
-    $main->setAttribute('class', 'hj-task-main');
+    $main->setAttribute('class', 'task-main');
     $nestedLists = [];
 
     foreach ($children as $child) {
@@ -3303,9 +3302,9 @@ function hansJackNormalizeTaskListItem(\DOMElement $item): ?bool
         $main->appendChild($child);
     }
 
-    $item->appendChild(hansJackBuildTaskListIconElement($dom));
+    $item->appendChild(buildTaskListIconElement($dom));
 
-    if (hansJackTaskListNodeHasVisibleContent($main)) {
+    if (taskListNodeHasVisibleContent($main)) {
         $item->appendChild($main);
     }
 
@@ -3316,7 +3315,7 @@ function hansJackNormalizeTaskListItem(\DOMElement $item): ?bool
     return $checked;
 }
 
-function hansJackApplyTaskListSyntaxToHtml(string $html): string
+function applyTaskListSyntaxToHtml(string $html): string
 {
     if ($html === '' || !class_exists('DOMDocument')) {
         return $html;
@@ -3345,7 +3344,7 @@ function hansJackApplyTaskListSyntaxToHtml(string $html): string
         $flags |= LIBXML_NOWARNING;
     }
 
-    $wrapped = '<div id="hj-task-list-root">' . $html . '</div>';
+    $wrapped = '<div id="task-list-root">' . $html . '</div>';
     $useErrors = libxml_use_internal_errors(true);
     $loaded = $flags > 0
         ? $dom->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped, $flags)
@@ -3358,7 +3357,7 @@ function hansJackApplyTaskListSyntaxToHtml(string $html): string
     }
 
     $xpath = new \DOMXPath($dom);
-    $rootNodes = $xpath->query('//div[@id="hj-task-list-root"]');
+    $rootNodes = $xpath->query('//div[@id="task-list-root"]');
     if (!$rootNodes instanceof \DOMNodeList || $rootNodes->length === 0) {
         return $html;
     }
@@ -3369,7 +3368,7 @@ function hansJackApplyTaskListSyntaxToHtml(string $html): string
     }
 
     if ($hasTaskMarker) {
-        hansJackConvertPlainTaskBlocksToLists($dom, $root);
+        convertPlainTaskBlocksToLists($dom, $root);
     }
 
     $listItems = $xpath->query('.//li', $root);
@@ -3386,7 +3385,7 @@ function hansJackApplyTaskListSyntaxToHtml(string $html): string
 
     $lists = [];
     foreach ($items as $item) {
-        $checked = hansJackNormalizeTaskListItem($item);
+        $checked = normalizeTaskListItem($item);
         if (!is_bool($checked)) {
             continue;
         }
@@ -3406,7 +3405,7 @@ function hansJackApplyTaskListSyntaxToHtml(string $html): string
 
     foreach ($lists as $list) {
         if ($list instanceof \DOMElement) {
-            hansJackDomElementAddClass($list, 'hj-task-list');
+            domElementAddClass($list, 'task-list');
         }
     }
 
@@ -3418,7 +3417,7 @@ function hansJackApplyTaskListSyntaxToHtml(string $html): string
     return $output !== '' ? $output : $html;
 }
 
-function hansJackContainsInlineSyntaxMarker(string $text): bool
+function containsInlineSyntaxMarker(string $text): bool
 {
     return strpos($text, '!!') !== false
         || strpos($text, '++') !== false
@@ -3426,7 +3425,7 @@ function hansJackContainsInlineSyntaxMarker(string $text): bool
         || strpos($text, '{') !== false;
 }
 
-function hansJackParseRubySyntaxPayload(string $raw): ?array
+function parseRubySyntaxPayload(string $raw): ?array
 {
     $inner = trim($raw);
     if ($inner === '') {
@@ -3463,7 +3462,7 @@ function hansJackParseRubySyntaxPayload(string $raw): ?array
     ];
 }
 
-function hansJackIsInlineSyntaxBlockedNode(\DOMNode $node, \DOMElement $root): bool
+function isInlineSyntaxBlockedNode(\DOMNode $node, \DOMElement $root): bool
 {
     $blockedTags = [
         'code', 'pre', 'a', 'script', 'style', 'textarea',
@@ -3482,9 +3481,9 @@ function hansJackIsInlineSyntaxBlockedNode(\DOMNode $node, \DOMElement $root): b
     return false;
 }
 
-function hansJackBuildInlineSyntaxFragment(\DOMDocument $dom, string $text): ?\DOMDocumentFragment
+function buildInlineSyntaxFragment(\DOMDocument $dom, string $text): ?\DOMDocumentFragment
 {
-    if ($text === '' || !hansJackContainsInlineSyntaxMarker($text)) {
+    if ($text === '' || !containsInlineSyntaxMarker($text)) {
         return null;
     }
 
@@ -3530,7 +3529,7 @@ function hansJackBuildInlineSyntaxFragment(\DOMDocument $dom, string $text): ?\D
             }
 
             $rubyRaw = (string) substr($text, $nextPos + 1, $rubyClose - ($nextPos + 1));
-            $parsed = hansJackParseRubySyntaxPayload($rubyRaw);
+            $parsed = parseRubySyntaxPayload($rubyRaw);
             if (!is_array($parsed)) {
                 $fragment->appendChild($dom->createTextNode('{'));
                 $pos = $nextPos + 1;
@@ -3565,7 +3564,7 @@ function hansJackBuildInlineSyntaxFragment(\DOMDocument $dom, string $text): ?\D
         $innerText = (string) substr($text, $nextPos + 2, $closePos - ($nextPos + 2));
         if ($nextType === 'spoiler') {
             $span = $dom->createElement('span');
-            $span->setAttribute('class', 'hj-term hj-term-spoiler spoiler');
+            $span->setAttribute('class', 'term term-spoiler spoiler');
             $span->setAttribute('tabindex', '0');
             $span->appendChild($dom->createTextNode($innerText));
             $fragment->appendChild($span);
@@ -3586,9 +3585,9 @@ function hansJackBuildInlineSyntaxFragment(\DOMDocument $dom, string $text): ?\D
     return $hasChange ? $fragment : null;
 }
 
-function hansJackApplyInlineSyntaxToHtml(string $html): string
+function applyInlineSyntaxToHtml(string $html): string
 {
-    if ($html === '' || !hansJackContainsInlineSyntaxMarker($html) || !class_exists('DOMDocument')) {
+    if ($html === '' || !containsInlineSyntaxMarker($html) || !class_exists('DOMDocument')) {
         return $html;
     }
 
@@ -3607,7 +3606,7 @@ function hansJackApplyInlineSyntaxToHtml(string $html): string
         $flags |= LIBXML_NOWARNING;
     }
 
-    $wrapped = '<div id="hj-inline-syntax-root">' . $html . '</div>';
+    $wrapped = '<div id="inline-syntax-root">' . $html . '</div>';
     $useErrors = libxml_use_internal_errors(true);
     $loaded = $flags > 0
         ? $dom->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped, $flags)
@@ -3620,7 +3619,7 @@ function hansJackApplyInlineSyntaxToHtml(string $html): string
     }
 
     $xpath = new \DOMXPath($dom);
-    $rootNodes = $xpath->query('//div[@id="hj-inline-syntax-root"]');
+    $rootNodes = $xpath->query('//div[@id="inline-syntax-root"]');
     if (!$rootNodes instanceof \DOMNodeList || $rootNodes->length === 0) {
         return $html;
     }
@@ -3644,14 +3643,14 @@ function hansJackApplyInlineSyntaxToHtml(string $html): string
 
     foreach ($targets as $textNode) {
         $value = (string) $textNode->nodeValue;
-        if ($value === '' || !hansJackContainsInlineSyntaxMarker($value)) {
+        if ($value === '' || !containsInlineSyntaxMarker($value)) {
             continue;
         }
-        if (hansJackIsInlineSyntaxBlockedNode($textNode, $root)) {
+        if (isInlineSyntaxBlockedNode($textNode, $root)) {
             continue;
         }
 
-        $fragment = hansJackBuildInlineSyntaxFragment($dom, $value);
+        $fragment = buildInlineSyntaxFragment($dom, $value);
         if (!$fragment instanceof \DOMDocumentFragment) {
             continue;
         }
@@ -3676,7 +3675,7 @@ function hansJackApplyInlineSyntaxToHtml(string $html): string
     return $output !== '' ? $output : $html;
 }
 
-function hansJackRenderArchiveContent($archive): string
+function renderArchiveContent($archive): string
 {
     if (!is_object($archive) || !method_exists($archive, 'content')) {
         return '';
@@ -3691,19 +3690,19 @@ function hansJackRenderArchiveContent($archive): string
     }
 
     $html = (string) ob_get_clean();
-    $html = hansJackApplyImageSizeSyntaxToHtml($html);
-    $html = hansJackApplyImagePerformanceAttrsToHtml($html, true);
-    $html = hansJackApplyTaskListSyntaxToHtml($html);
-    $html = hansJackApplyInlineSyntaxToHtml($html);
+    $html = applyImageSizeSyntaxToHtml($html);
+    $html = applyImagePerformanceAttrsToHtml($html, true);
+    $html = applyTaskListSyntaxToHtml($html);
+    $html = applyInlineSyntaxToHtml($html);
     return $html;
 }
 
-function hansJackEchoArchiveContent($archive): void
+function echoArchiveContent($archive): void
 {
-    echo hansJackRenderArchiveContent($archive);
+    echo renderArchiveContent($archive);
 }
 
-function hansJackReadCommentContentHtml($comments): string
+function readCommentContentHtml($comments): string
 {
     if (!is_object($comments)) {
         return '';
@@ -3736,7 +3735,7 @@ function hansJackReadCommentContentHtml($comments): string
         try {
             $rawText = trim((string) ($comments->text ?? ''));
             if ($rawText !== '') {
-                $html = '<p>' . nl2br(hansJackEscape($rawText)) . '</p>';
+                $html = '<p>' . nl2br(escape($rawText)) . '</p>';
             }
         } catch (\Throwable $e) {
             // Keep empty output when all fallbacks fail.
@@ -3746,30 +3745,30 @@ function hansJackReadCommentContentHtml($comments): string
     return (string) $html;
 }
 
-function hansJackRenderCommentContent($comments): string
+function renderCommentContent($comments): string
 {
     if (!is_object($comments)) {
         return '';
     }
 
-    $html = hansJackReadCommentContentHtml($comments);
+    $html = readCommentContentHtml($comments);
     if ($html === '') {
         return '';
     }
 
-    $html = hansJackApplyImageSizeSyntaxToHtml($html);
-    $html = hansJackApplyImagePerformanceAttrsToHtml($html, false);
-    $html = hansJackApplyTaskListSyntaxToHtml($html);
-    $html = hansJackApplyInlineSyntaxToHtml($html);
+    $html = applyImageSizeSyntaxToHtml($html);
+    $html = applyImagePerformanceAttrsToHtml($html, false);
+    $html = applyTaskListSyntaxToHtml($html);
+    $html = applyInlineSyntaxToHtml($html);
     return $html;
 }
 
-function hansJackEchoCommentContent($comments): void
+function echoCommentContent($comments): void
 {
-    echo hansJackRenderCommentContent($comments);
+    echo renderCommentContent($comments);
 }
 
-function hansJackBuildMpsBeianUrl(string $value): string
+function buildMpsBeianUrl(string $value): string
 {
     $value = trim($value);
     if ($value === '') {
@@ -3793,12 +3792,12 @@ function hansJackBuildMpsBeianUrl(string $value): string
     return 'https://beian.mps.gov.cn/#/query/webSearch?code=' . rawurlencode($code);
 }
 
-function hansJackAsciiBanner(string $raw, int $maxLineChars = 0, int $weight = 2): string
+function asciiBanner(string $raw, int $maxLineChars = 0, int $weight = 2): string
 {
     $text = strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', $raw));
     $text = trim($text);
     if ($text === '') {
-        $text = 'HANSJACK';
+        $text = 'TYPECHO';
     }
 
     $maxLineChars = (int) $maxLineChars;
@@ -3903,11 +3902,11 @@ function hansJackAsciiBanner(string $raw, int $maxLineChars = 0, int $weight = 2
     return implode("\n", $out);
 }
 
-function hansJackAvatarFallback(Options $options): string
+function avatarFallback(Options $options): string
 {
     $title = trim((string) $options->title);
     if ($title === '') {
-        return 'HJ';
+        return 'T';
     }
 
     if (function_exists('mb_substr')) {
@@ -3917,7 +3916,7 @@ function hansJackAvatarFallback(Options $options): string
     return strtoupper(substr($title, 0, 1));
 }
 
-function hansJackIsActiveNav(Archive $archive, string $targetUrl): bool
+function isActiveNav(Archive $archive, string $targetUrl): bool
 {
     $targetRaw = (string) (parse_url($targetUrl, PHP_URL_PATH) ?? '');
     if ($targetRaw === '') {
@@ -3927,13 +3926,13 @@ function hansJackIsActiveNav(Archive $archive, string $targetUrl): bool
     $currentUri = (string) ($archive->request->getRequestUri() ?? '/');
     $currentRaw = (string) (parse_url($currentUri, PHP_URL_PATH) ?? '/');
 
-    $targetPath = hansJackNormalizePath($targetRaw);
-    $currentPath = hansJackNormalizePath($currentRaw);
+    $targetPath = normalizePath($targetRaw);
+    $currentPath = normalizePath($currentRaw);
 
     return $currentPath === $targetPath;
 }
 
-function hansJackNormalizePath(string $path): string
+function normalizePath(string $path): string
 {
     $normalized = '/' . ltrim(trim($path), '/');
     $normalized = (string) preg_replace('#/+#', '/', $normalized);
@@ -3943,7 +3942,7 @@ function hansJackNormalizePath(string $path): string
     return $normalized === '' ? '/' : $normalized;
 }
 
-function hansJackNavIconSvg(string $key): string
+function navIconSvg(string $key): string
 {
     switch ($key) {
         case 'home':
@@ -3953,19 +3952,19 @@ function hansJackNavIconSvg(string $key): string
         case 'memo':
             return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.67 19a2 2 0 0 0 1.416-.588l6.154-6.172a6 6 0 0 0-8.49-8.49L5.586 9.914A2 2 0 0 0 5 11.328V18a1 1 0 0 0 1 1z"/><path d="M16 8 2 22"/><path d="M17.5 15H9"/></svg>';
         case 'memory':
-            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path class="hj-memory-hour" d="M12 8v4"/><path class="hj-memory-minute" d="M12 12l3 1.6"/></svg>';
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path class="memory-hour" d="M12 8v4"/><path class="memory-minute" d="M12 12l3 1.6"/></svg>';
         default:
             return '';
     }
 }
 
-function hansJackAvatarRating(Options $options): string
+function avatarRating(Options $options): string
 {
     $rating = strtoupper(trim((string) ($options->commentsAvatarRating ?? 'G')));
     return in_array($rating, ['G', 'PG', 'R', 'X'], true) ? $rating : 'G';
 }
 
-function hansJackGithubLoginFromUrl(string $url): string
+function githubLoginFromUrl(string $url): string
 {
     $url = trim($url);
     if ($url === '') {
@@ -3998,23 +3997,23 @@ function hansJackGithubLoginFromUrl(string $url): string
     return $login;
 }
 
-function hansJackPrivateCommentMarker(): string
+function privateCommentMarker(): string
 {
     // Stored in comment text so the theme can render "private" comments without extra DB fields.
-    return '<!--hj-private-->';
+    return '<!--private-->';
 }
 
-function hansJackIsPrivateCommentText(string $text): bool
+function isPrivateCommentText(string $text): bool
 {
-    $marker = hansJackPrivateCommentMarker();
-    return hansJackStartsWith(ltrim($text), $marker);
+    $marker = privateCommentMarker();
+    return startsWith(ltrim($text), $marker);
 }
 
-function hansJackStripPrivateCommentMarker(string $text): string
+function stripPrivateCommentMarker(string $text): string
 {
-    $marker = hansJackPrivateCommentMarker();
+    $marker = privateCommentMarker();
     $trimmed = ltrim($text);
-    if (!hansJackStartsWith($trimmed, $marker)) {
+    if (!startsWith($trimmed, $marker)) {
         return $text;
     }
 
@@ -4027,7 +4026,7 @@ function hansJackStripPrivateCommentMarker(string $text): string
     return ltrim($rest, "\r\n\t ");
 }
 
-function hansJackCanViewPrivateComment(int $ownerId, int $authorId): bool
+function canViewPrivateComment(int $ownerId, int $authorId): bool
 {
     $ownerId = (int) $ownerId;
     $authorId = (int) $authorId;
@@ -4072,7 +4071,7 @@ function hansJackCanViewPrivateComment(int $ownerId, int $authorId): bool
     return false;
 }
 
-function hansJackThreadedCommentsMap($comments): array
+function threadedCommentsMap($comments): array
 {
     if (!is_object($comments)) {
         return [];
@@ -4116,7 +4115,7 @@ function hansJackThreadedCommentsMap($comments): array
     return $map;
 }
 
-function hansJackCountCommentDescendantsByMap(array $map, int $coid, array &$memo = []): int
+function countCommentDescendantsByMap(array $map, int $coid, array &$memo = []): int
 {
     $coid = (int) $coid;
     if ($coid <= 0) {
@@ -4153,7 +4152,7 @@ function hansJackCountCommentDescendantsByMap(array $map, int $coid, array &$mem
         }
 
         if ($childId > 0) {
-            $count += hansJackCountCommentDescendantsByMap($map, $childId, $memo);
+            $count += countCommentDescendantsByMap($map, $childId, $memo);
         }
     }
 
@@ -4161,7 +4160,7 @@ function hansJackCountCommentDescendantsByMap(array $map, int $coid, array &$mem
     return $count;
 }
 
-function hansJackCountCommentDescendants($comments): int
+function countCommentDescendants($comments): int
 {
     if (!is_object($comments)) {
         return 0;
@@ -4192,7 +4191,7 @@ function hansJackCountCommentDescendants($comments): int
         }
     }
 
-    $map = hansJackThreadedCommentsMap($comments);
+    $map = threadedCommentsMap($comments);
     if (empty($map)) {
         try {
             $children = $comments->children;
@@ -4204,14 +4203,14 @@ function hansJackCountCommentDescendants($comments): int
 
     if ($widgetKey === '') {
         $tmpMemo = [];
-        return hansJackCountCommentDescendantsByMap($map, $coid, $tmpMemo);
+        return countCommentDescendantsByMap($map, $coid, $tmpMemo);
     }
 
     if (!isset($memoByWidget[$widgetKey]) || !is_array($memoByWidget[$widgetKey])) {
         $memoByWidget[$widgetKey] = [];
     }
 
-    return hansJackCountCommentDescendantsByMap($map, $coid, $memoByWidget[$widgetKey]);
+    return countCommentDescendantsByMap($map, $coid, $memoByWidget[$widgetKey]);
 }
 
 function threadedComments($comments, $singleCommentOptions): void
@@ -4227,14 +4226,14 @@ function threadedComments($comments, $singleCommentOptions): void
         $rawText = '';
     }
 
-    $isPrivate = hansJackIsPrivateCommentText($rawText);
-    $hjEditText = hansJackStripPrivateCommentMarker($rawText);
-    $hjCanEditComment = hansJackCurrentUserIsAdmin();
-    $hjCommentCoid = 0;
+    $isPrivate = isPrivateCommentText($rawText);
+    $editText = stripPrivateCommentMarker($rawText);
+    $canEditComment = currentUserIsAdmin();
+    $commentCoid = 0;
     try {
-        $hjCommentCoid = (int) ($comments->coid ?? 0);
+        $commentCoid = (int) ($comments->coid ?? 0);
     } catch (\Throwable $e) {
-        $hjCommentCoid = 0;
+        $commentCoid = 0;
     }
     $canViewPrivate = true;
     if ($isPrivate) {
@@ -4250,7 +4249,7 @@ function threadedComments($comments, $singleCommentOptions): void
         } catch (\Throwable $e) {
             $authorId = 0;
         }
-        $canViewPrivate = hansJackCanViewPrivateComment($ownerId, $authorId);
+        $canViewPrivate = canViewPrivateComment($ownerId, $authorId);
     }
 
     $commentClass = '';
@@ -4263,65 +4262,65 @@ function threadedComments($comments, $singleCommentOptions): void
     }
 
     if ($isPrivate) {
-        $commentClass .= ' hj-comment-private';
+        $commentClass .= ' comment-private';
         if (!$canViewPrivate) {
             $commentClass .= ' is-private-hidden';
         }
     }
 
-    $hjHasChildren = false;
+    $hasChildren = false;
     try {
-        $hjHasChildren = !empty($comments->children);
+        $hasChildren = !empty($comments->children);
     } catch (\Throwable $e) {
-        $hjHasChildren = false;
+        $hasChildren = false;
     }
-    if ($hjHasChildren) {
-        $commentClass .= ' hj-comment-has-children';
+    if ($hasChildren) {
+        $commentClass .= ' comment-has-children';
     }
 
-    $hjAvatarSize = max(1, (int) ($singleCommentOptions->avatarSize ?? 32));
-    $hjAvatarDefault = '';
+    $avatarSize = max(1, (int) ($singleCommentOptions->avatarSize ?? 32));
+    $avatarDefault = '';
     try {
-        $hjAvatarDefault = trim((string) ($singleCommentOptions->defaultAvatar ?? ''));
+        $avatarDefault = trim((string) ($singleCommentOptions->defaultAvatar ?? ''));
     } catch (\Throwable $e) {
-        $hjAvatarDefault = '';
+        $avatarDefault = '';
     }
-    if ($hjAvatarDefault === '') {
-        $hjAvatarDefault = 'mp';
+    if ($avatarDefault === '') {
+        $avatarDefault = 'mp';
     }
 
-    $hjAvatarEmail = '';
+    $avatarEmail = '';
     try {
-        $hjAvatarEmail = strtolower(trim((string) ($comments->mail ?? '')));
+        $avatarEmail = strtolower(trim((string) ($comments->mail ?? '')));
     } catch (\Throwable $e) {
-        $hjAvatarEmail = '';
+        $avatarEmail = '';
     }
 
-    $hjCommentUrl = '';
+    $commentUrl = '';
     try {
-        $hjCommentUrl = trim((string) ($comments->url ?? ''));
+        $commentUrl = trim((string) ($comments->url ?? ''));
     } catch (\Throwable $e) {
-        $hjCommentUrl = '';
+        $commentUrl = '';
     }
 
-    $hjAvatarSrcset = '';
-    $hjGithubLogin = hansJackGithubLoginFromUrl($hjCommentUrl);
-    if ($hjGithubLogin !== '') {
-        $hjAvatarBase = 'https://github.com/' . rawurlencode($hjGithubLogin) . '.png';
-        $hjAvatarUrl = $hjAvatarBase . '?size=' . $hjAvatarSize;
+    $avatarSrcset = '';
+    $githubLogin = githubLoginFromUrl($commentUrl);
+    if ($githubLogin !== '') {
+        $avatarBase = 'https://github.com/' . rawurlencode($githubLogin) . '.png';
+        $avatarUrl = $avatarBase . '?size=' . $avatarSize;
         if (!empty($singleCommentOptions->avatarHighRes)) {
-            $hjAvatarSrcset = $hjAvatarBase . '?size=' . ($hjAvatarSize * 2) . ' 2x, '
-                . $hjAvatarBase . '?size=' . ($hjAvatarSize * 3) . ' 3x';
+            $avatarSrcset = $avatarBase . '?size=' . ($avatarSize * 2) . ' 2x, '
+                . $avatarBase . '?size=' . ($avatarSize * 3) . ' 3x';
         }
     } else {
         // Use Sep CDN as the default avatar endpoint with Gravatar-compatible parameters.
-        $hjAvatarHash = md5($hjAvatarEmail);
-        $hjAvatarBase = 'https://cdn.sep.cc/avatar/' . $hjAvatarHash;
-        $hjAvatarQuery = '&d=' . rawurlencode($hjAvatarDefault) . '&r=g';
-        $hjAvatarUrl = $hjAvatarBase . '?s=' . $hjAvatarSize . $hjAvatarQuery;
+        $avatarHash = md5($avatarEmail);
+        $avatarBase = 'https://cdn.sep.cc/avatar/' . $avatarHash;
+        $avatarQuery = '&d=' . rawurlencode($avatarDefault) . '&r=g';
+        $avatarUrl = $avatarBase . '?s=' . $avatarSize . $avatarQuery;
         if (!empty($singleCommentOptions->avatarHighRes)) {
-            $hjAvatarSrcset = $hjAvatarBase . '?s=' . ($hjAvatarSize * 2) . $hjAvatarQuery . ' 2x, '
-                . $hjAvatarBase . '?s=' . ($hjAvatarSize * 3) . $hjAvatarQuery . ' 3x';
+            $avatarSrcset = $avatarBase . '?s=' . ($avatarSize * 2) . $avatarQuery . ' 2x, '
+                . $avatarBase . '?s=' . ($avatarSize * 3) . $avatarQuery . ' 3x';
         }
     }
     ?>
@@ -4334,22 +4333,22 @@ function threadedComments($comments, $singleCommentOptions): void
     }
     $comments->alt(' comment-odd', ' comment-even');
     echo $commentClass; 
-    ?>" data-hj-comment-level="<?php echo (int) $comments->levels; ?>"> 
+    ?>" data-comment-level="<?php echo (int) $comments->levels; ?>"> 
         <div class="comment-author" itemprop="creator" itemscope itemtype="http://schema.org/Person">  
             <span itemprop="image">  
                 <img
                     class="avatar"
-                    src="<?php echo hansJackEscape($hjAvatarUrl); ?>"
-                    <?php if ($hjAvatarSrcset !== ''): ?>srcset="<?php echo hansJackEscape($hjAvatarSrcset); ?>"<?php endif; ?>
+                    src="<?php echo escape($avatarUrl); ?>"
+                    <?php if ($avatarSrcset !== ''): ?>srcset="<?php echo escape($avatarSrcset); ?>"<?php endif; ?>
                     alt=""
-                    width="<?php echo (int) $hjAvatarSize; ?>"
-                    height="<?php echo (int) $hjAvatarSize; ?>"
+                    width="<?php echo (int) $avatarSize; ?>"
+                    height="<?php echo (int) $avatarSize; ?>"
                     loading="lazy"
                     decoding="async"
                     referrerpolicy="no-referrer"
                 >
             </span>
-            <div class="hj-comment-author-meta">
+            <div class="comment-author-meta">
                 <cite class="fn" itemprop="name"><?php $singleCommentOptions->beforeAuthor();
                     $comments->author();
                     $singleCommentOptions->afterAuthor(); ?></cite>
@@ -4365,104 +4364,104 @@ function threadedComments($comments, $singleCommentOptions): void
                 </div> 
             </div>
         </div> 
-        <div class="comment-content hj-comment-content<?php echo $isPrivate ? ' is-private' : ''; ?><?php echo ($isPrivate && !$canViewPrivate) ? ' is-private-hidden' : ''; ?>" itemprop="commentText">
+        <div class="comment-content comment-content<?php echo $isPrivate ? ' is-private' : ''; ?><?php echo ($isPrivate && !$canViewPrivate) ? ' is-private-hidden' : ''; ?>" itemprop="commentText">
             <?php if ($isPrivate && !$canViewPrivate): ?>
-                <div class="hj-private-mask" aria-hidden="true"></div>
+                <div class="private-mask" aria-hidden="true"></div>
             <?php else: ?>
-                <?php hansJackEchoCommentContent($comments); ?>
+                <?php echoCommentContent($comments); ?>
             <?php endif; ?>
         </div> 
         <?php if ($comments->children) { ?>
             <?php
-            $hjChildren = $comments->children;
-            $hjChildrenDirectCount = is_array($hjChildren) ? count($hjChildren) : 0;
-            $hjChildrenCount = hansJackCountCommentDescendants($comments);
-            $hjChildrenPreview = [];
-            if ($hjChildrenDirectCount > 0) {
-                $hjChildrenPreview = array_slice($hjChildren, 0, 5);
+            $children = $comments->children;
+            $childrenDirectCount = is_array($children) ? count($children) : 0;
+            $childrenCount = countCommentDescendants($comments);
+            $childrenPreview = [];
+            if ($childrenDirectCount > 0) {
+                $childrenPreview = array_slice($children, 0, 5);
             }
             ?>
-            <details class="comment-children hj-comment-children" itemprop="discusses" data-hj-comment-children data-hj-comment-children-count="<?php echo (int) $hjChildrenCount; ?>">
-                <summary class="hj-comment-children-summary">
-                    <div class="hj-comment-children-preview" aria-label="<?php _e('回复预览'); ?>">
-                        <?php foreach ($hjChildrenPreview as $hjChild): ?>
+            <details class="comment-children comment-children" itemprop="discusses" data-comment-children data-comment-children-count="<?php echo (int) $childrenCount; ?>">
+                <summary class="comment-children-summary">
+                    <div class="comment-children-preview" aria-label="<?php _e('回复预览'); ?>">
+                        <?php foreach ($childrenPreview as $child): ?>
                             <?php
-                            $hjChildAuthor = '';
+                            $childAuthor = '';
                             try {
-                                $hjChildAuthor = (string) ($hjChild['author'] ?? '');
+                                $childAuthor = (string) ($child['author'] ?? '');
                             } catch (\Throwable $e) {
-                                $hjChildAuthor = '';
+                                $childAuthor = '';
                             }
 
-                            $hjChildRaw = '';
+                            $childRaw = '';
                             try {
-                                $hjChildRaw = (string) ($hjChild['text'] ?? '');
+                                $childRaw = (string) ($child['text'] ?? '');
                             } catch (\Throwable $e) {
-                                $hjChildRaw = '';
+                                $childRaw = '';
                             }
 
-                            $hjChildIsPrivate = hansJackIsPrivateCommentText($hjChildRaw);
-                            $hjChildCanView = true;
-                            if ($hjChildIsPrivate) {
-                                $hjChildOwnerId = 0;
-                                $hjChildAuthorId = 0;
+                            $childIsPrivate = isPrivateCommentText($childRaw);
+                            $childCanView = true;
+                            if ($childIsPrivate) {
+                                $childOwnerId = 0;
+                                $childAuthorId = 0;
                                 try {
-                                    $hjChildOwnerId = (int) ($hjChild['ownerId'] ?? 0);
+                                    $childOwnerId = (int) ($child['ownerId'] ?? 0);
                                 } catch (\Throwable $e) {
-                                    $hjChildOwnerId = 0;
+                                    $childOwnerId = 0;
                                 }
                                 try {
-                                    $hjChildAuthorId = (int) ($hjChild['authorId'] ?? 0);
+                                    $childAuthorId = (int) ($child['authorId'] ?? 0);
                                 } catch (\Throwable $e) {
-                                    $hjChildAuthorId = 0;
+                                    $childAuthorId = 0;
                                 }
-                                $hjChildCanView = hansJackCanViewPrivateComment($hjChildOwnerId, $hjChildAuthorId);
+                                $childCanView = canViewPrivateComment($childOwnerId, $childAuthorId);
                             }
 
-                            if ($hjChildIsPrivate && !$hjChildCanView) {
-                                $hjChildPreviewText = _t('私信内容');
+                            if ($childIsPrivate && !$childCanView) {
+                                $childPreviewText = _t('私信内容');
                             } else {
-                                $hjChildPreviewText = hansJackStripPrivateCommentMarker($hjChildRaw);
-                                $hjChildPreviewText = strip_tags($hjChildPreviewText);
-                                $hjChildPreviewText = (string) preg_replace('/\\s+/u', ' ', $hjChildPreviewText);
-                                $hjChildPreviewText = trim($hjChildPreviewText);
-                                if ($hjChildPreviewText === '') {
-                                    $hjChildPreviewText = _t('（无内容）');
+                                $childPreviewText = stripPrivateCommentMarker($childRaw);
+                                $childPreviewText = strip_tags($childPreviewText);
+                                $childPreviewText = (string) preg_replace('/\\s+/u', ' ', $childPreviewText);
+                                $childPreviewText = trim($childPreviewText);
+                                if ($childPreviewText === '') {
+                                    $childPreviewText = _t('（无内容）');
                                 } else {
-                                    $hjChildPreviewText = Common::subStr($hjChildPreviewText, 0, 72, '...');
+                                    $childPreviewText = Common::subStr($childPreviewText, 0, 72, '...');
                                 }
                             }
                             ?>
-                            <div class="hj-comment-children-preview-item">
-                                <span class="hj-comment-children-preview-author"><?php echo hansJackEscape($hjChildAuthor); ?></span><span class="hj-comment-children-preview-sep">：</span><span class="hj-comment-children-preview-text"><?php echo hansJackEscape($hjChildPreviewText); ?></span>
+                            <div class="comment-children-preview-item">
+                                <span class="comment-children-preview-author"><?php echo escape($childAuthor); ?></span><span class="comment-children-preview-sep">：</span><span class="comment-children-preview-text"><?php echo escape($childPreviewText); ?></span>
                             </div>
                         <?php endforeach; ?>
                     </div>
-                    <span class="hj-comment-children-toggle hj-comment-children-toggle-closed"><?php echo _t('共') . (int) $hjChildrenCount . _t('条回复'); ?></span>
-                    <span class="hj-comment-children-toggle hj-comment-children-toggle-open"><?php _e('收起回复'); ?></span>
+                    <span class="comment-children-toggle comment-children-toggle-closed"><?php echo _t('共') . (int) $childrenCount . _t('条回复'); ?></span>
+                    <span class="comment-children-toggle comment-children-toggle-open"><?php _e('收起回复'); ?></span>
                 </summary>
-                <div class="hj-comment-children-full">
+                <div class="comment-children-full">
                     <?php $comments->threadedComments(); ?>
                 </div>
             </details>
         <?php } ?>
         <div class="comment-reply"> 
             <?php $comments->reply($singleCommentOptions->replyWord); ?> 
-            <button class="hj-comment-share-btn" type="button" aria-label="<?php _e('分享'); ?>" title="<?php _e('分享'); ?>" data-hj-comment-share="<?php $comments->permalink(); ?>"> 
+            <button class="comment-share-btn" type="button" aria-label="<?php _e('分享'); ?>" title="<?php _e('分享'); ?>" data-comment-share="<?php $comments->permalink(); ?>"> 
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-share2-icon lucide-share-2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg> 
             </button> 
-            <?php if ($hjCanEditComment && $hjCommentCoid > 0): ?>
+            <?php if ($canEditComment && $commentCoid > 0): ?>
                 <button
-                    class="hj-comment-edit-btn"
+                    class="comment-edit-btn"
                     type="button"
                     aria-label="<?php _e('编辑'); ?>"
                     title="<?php _e('编辑'); ?>"
-                    data-hj-comment-edit
-                    data-hj-comment-coid="<?php echo (int) $hjCommentCoid; ?>"
-                    data-hj-comment-edit-private="<?php echo $isPrivate ? '1' : '0'; ?>">
+                    data-comment-edit
+                    data-comment-coid="<?php echo (int) $commentCoid; ?>"
+                    data-comment-edit-private="<?php echo $isPrivate ? '1' : '0'; ?>">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil-line-icon lucide-pencil-line" aria-hidden="true"><path d="M13 21h8"/><path d="m15 5 4 4"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>
                 </button>
-                <textarea class="hj-comment-edit-source" data-hj-comment-edit-source hidden><?php echo hansJackEscape((string) $hjEditText); ?></textarea>
+                <textarea class="comment-edit-source" data-comment-edit-source hidden><?php echo escape((string) $editText); ?></textarea>
             <?php endif; ?>
         </div> 
     </li>

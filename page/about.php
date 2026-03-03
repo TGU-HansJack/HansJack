@@ -20,11 +20,11 @@ if (!defined('__TYPECHO_ROOT_DIR__')) {
     exit;
 }
 
-if (!function_exists('hansJackAboutDecodeJson')) {
+if (!function_exists('aboutDecodeJson')) {
     /**
      * @return mixed
      */
-    function hansJackAboutDecodeJson(string $json)
+    function aboutDecodeJson(string $json)
     {
         $json = trim($json);
         if ($json === '') {
@@ -45,12 +45,12 @@ if (!function_exists('hansJackAboutDecodeJson')) {
     }
 }
 
-if (!function_exists('hansJackAboutTimelineValues')) {
+if (!function_exists('aboutTimelineValues')) {
     /**
      * @param mixed $value
      * @return string[]
      */
-    function hansJackAboutTimelineValues($value): array
+    function aboutTimelineValues($value): array
     {
         $rows = [];
 
@@ -73,7 +73,7 @@ if (!function_exists('hansJackAboutTimelineValues')) {
             return $rows;
         }
 
-        $decoded = hansJackAboutDecodeJson($raw);
+        $decoded = aboutDecodeJson($raw);
         if (is_array($decoded)) {
             foreach ($decoded as $item) {
                 $pushValue($item);
@@ -94,12 +94,12 @@ if (!function_exists('hansJackAboutTimelineValues')) {
     }
 }
 
-if (!function_exists('hansJackAboutTimelineRows')) {
+if (!function_exists('aboutTimelineRows')) {
     /**
      * @param mixed $archive
      * @return array<int, array{time:string, values:array<int, string>}>
      */
-    function hansJackAboutTimelineRows($archive): array
+    function aboutTimelineRows($archive): array
     {
         if (!$archive) {
             return [];
@@ -117,9 +117,9 @@ if (!function_exists('hansJackAboutTimelineRows')) {
             return [];
         }
 
-        $decoded = hansJackAboutDecodeJson($raw);
+        $decoded = aboutDecodeJson($raw);
         if (is_string($decoded)) {
-            $decodedSecond = hansJackAboutDecodeJson($decoded);
+            $decodedSecond = aboutDecodeJson($decoded);
             if (is_array($decodedSecond)) {
                 $decoded = $decodedSecond;
             }
@@ -140,7 +140,7 @@ if (!function_exists('hansJackAboutTimelineRows')) {
                 continue;
             }
 
-            $values = hansJackAboutTimelineValues($item['value'] ?? '');
+            $values = aboutTimelineValues($item['value'] ?? '');
             $rows[] = [
                 'time' => $time,
                 'values' => $values,
@@ -152,24 +152,24 @@ if (!function_exists('hansJackAboutTimelineRows')) {
     }
 }
 
-$hjTimelineRows = hansJackAboutTimelineRows($this);
+$timelineRows = aboutTimelineRows($this);
 $this->need('header.php');
 ?>
 
-<main class="hj-main" role="main">
-    <section class="hj-about" aria-label="<?php _e('关于'); ?>">
-        <div class="hj-about-layout">
-            <article class="hj-about-article">
-                <div class="hj-article-content hj-about-content">
-                    <?php hansJackEchoArchiveContent($this); ?>
+<main class="main" role="main">
+    <section class="about" aria-label="<?php _e('关于'); ?>">
+        <div class="about-layout">
+            <article class="about-article">
+                <div class="article-content about-content">
+                    <?php echoArchiveContent($this); ?>
                 </div>
             </article>
 
-            <aside class="hj-about-aside" aria-label="<?php _e('时间线'); ?>">
-                <div class="hj-about-timeline">
-                    <?php if (!empty($hjTimelineRows)): ?>
-                        <ol class="hj-about-timeline-list">
-                            <?php foreach ($hjTimelineRows as $row): ?>
+            <aside class="about-aside" aria-label="<?php _e('时间线'); ?>">
+                <div class="about-timeline">
+                    <?php if (!empty($timelineRows)): ?>
+                        <ol class="about-timeline-list">
+                            <?php foreach ($timelineRows as $row): ?>
                                 <?php
                                 $time = (string) ($row['time'] ?? '');
                                 $values = is_array($row['values'] ?? null) ? $row['values'] : [];
@@ -177,17 +177,17 @@ $this->need('header.php');
                                     continue;
                                 }
                                 ?>
-                                <li class="hj-about-timeline-item">
-                                    <div class="hj-about-timeline-body">
-                                        <time class="hj-about-timeline-time"><?php echo hansJackEscape($time); ?></time>
+                                <li class="about-timeline-item">
+                                    <div class="about-timeline-body">
+                                        <time class="about-timeline-time"><?php echo escape($time); ?></time>
                                         <?php if (!empty($values)): ?>
-                                            <ul class="hj-about-timeline-values">
+                                            <ul class="about-timeline-values">
                                                 <?php foreach ($values as $value): ?>
                                                     <?php $valueText = trim((string) $value); ?>
                                                     <?php if ($valueText === ''): ?>
                                                         <?php continue; ?>
                                                     <?php endif; ?>
-                                                    <li><?php echo hansJackEscape($valueText); ?></li>
+                                                    <li><?php echo escape($valueText); ?></li>
                                                 <?php endforeach; ?>
                                             </ul>
                                         <?php endif; ?>
@@ -196,7 +196,7 @@ $this->need('header.php');
                             <?php endforeach; ?>
                         </ol>
                     <?php else: ?>
-                        <p class="hj-about-timeline-empty"><?php _e('暂无时间线，请在自定义字段 timeline 中填写 JSON。'); ?></p>
+                        <p class="about-timeline-empty"><?php _e('暂无时间线，请在自定义字段 timeline 中填写 JSON。'); ?></p>
                     <?php endif; ?>
                 </div>
             </aside>
