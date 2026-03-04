@@ -2299,8 +2299,8 @@
                         return;
                     }
 
-                    // Keep avatar prominent while still bounded for layout stability.
-                    var h = Math.max(28, Math.min(46, rect.height * 1.15));
+                    // Keep avatar compact while still bounded for layout stability.
+                    var h = Math.max(24, Math.min(36, rect.height * 1.05));
                     item.style.setProperty("--comment-avatar-size", h.toFixed(2) + "px");
                 });
 
@@ -2359,6 +2359,13 @@
                 }
 
                 items.forEach(function (item, index) {
+                    var hasChildren = item.classList && item.classList.contains("comment-has-children");
+                    if (!hasChildren) {
+                        item.classList.add("is-avatar-line-hidden");
+                        item.style.setProperty("--comment-avatar-line-height", "0px");
+                        return;
+                    }
+
                     var avatarWrap = item.querySelector('.comment-author span[itemprop="image"]');
                     if (!avatarWrap) {
                         item.classList.add("is-avatar-line-hidden");

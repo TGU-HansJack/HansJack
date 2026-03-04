@@ -5386,8 +5386,8 @@ html.theme-dark .fab-reward-backdrop {
 .comments {   
     margin-top: 2.4rem;   
     padding-top: 0.2rem;   
-    --comment-body-pad-x: 0.85rem;  
-    --comment-indent: 1.25rem;   
+    --comment-body-pad-x: 0;  
+    --comment-indent: 1.8rem;   
     --comment-thread-stroke: #7c3aed;
     --comment-thread-bg: var(--day-bg);
     --comment-avatar-line-width: 3px;
@@ -5707,6 +5707,8 @@ html.theme-dark .fab-reward-backdrop {
 .comments .comment-content {  
     margin-top: 0.6rem;  
     padding-left: calc(var(--comment-avatar-size) + var(--comment-avatar-gap));  
+    padding-right: 0.6rem;
+    padding-right: max(0.6rem, env(safe-area-inset-right));
     min-width: 0; 
     overflow-wrap: anywhere; 
 } 
