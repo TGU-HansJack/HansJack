@@ -4360,8 +4360,18 @@ function threadedComments($comments, $singleCommentOptions): void
             </span>
             <div class="comment-author-meta">
                 <cite class="fn" itemprop="name"><?php $singleCommentOptions->beforeAuthor();
-                    $comments->author();
+                    $comments->author(false);
                     $singleCommentOptions->afterAuthor(); ?></cite>
+                <?php if ($commentUrl !== ''): ?>
+                    <a
+                        class="comment-author-home"
+                        href="<?php echo escape($commentUrl); ?>"
+                        rel="external nofollow"
+                        aria-label="<?php _e('访问作者网站'); ?>"
+                        title="<?php _e('访问作者网站'); ?>">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-house-icon lucide-house" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                    </a>
+                <?php endif; ?>
                 <div class="comment-meta"> 
                     <time itemprop="commentTime" datetime="<?php $comments->date('c'); ?>"><?php 
                         $singleCommentOptions->beforeDate(); 
@@ -4374,87 +4384,13 @@ function threadedComments($comments, $singleCommentOptions): void
                 </div> 
             </div>
         </div> 
-        <div class="comment-content comment-content<?php echo $isPrivate ? ' is-private' : ''; ?><?php echo ($isPrivate && !$canViewPrivate) ? ' is-private-hidden' : ''; ?>" itemprop="commentText">
+        <div class="comment-content<?php echo $isPrivate ? ' is-private' : ''; ?><?php echo ($isPrivate && !$canViewPrivate) ? ' is-private-hidden' : ''; ?>" itemprop="commentText">
             <?php if ($isPrivate && !$canViewPrivate): ?>
                 <div class="private-mask" aria-hidden="true"></div>
             <?php else: ?>
                 <?php echoCommentContent($comments); ?>
             <?php endif; ?>
         </div> 
-        <?php if ($comments->children) { ?>
-            <?php
-            $children = $comments->children;
-            $childrenDirectCount = is_array($children) ? count($children) : 0;
-            $childrenCount = countCommentDescendants($comments);
-            $childrenPreview = [];
-            if ($childrenDirectCount > 0) {
-                $childrenPreview = array_slice($children, 0, 5);
-            }
-            ?>
-            <details class="comment-children comment-children" itemprop="discusses" data-comment-children data-comment-children-count="<?php echo (int) $childrenCount; ?>">
-                <summary class="comment-children-summary">
-                    <div class="comment-children-preview" aria-label="<?php _e('回复预览'); ?>">
-                        <?php foreach ($childrenPreview as $child): ?>
-                            <?php
-                            $childAuthor = '';
-                            try {
-                                $childAuthor = (string) ($child['author'] ?? '');
-                            } catch (\Throwable $e) {
-                                $childAuthor = '';
-                            }
-
-                            $childRaw = '';
-                            try {
-                                $childRaw = (string) ($child['text'] ?? '');
-                            } catch (\Throwable $e) {
-                                $childRaw = '';
-                            }
-
-                            $childIsPrivate = isPrivateCommentText($childRaw);
-                            $childCanView = true;
-                            if ($childIsPrivate) {
-                                $childOwnerId = 0;
-                                $childAuthorId = 0;
-                                try {
-                                    $childOwnerId = (int) ($child['ownerId'] ?? 0);
-                                } catch (\Throwable $e) {
-                                    $childOwnerId = 0;
-                                }
-                                try {
-                                    $childAuthorId = (int) ($child['authorId'] ?? 0);
-                                } catch (\Throwable $e) {
-                                    $childAuthorId = 0;
-                                }
-                                $childCanView = canViewPrivateComment($childOwnerId, $childAuthorId);
-                            }
-
-                            if ($childIsPrivate && !$childCanView) {
-                                $childPreviewText = _t('私信内容');
-                            } else {
-                                $childPreviewText = stripPrivateCommentMarker($childRaw);
-                                $childPreviewText = strip_tags($childPreviewText);
-                                $childPreviewText = (string) preg_replace('/\\s+/u', ' ', $childPreviewText);
-                                $childPreviewText = trim($childPreviewText);
-                                if ($childPreviewText === '') {
-                                    $childPreviewText = _t('（无内容）');
-                                } else {
-                                    $childPreviewText = Common::subStr($childPreviewText, 0, 72, '...');
-                                }
-                            }
-                            ?>
-                            <div class="comment-children-preview-item">
-                                <span class="comment-children-preview-author"><?php echo escape($childAuthor); ?></span><span class="comment-children-preview-sep">：</span><span class="comment-children-preview-text"><?php echo escape($childPreviewText); ?></span>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <span class="comment-children-toggle comment-children-toggle-closed"><?php echo _t('共') . (int) $childrenCount . _t('条回复'); ?></span>
-                    <span class="comment-children-toggle comment-children-toggle-open"><?php _e('收起回复'); ?></span>
-                </summary>
-                <div class="comment-children-full">
-                    <?php $comments->threadedComments(); ?>
-                </div>
-            </details>
-        <?php } ?>
         <div class="comment-reply"> 
             <?php $comments->reply($singleCommentOptions->replyWord); ?> 
             <button class="comment-share-btn" type="button" aria-label="<?php _e('分享'); ?>" title="<?php _e('分享'); ?>" data-comment-share="<?php $comments->permalink(); ?>"> 
@@ -4474,6 +4410,13 @@ function threadedComments($comments, $singleCommentOptions): void
                 <textarea class="comment-edit-source" data-comment-edit-source hidden><?php echo escape((string) $editText); ?></textarea>
             <?php endif; ?>
         </div> 
+        <?php if ($comments->children) { ?>
+            <div class="comment-children" itemprop="discusses">
+                <div class="comment-children-full">
+                    <?php $comments->threadedComments(); ?>
+                </div>
+            </div>
+        <?php } ?>
     </li>
     <?php
 }

@@ -2171,94 +2171,6 @@
                 }
             }
 
-            function cleanText(text) {
-                return String(text || "").replace(/\s+/g, " ").trim();
-            }
-
-            function shorten(text, maxLen) {
-                text = cleanText(text);
-                maxLen = parseInt(maxLen || "0", 10);
-                if (!isFinite(maxLen) || maxLen <= 0) {
-                    return text;
-                }
-                if (text.length <= maxLen) {
-                    return text;
-                }
-                if (maxLen <= 3) {
-                    return text.slice(0, maxLen);
-                }
-                return text.slice(0, maxLen - 3) + "...";
-            }
-
-            function rebuildPreview(detailsEl) {
-                if (!detailsEl) {
-                    return;
-                }
-                var preview = detailsEl.querySelector(".comment-children-preview");
-                var list = detailsEl.querySelector(".comment-children-full > .comment-list");
-                if (!preview || !list) {
-                    return;
-                }
-
-                var items = Array.prototype.slice.call(list.children || []).filter(function (n) {
-                    return n && n.classList && n.classList.contains("comment-body");
-                });
-
-                // Keep the same 5-item cap as the server-side render.
-                var maxItems = 5;
-                items = items.slice(0, maxItems);
-
-                while (preview.firstChild) {
-                    preview.removeChild(preview.firstChild);
-                }
-
-                items.forEach(function (item) {
-                    var authorEl = item.querySelector(".comment-author .fn");
-                    var author = cleanText(authorEl ? authorEl.textContent : "");
-                    if (!author) {
-                        author = "匿名";
-                    }
-
-                    var text = "";
-                    if (item.classList.contains("is-private-hidden")) {
-                        text = "私信内容";
-                    } else {
-                        var contentEl = item.querySelector(".comment-content");
-                        text = cleanText(contentEl ? contentEl.textContent : "");
-                        if (!text) {
-                            text = "（无内容）";
-                        } else {
-                            text = shorten(text, 72);
-                        }
-                    }
-
-                    var row = document.createElement("div");
-                    row.className = "comment-children-preview-item";
-
-                    var a = document.createElement("span");
-                    a.className = "comment-children-preview-author";
-                    a.textContent = author;
-
-                    var sep = document.createElement("span");
-                    sep.className = "comment-children-preview-sep";
-                    sep.textContent = "：";
-
-                    var t = document.createElement("span");
-                    t.className = "comment-children-preview-text";
-                    t.textContent = text;
-
-                    row.appendChild(a);
-                    row.appendChild(sep);
-                    row.appendChild(t);
-                    preview.appendChild(row);
-                });
-            }
-
-            function rebuildAllPreviews() {
-                var blocks = Array.prototype.slice.call(comments.querySelectorAll("details.comment-children"));
-                blocks.forEach(rebuildPreview);
-            }
-
             sortBtn.addEventListener("click", function (e) {
                 if (e && e.preventDefault) {
                     e.preventDefault();
@@ -2275,7 +2187,10 @@
                 setOrder(next);
                 updateSortLabel();
                 renderSortIcon();
-                rebuildAllPreviews();
+                // Thread order changed, recompute avatar sizing/connector lengths.
+                try {
+                    window.dispatchEvent(new Event("resize"));
+                } catch (err) {}
             });
 
             updateSortLabel();
@@ -2356,36 +2271,9 @@
             });  
         })();  
 
-        (function setupCommentChildrenToggleGuard() {
-            // Only the "共x条回复 / 收起回复" text can toggle <details>.
-            comments.addEventListener("click", function (e) {
-                var t = e && e.target;
-                if (!t || !t.closest) {
-                    return;
-                }
-
-                var summary = t.closest("summary.comment-children-summary");
-                if (!summary) {
-                    return;
-                }
-
-                var toggle = t.closest(".comment-children-toggle");
-                if (toggle) {
-                    return;
-                }
-
-                if (e && typeof e.preventDefault === "function") {
-                    e.preventDefault();
-                }
-                if (e && typeof e.stopPropagation === "function") {
-                    e.stopPropagation();
-                }
-            }, true);
-        })();
-
         (function setupCommentAvatarSizing() {
             // Make the avatar diameter match the author-meta two-line height.
-            // We also update --comment-avatar-size so all left indents stay aligned.
+            // We also update --comment-avatar-size and the connector line height.
             var raf = window.requestAnimationFrame || function (fn) { return window.setTimeout(fn, 16); };
             var ticking = false;
 
@@ -2411,9 +2299,130 @@
                         return;
                     }
 
-                    // Clamp to a reasonable minimum so it doesn't collapse on edge cases.
-                    var h = Math.max(24, rect.height);
+                    // Keep avatar prominent while still bounded for layout stability.
+                    var h = Math.max(28, Math.min(46, rect.height * 1.15));
                     item.style.setProperty("--comment-avatar-size", h.toFixed(2) + "px");
+                });
+
+                var commentsStyle = window.getComputedStyle ? window.getComputedStyle(comments) : null;
+                var lineStartGap = commentsStyle ? parseFloat(commentsStyle.getPropertyValue("--comment-avatar-line-gap-start")) : NaN;
+                var lineEndGap = commentsStyle ? parseFloat(commentsStyle.getPropertyValue("--comment-avatar-line-gap-end")) : NaN;
+                var lineFadeLength = commentsStyle ? parseFloat(commentsStyle.getPropertyValue("--comment-avatar-line-fade-length")) : NaN;
+                if (!isFinite(lineStartGap)) {
+                    lineStartGap = 6;
+                }
+                if (!isFinite(lineEndGap)) {
+                    lineEndGap = 4;
+                }
+                if (!isFinite(lineFadeLength) || lineFadeLength < 0) {
+                    lineFadeLength = 0;
+                }
+
+                function nextCommentSibling(item) {
+                    var next = item ? item.nextElementSibling : null;
+                    while (next && (!next.classList || !next.classList.contains("comment-body"))) {
+                        next = next.nextElementSibling;
+                    }
+                    return next || null;
+                }
+
+                function getCommentLevel(node, fallbackLevel) {
+                    var level = parseInt(node && node.getAttribute ? node.getAttribute("data-comment-level") || "" : "", 10);
+                    if (!isFinite(level)) {
+                        level = isFinite(fallbackLevel) ? fallbackLevel : 0;
+                    }
+                    return level;
+                }
+
+                function nextSameLevelSibling(item, currentLevel) {
+                    if (!item) {
+                        return null;
+                    }
+                    var next = nextCommentSibling(item);
+                    if (!next) {
+                        return null;
+                    }
+                    var nextLevel = getCommentLevel(next, currentLevel);
+                    return nextLevel === currentLevel ? next : null;
+                }
+
+                function nextOutsideSubtree(index, currentLevel) {
+                    var i = index + 1;
+                    while (i < items.length) {
+                        var candidate = items[i];
+                        if (!candidate) {
+                            i += 1;
+                            continue;
+                        }
+                        // Skip descendants of current node; find the first row after this subtree.
+                        var candidateLevel = getCommentLevel(candidate, currentLevel);
+                        if (candidateLevel <= currentLevel) {
+                            return candidate;
+                        }
+                        i += 1;
+                    }
+                    return null;
+                }
+
+                items.forEach(function (item, index) {
+                    var avatarWrap = item.querySelector('.comment-author span[itemprop="image"]');
+                    if (!avatarWrap) {
+                        item.classList.add("is-avatar-line-hidden");
+                        item.style.setProperty("--comment-avatar-line-height", "0px");
+                        return;
+                    }
+
+                    var avatarRect;
+                    var itemRect;
+                    try {
+                        avatarRect = avatarWrap.getBoundingClientRect();
+                        itemRect = item.getBoundingClientRect();
+                    } catch (e) {
+                        avatarRect = null;
+                        itemRect = null;
+                    }
+                    if (!avatarRect || !itemRect) {
+                        item.classList.add("is-avatar-line-hidden");
+                        item.style.setProperty("--comment-avatar-line-height", "0px");
+                        return;
+                    }
+
+                    var startY = avatarRect.bottom + lineStartGap;
+                    var endY = 0;
+                    var currentLevel = getCommentLevel(item, 0);
+                    var target = nextSameLevelSibling(item, currentLevel);
+                    if (!target) {
+                        // If there is no same-level sibling, connect to the first comment
+                        // after the current subtree to avoid stopping at child replies.
+                        target = nextOutsideSubtree(index, currentLevel);
+                    }
+
+                    var targetY = 0;
+                    if (target) {
+                        var targetRect;
+                        try {
+                            targetRect = target.getBoundingClientRect();
+                        } catch (e) {
+                            targetRect = null;
+                        }
+                        if (targetRect) {
+                            targetY = targetRect.top - lineEndGap;
+                        }
+                    }
+
+                    if (!(isFinite(targetY) && targetY > 0)) {
+                        targetY = itemRect.bottom - lineEndGap;
+                    }
+                    endY = targetY + lineFadeLength;
+
+                    var lineHeight = endY - startY;
+                    if (!isFinite(lineHeight) || lineHeight < 6) {
+                        item.classList.add("is-avatar-line-hidden");
+                        item.style.setProperty("--comment-avatar-line-height", "0px");
+                    } else {
+                        item.classList.remove("is-avatar-line-hidden");
+                        item.style.setProperty("--comment-avatar-line-height", lineHeight.toFixed(2) + "px");
+                    }
                 });
             }
 
@@ -2428,21 +2437,60 @@
                 });
             }
 
+            function requestUpdateBurst() {
+                requestUpdate();
+                window.setTimeout(requestUpdate, 40);
+                window.setTimeout(requestUpdate, 140);
+                window.setTimeout(requestUpdate, 280);
+            }
+
             window.addEventListener("resize", requestUpdate);
 
-            // Recompute after expanding/collapsing reply blocks.
+            // Reply form insertion/removal and threaded list updates should recompute
+            // connector start/end positions immediately.
+            if (window.MutationObserver) {
+                try {
+                    var mo = new MutationObserver(function () {
+                        requestUpdate();
+                    });
+                    mo.observe(comments, {
+                        childList: true,
+                        subtree: true
+                    });
+                } catch (e) {}
+            }
+
+            if (window.ResizeObserver) {
+                try {
+                    var ro = new ResizeObserver(function () {
+                        requestUpdate();
+                    });
+                    ro.observe(comments);
+                } catch (e) {}
+            }
+
             comments.addEventListener("click", function (e) {
-                var t = e && e.target;
-                if (!t || !t.closest) {
+                var target = e && e.target && e.target.closest ? e.target.closest("a,button") : null;
+                if (!target) {
                     return;
                 }
-                if (!t.closest(".comment-children-toggle")) {
-                    return;
+                var isReplyAction = false;
+                if (target.id === "cancel-comment-reply-link") {
+                    isReplyAction = true;
+                } else if (target.classList && target.classList.contains("comment-reply-link")) {
+                    isReplyAction = true;
+                } else {
+                    var onclickText = target.getAttribute ? String(target.getAttribute("onclick") || "") : "";
+                    if (onclickText.indexOf("TypechoComment.reply(") !== -1) {
+                        isReplyAction = true;
+                    }
                 }
-                window.setTimeout(requestUpdate, 0);
+                if (isReplyAction) {
+                    requestUpdateBurst();
+                }
             }, true);
 
-            requestUpdate();
+            requestUpdateBurst();
         })();
  
         // Typecho's built-in reply script toggles #cancel-comment-reply-link.

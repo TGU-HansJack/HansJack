@@ -110,6 +110,13 @@ if ($comments && $comments->have()) {
             $author = _t('匿名');
         }
 
+        $authorUrl = '';
+        try {
+            $authorUrl = trim((string) ($comments->url ?? ''));
+        } catch (\Throwable $e) {
+            $authorUrl = '';
+        }
+
         $mail = '';
         try {
             $mail = strtolower(trim((string) ($comments->mail ?? '')));
@@ -215,6 +222,7 @@ if ($comments && $comments->have()) {
         $commentsData[] = [
             'id' => $coid,
             'author' => $author,
+            'authorUrl' => $authorUrl,
             'avatar' => $avatar,
             'created' => $created,
             'date' => $formatDate($created, 'Y/m/d H:i:s'),
@@ -414,6 +422,17 @@ if ($pagePermalink === '') {
                                         </span>
                                         <div class="comment-author-meta">
                                             <cite class="fn" itemprop="name"><?php echo escape((string) ($item['author'] ?? '')); ?></cite>
+                                            <?php $memoryAuthorUrl = trim((string) ($item['authorUrl'] ?? '')); ?>
+                                            <?php if ($memoryAuthorUrl !== ''): ?>
+                                                <a
+                                                    class="comment-author-home"
+                                                    href="<?php echo escape($memoryAuthorUrl); ?>"
+                                                    rel="external nofollow"
+                                                    aria-label="<?php _e('访问作者网站'); ?>"
+                                                    title="<?php _e('访问作者网站'); ?>">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-house-icon lucide-house" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                                                </a>
+                                            <?php endif; ?>
                                             <div class="comment-meta">
                                                 <time itemprop="commentTime" datetime="<?php echo escape((string) ($item['dateIso'] ?? '')); ?>">
                                                     <?php echo escape((string) ($item['date'] ?? '')); ?>
@@ -421,7 +440,7 @@ if ($pagePermalink === '') {
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="comment-content comment-content" itemprop="commentText">
+                                    <div class="comment-content" itemprop="commentText">
                                         <?php echo (string) ($item['content'] ?? ''); ?>
                                         <?php if ($status !== '' && $status !== 'approved'): ?>
                                             <p class="comment-awaiting-moderation"><?php _e('审核中'); ?></p>
