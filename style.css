@@ -5750,6 +5750,46 @@ html.theme-dark .fab-reward-backdrop {
     opacity: 0.86; 
 } 
 
+.comments .comment-reply .comment-children-toggle {
+    width: auto;
+    min-width: 34px;
+    padding: 0 0.22rem 0 0;
+    gap: 0.16rem;
+}
+
+.comments .comment-reply .comment-children-toggle .comment-children-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.comments .comment-reply .comment-children-toggle .comment-children-toggle-icon-collapse {
+    display: none;
+}
+
+.comments .comment-body.comment-parent:not(.comment-children-collapsed) .comment-reply .comment-children-toggle .comment-children-toggle-icon-expand {
+    display: none;
+}
+
+.comments .comment-body.comment-parent:not(.comment-children-collapsed) .comment-reply .comment-children-toggle .comment-children-toggle-icon-collapse {
+    display: inline-flex;
+}
+
+.comments .comment-reply .comment-children-toggle::after {
+    left: 12px;
+}
+
+.comments .comment-reply .comment-children-toggle-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.2ch;
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
 .comments .comment-reply a::after,
 .comments .comment-reply button::after {
     position: absolute;
@@ -5970,6 +6010,10 @@ html.theme-dark .fab-reward-backdrop {
     padding-left: 0;  
     padding-bottom: 0; 
 }  
+
+.comments .comment-body.comment-parent.comment-children-collapsed > .comment-children {
+    display: none;
+}
  
 .comments .comment-children-full {
     margin-top: 0;

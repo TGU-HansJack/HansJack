@@ -2271,6 +2271,79 @@
             });  
         })();  
 
+        (function setupCommentChildrenToggle() {
+            var buttons = Array.prototype.slice.call(comments.querySelectorAll("[data-comment-children-toggle]"));
+            if (!buttons || buttons.length === 0) {
+                return;
+            }
+
+            function findDirectChildrenWrap(row) {
+                if (!row) {
+                    return null;
+                }
+                var nodes = row.children || [];
+                for (var i = 0; i < nodes.length; i++) {
+                    var node = nodes[i];
+                    if (node && node.classList && node.classList.contains("comment-children")) {
+                        return node;
+                    }
+                }
+                if (row.querySelector) {
+                    return row.querySelector(".comment-children");
+                }
+                return null;
+            }
+
+            function syncToggleState(row, button) {
+                if (!row || !button) {
+                    return;
+                }
+
+                var wrap = findDirectChildrenWrap(row);
+                if (!wrap) {
+                    button.setAttribute("hidden", "hidden");
+                    return;
+                }
+
+                var collapsed = row.classList.contains("comment-children-collapsed");
+                var label = collapsed ? "展开子评论" : "收起子评论";
+                button.setAttribute("aria-label", label);
+                button.setAttribute("title", label);
+                button.setAttribute("aria-expanded", collapsed ? "false" : "true");
+
+                if (collapsed) {
+                    wrap.setAttribute("hidden", "hidden");
+                } else {
+                    wrap.removeAttribute("hidden");
+                }
+            }
+
+            buttons.forEach(function (button) {
+                var row = button.closest ? button.closest(".comment-body") : null;
+                if (!row) {
+                    return;
+                }
+
+                syncToggleState(row, button);
+                button.addEventListener("click", function (e) {
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+
+                    var wrap = findDirectChildrenWrap(row);
+                    if (!wrap) {
+                        return;
+                    }
+
+                    row.classList.toggle("comment-children-collapsed");
+                    syncToggleState(row, button);
+                    try {
+                        window.dispatchEvent(new Event("resize"));
+                    } catch (err) {}
+                });
+            });
+        })();
+
         (function setupCommentAvatarSizing() {
             // Make the avatar diameter match the author-meta two-line height.
             // We also update --comment-avatar-size and the connector line height.
@@ -2360,7 +2433,8 @@
 
                 items.forEach(function (item, index) {
                     var hasChildren = item.classList && item.classList.contains("comment-has-children");
-                    if (!hasChildren) {
+                    var isChildrenCollapsed = item.classList && item.classList.contains("comment-children-collapsed");
+                    if (!hasChildren || isChildrenCollapsed) {
                         item.classList.add("is-avatar-line-hidden");
                         item.style.setProperty("--comment-avatar-line-height", "0px");
                         return;

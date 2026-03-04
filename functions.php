@@ -4278,6 +4278,14 @@ function threadedComments($comments, $singleCommentOptions): void
         }
     }
 
+    $commentLevel = 0;
+    try {
+        $commentLevel = (int) ($comments->levels ?? 0);
+    } catch (\Throwable $e) {
+        $commentLevel = 0;
+    }
+    $isTopLevelComment = ($commentLevel === 0);
+
     $hasChildren = false;
     try {
         $hasChildren = !empty($comments->children);
@@ -4286,6 +4294,28 @@ function threadedComments($comments, $singleCommentOptions): void
     }
     if ($hasChildren) {
         $commentClass .= ' comment-has-children';
+    }
+
+    $childCommentsCount = 0;
+    if ($hasChildren) {
+        $childCommentsCount = max(0, (int) countCommentDescendants($comments));
+        if ($childCommentsCount <= 0) {
+            try {
+                $children = $comments->children;
+                $childCommentsCount = is_array($children) ? count($children) : 0;
+            } catch (\Throwable $e) {
+                $childCommentsCount = 0;
+            }
+        }
+    }
+
+    if ($hasChildren && $isTopLevelComment) {
+        $commentClass .= ' comment-children-collapsed';
+    }
+
+    $childrenWrapId = '';
+    if ($hasChildren && $commentCoid > 0) {
+        $childrenWrapId = 'comment-children-' . $commentCoid;
     }
 
     $avatarSize = max(1, (int) ($singleCommentOptions->avatarSize ?? 32));
@@ -4335,7 +4365,7 @@ function threadedComments($comments, $singleCommentOptions): void
     }
     ?>
     <li itemscope itemtype="http://schema.org/UserComments" id="<?php $comments->theId(); ?>" class="comment-body<?php 
-    if ($comments->levels > 0) { 
+    if ($commentLevel > 0) { 
         echo ' comment-child'; 
         $comments->levelsAlt(' comment-level-odd', ' comment-level-even'); 
     } else { 
@@ -4343,7 +4373,7 @@ function threadedComments($comments, $singleCommentOptions): void
     }
     $comments->alt(' comment-odd', ' comment-even');
     echo $commentClass; 
-    ?>" data-comment-level="<?php echo (int) $comments->levels; ?>"> 
+    ?>" data-comment-level="<?php echo $commentLevel; ?>"> 
         <div class="comment-author" itemprop="creator" itemscope itemtype="http://schema.org/Person">  
             <span itemprop="image">  
                 <img
@@ -4409,9 +4439,27 @@ function threadedComments($comments, $singleCommentOptions): void
                 </button>
                 <textarea class="comment-edit-source" data-comment-edit-source hidden><?php echo escape((string) $editText); ?></textarea>
             <?php endif; ?>
+            <?php if ($hasChildren && $isTopLevelComment): ?>
+                <button
+                    class="comment-children-toggle"
+                    type="button"
+                    aria-label="<?php _e('展开子评论'); ?>"
+                    title="<?php _e('展开子评论'); ?>"
+                    aria-expanded="false"
+                    data-comment-children-toggle
+                    <?php if ($childrenWrapId !== ''): ?>aria-controls="<?php echo escape($childrenWrapId); ?>"<?php endif; ?>>
+                    <span class="comment-children-toggle-icon comment-children-toggle-icon-expand" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-chevrons-up-down-icon lucide-list-chevrons-up-down"><path d="M3 5h8"/><path d="M3 12h8"/><path d="M3 19h8"/><path d="m15 8 3-3 3 3"/><path d="m15 16 3 3 3-3"/></svg>
+                    </span>
+                    <span class="comment-children-toggle-icon comment-children-toggle-icon-collapse" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-chevrons-down-up-icon lucide-list-chevrons-down-up"><path d="M3 5h8"/><path d="M3 12h8"/><path d="M3 19h8"/><path d="m15 5 3 3 3-3"/><path d="m15 19 3-3 3 3"/></svg>
+                    </span>
+                    <span class="comment-children-toggle-count" aria-hidden="true">(<?php echo (int) $childCommentsCount; ?>)</span>
+                </button>
+            <?php endif; ?>
         </div> 
         <?php if ($comments->children) { ?>
-            <div class="comment-children" itemprop="discusses">
+            <div class="comment-children" itemprop="discusses"<?php if ($childrenWrapId !== ''): ?> id="<?php echo escape($childrenWrapId); ?>"<?php endif; ?><?php if ($hasChildren && $isTopLevelComment): ?> hidden<?php endif; ?>>
                 <div class="comment-children-full">
                     <?php $comments->threadedComments(); ?>
                 </div>
