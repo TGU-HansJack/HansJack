@@ -5397,6 +5397,8 @@ html.theme-dark .fab-reward-backdrop {
     --comment-avatar-line-color: rgba(162, 162, 162, 0.62);
     --comment-avatar-line-fade: rgba(162, 162, 162, 0);
     --comment-avatar-border: rgba(162, 162, 162, 0.55);
+    --comment-target-bg: rgba(156, 156, 156, 0.16);
+    --comment-target-bg-strong: rgba(138, 138, 138, 0.24);
 }   
 
 .comments .comments-head {
@@ -5559,6 +5561,20 @@ html.theme-dark .fab-reward-backdrop {
 .comments .comment-body.comment-parent,
 .comments .comment-body.comment-child.comment-has-children {
     border: 0;
+}
+
+.comments .comment-body.is-comment-targeted {
+    background-color: var(--comment-target-bg);
+    animation: comment-target-flash 0.9s ease;
+}
+
+@keyframes comment-target-flash {
+    0% {
+        background-color: var(--comment-target-bg-strong);
+    }
+    100% {
+        background-color: var(--comment-target-bg);
+    }
 }
 
 .comments .comment-author {
@@ -8184,6 +8200,8 @@ html.login-modal-open .login-modal {
         --comment-avatar-line-color: rgba(183, 183, 183, 0.46);
         --comment-avatar-line-fade: rgba(183, 183, 183, 0);
         --comment-avatar-border: rgba(183, 183, 183, 0.5);
+        --comment-target-bg: rgba(164, 164, 164, 0.2);
+        --comment-target-bg-strong: rgba(186, 186, 186, 0.28);
     }
 
     html:not(.theme-light) .comments {
@@ -8874,6 +8892,8 @@ html.theme-dark .comments {
     --comment-avatar-line-color: rgba(183, 183, 183, 0.46);
     --comment-avatar-line-fade: rgba(183, 183, 183, 0);
     --comment-avatar-border: rgba(183, 183, 183, 0.5);
+    --comment-target-bg: rgba(164, 164, 164, 0.2);
+    --comment-target-bg-strong: rgba(186, 186, 186, 0.28);
 }
 
 html.theme-dark .comment-box.is-private,  

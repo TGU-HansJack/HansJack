@@ -2276,6 +2276,8 @@
             if (!buttons || buttons.length === 0) {
                 return;
             }
+            var activeHashTarget = null;
+            var activeHashTargetTimer = 0;
 
             function findDirectChildrenWrap(row) {
                 if (!row) {
@@ -2318,6 +2320,105 @@
                 }
             }
 
+            function expandCollapsedRow(row) {
+                if (!row || !row.classList || !row.classList.contains("comment-children-collapsed")) {
+                    return false;
+                }
+                row.classList.remove("comment-children-collapsed");
+                var button = row.querySelector ? row.querySelector("[data-comment-children-toggle]") : null;
+                if (button) {
+                    syncToggleState(row, button);
+                } else {
+                    var wrap = findDirectChildrenWrap(row);
+                    if (wrap) {
+                        wrap.removeAttribute("hidden");
+                    }
+                }
+                return true;
+            }
+
+            function findCommentTargetFromHash(rawHash) {
+                var hash = String(rawHash || "");
+                if (!hash) {
+                    return null;
+                }
+                if (hash.charAt(0) === "#") {
+                    hash = hash.slice(1);
+                }
+                try {
+                    hash = decodeURIComponent(hash);
+                } catch (e) {}
+                hash = String(hash || "").trim();
+                if (!hash || hash.indexOf("comment-") !== 0) {
+                    return null;
+                }
+                var target = document.getElementById(hash);
+                if (!target || !comments.contains(target)) {
+                    return null;
+                }
+                return target;
+            }
+
+            function revealHashComment(rawHash, smoothScroll) {
+                var target = findCommentTargetFromHash(rawHash);
+                if (!target) {
+                    return;
+                }
+
+                var changed = false;
+                var cursor = target;
+                while (cursor) {
+                    var ancestor = cursor.parentElement && cursor.parentElement.closest
+                        ? cursor.parentElement.closest(".comment-body.comment-children-collapsed")
+                        : null;
+                    if (!ancestor) {
+                        break;
+                    }
+                    if (expandCollapsedRow(ancestor)) {
+                        changed = true;
+                    }
+                    cursor = ancestor;
+                }
+
+                if (changed) {
+                    try {
+                        window.dispatchEvent(new Event("resize"));
+                    } catch (err) {}
+                }
+
+                window.setTimeout(function () {
+                    if (!target || !target.scrollIntoView) {
+                        return;
+                    }
+                    try {
+                        target.scrollIntoView({
+                            behavior: smoothScroll ? "smooth" : "auto",
+                            block: "center"
+                        });
+                    } catch (e) {}
+                    if (activeHashTargetTimer) {
+                        window.clearTimeout(activeHashTargetTimer);
+                        activeHashTargetTimer = 0;
+                    }
+                    if (activeHashTarget && activeHashTarget !== target && activeHashTarget.classList) {
+                        activeHashTarget.classList.remove("is-comment-targeted");
+                    }
+                    if (target.classList) {
+                        target.classList.remove("is-comment-targeted");
+                        void target.offsetWidth;
+                        target.classList.add("is-comment-targeted");
+                    }
+                    activeHashTarget = target;
+                    activeHashTargetTimer = window.setTimeout(function () {
+                        if (activeHashTarget && activeHashTarget.classList) {
+                            activeHashTarget.classList.remove("is-comment-targeted");
+                        }
+                        activeHashTarget = null;
+                        activeHashTargetTimer = 0;
+                    }, 1800);
+                }, changed ? 36 : 0);
+            }
+
             buttons.forEach(function (button) {
                 var row = button.closest ? button.closest(".comment-body") : null;
                 if (!row) {
@@ -2341,6 +2442,16 @@
                         window.dispatchEvent(new Event("resize"));
                     } catch (err) {}
                 });
+            });
+
+            window.setTimeout(function () {
+                revealHashComment(window.location ? window.location.hash : "", false);
+            }, 0);
+            window.setTimeout(function () {
+                revealHashComment(window.location ? window.location.hash : "", false);
+            }, 120);
+            window.addEventListener("hashchange", function () {
+                revealHashComment(window.location ? window.location.hash : "", true);
             });
         })();
 
