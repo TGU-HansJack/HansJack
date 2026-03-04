@@ -2318,14 +2318,6 @@
                     lineFadeLength = 0;
                 }
 
-                function nextCommentSibling(item) {
-                    var next = item ? item.nextElementSibling : null;
-                    while (next && (!next.classList || !next.classList.contains("comment-body"))) {
-                        next = next.nextElementSibling;
-                    }
-                    return next || null;
-                }
-
                 function getCommentLevel(node, fallbackLevel) {
                     var level = parseInt(node && node.getAttribute ? node.getAttribute("data-comment-level") || "" : "", 10);
                     if (!isFinite(level)) {
@@ -2334,19 +2326,7 @@
                     return level;
                 }
 
-                function nextSameLevelSibling(item, currentLevel) {
-                    if (!item) {
-                        return null;
-                    }
-                    var next = nextCommentSibling(item);
-                    if (!next) {
-                        return null;
-                    }
-                    var nextLevel = getCommentLevel(next, currentLevel);
-                    return nextLevel === currentLevel ? next : null;
-                }
-
-                function nextOutsideSubtree(index, currentLevel) {
+                function findBoundaryComment(index, currentLevel) {
                     var i = index + 1;
                     while (i < items.length) {
                         var candidate = items[i];
@@ -2354,7 +2334,9 @@
                             i += 1;
                             continue;
                         }
-                        // Skip descendants of current node; find the first row after this subtree.
+                        // Boundary rule: first row whose level is <= current level.
+                        // - Same level: stop above same-level next comment.
+                        // - Upper level: stop above parent-level (or higher) next comment.
                         var candidateLevel = getCommentLevel(candidate, currentLevel);
                         if (candidateLevel <= currentLevel) {
                             return candidate;
@@ -2362,6 +2344,18 @@
                         i += 1;
                     }
                     return null;
+                }
+
+                function getThreadRootComment(item) {
+                    var root = item;
+                    while (root && root.parentElement && root.parentElement.closest) {
+                        var parentComment = root.parentElement.closest(".comment-body");
+                        if (!parentComment) {
+                            break;
+                        }
+                        root = parentComment;
+                    }
+                    return root || item;
                 }
 
                 items.forEach(function (item, index) {
@@ -2390,14 +2384,10 @@
                     var startY = avatarRect.bottom + lineStartGap;
                     var endY = 0;
                     var currentLevel = getCommentLevel(item, 0);
-                    var target = nextSameLevelSibling(item, currentLevel);
-                    if (!target) {
-                        // If there is no same-level sibling, connect to the first comment
-                        // after the current subtree to avoid stopping at child replies.
-                        target = nextOutsideSubtree(index, currentLevel);
-                    }
+                    var target = findBoundaryComment(index, currentLevel);
 
-                    var targetY = 0;
+                    var targetY = NaN;
+                    var hasBoundary = false;
                     if (target) {
                         var targetRect;
                         try {
@@ -2405,13 +2395,25 @@
                         } catch (e) {
                             targetRect = null;
                         }
-                        if (targetRect) {
+                        if (targetRect && isFinite(targetRect.top)) {
+                            hasBoundary = true;
                             targetY = targetRect.top - lineEndGap;
                         }
                     }
 
-                    if (!(isFinite(targetY) && targetY > 0)) {
-                        targetY = itemRect.bottom - lineEndGap;
+                    if (!hasBoundary || !isFinite(targetY)) {
+                        var rootComment = getThreadRootComment(item);
+                        var rootRect = null;
+                        try {
+                            rootRect = rootComment ? rootComment.getBoundingClientRect() : null;
+                        } catch (e) {
+                            rootRect = null;
+                        }
+                        if (rootRect && isFinite(rootRect.bottom)) {
+                            targetY = rootRect.bottom - lineEndGap;
+                        } else {
+                            targetY = itemRect.bottom - lineEndGap;
+                        }
                     }
                     endY = targetY + lineFadeLength;
 
