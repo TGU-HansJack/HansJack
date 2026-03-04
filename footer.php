@@ -154,25 +154,28 @@ if ($customJavaScript !== '') {
     <div class="fab-settings-panel" role="dialog" aria-modal="true" aria-label="<?php _e('设置'); ?>" data-posts-settings-panel>
         <div class="fab-settings-row">
             <span class="fab-settings-label"><?php _e('排序模式'); ?></span>
-            <select class="fab-settings-select" data-posts-setting-sort-mode>
-                <option value="default"><?php _e('默认'); ?></option>
-                <option value="published"><?php _e('按照发布时间'); ?></option>
-                <option value="updated"><?php _e('按照更新时间'); ?></option>
-            </select>
+            <div class="fab-settings-segmented" role="radiogroup" aria-label="<?php _e('排序模式'); ?>" data-posts-setting-sort-mode>
+                <span class="fab-settings-segmented-thumb" aria-hidden="true"></span>
+                <button class="fab-settings-segmented-option is-active" type="button" role="radio" aria-checked="true" data-value="default"><?php _e('默认'); ?></button>
+                <button class="fab-settings-segmented-option" type="button" role="radio" aria-checked="false" data-value="published"><?php _e('发布'); ?></button>
+                <button class="fab-settings-segmented-option" type="button" role="radio" aria-checked="false" data-value="updated"><?php _e('更新'); ?></button>
+            </div>
         </div>
         <div class="fab-settings-row">
             <span class="fab-settings-label"><?php _e('顺序'); ?></span>
-            <select class="fab-settings-select" data-posts-setting-order>
-                <option value="desc"><?php _e('降序'); ?></option>
-                <option value="asc"><?php _e('升序'); ?></option>
-            </select>
+            <div class="fab-settings-segmented" role="radiogroup" aria-label="<?php _e('顺序'); ?>" data-posts-setting-order>
+                <span class="fab-settings-segmented-thumb" aria-hidden="true"></span>
+                <button class="fab-settings-segmented-option is-active" type="button" role="radio" aria-checked="true" data-value="desc"><?php _e('降序'); ?></button>
+                <button class="fab-settings-segmented-option" type="button" role="radio" aria-checked="false" data-value="asc"><?php _e('升序'); ?></button>
+            </div>
         </div>
         <div class="fab-settings-row">
             <span class="fab-settings-label"><?php _e('列表模式'); ?></span>
-            <select class="fab-settings-select" data-posts-setting-list-mode>
-                <option value="compact"><?php _e('紧凑模式'); ?></option>
-                <option value="preview"><?php _e('预览模式'); ?></option>
-            </select>
+            <div class="fab-settings-segmented" role="radiogroup" aria-label="<?php _e('列表模式'); ?>" data-posts-setting-list-mode>
+                <span class="fab-settings-segmented-thumb" aria-hidden="true"></span>
+                <button class="fab-settings-segmented-option is-active" type="button" role="radio" aria-checked="true" data-value="compact"><?php _e('紧凑'); ?></button>
+                <button class="fab-settings-segmented-option" type="button" role="radio" aria-checked="false" data-value="preview"><?php _e('预览'); ?></button>
+            </div>
         </div>
     </div>
 </div>

@@ -105,9 +105,9 @@
         var tocBtn = fab.querySelector(".fab-toc");
         var settingsPopover = document.querySelector("[data-posts-settings-popover]");
         var settingsPanel = settingsPopover ? settingsPopover.querySelector("[data-posts-settings-panel]") : null;
-        var settingsSortModeSelect = settingsPopover ? settingsPopover.querySelector("[data-posts-setting-sort-mode]") : null;
-        var settingsOrderSelect = settingsPopover ? settingsPopover.querySelector("[data-posts-setting-order]") : null;
-        var settingsListModeSelect = settingsPopover ? settingsPopover.querySelector("[data-posts-setting-list-mode]") : null;
+        var settingsSortModeControl = settingsPopover ? settingsPopover.querySelector("[data-posts-setting-sort-mode]") : null;
+        var settingsOrderControl = settingsPopover ? settingsPopover.querySelector("[data-posts-setting-order]") : null;
+        var settingsListModeControl = settingsPopover ? settingsPopover.querySelector("[data-posts-setting-list-mode]") : null;
         var rewardBackdrop = document.querySelector("[data-reward-backdrop]");
         var rewardPopover = document.querySelector("[data-reward-popover]");
         var rewardPanel = rewardPopover ? rewardPopover.querySelector("[data-reward-panel]") : null;
@@ -324,18 +324,121 @@
             } catch (e) {}
         }
 
+        function getSettingsSegmentedOptions(group) {
+            if (!group || !group.querySelectorAll) {
+                return [];
+            }
+            return Array.prototype.slice.call(group.querySelectorAll(".fab-settings-segmented-option[data-value]"));
+        }
+
+        function getSettingsSegmentedValue(group) {
+            var options = getSettingsSegmentedOptions(group);
+            if (!options || options.length === 0) {
+                return "";
+            }
+            var active = null;
+            options.some(function (opt) {
+                if (opt.getAttribute("aria-checked") === "true" || (opt.classList && opt.classList.contains("is-active"))) {
+                    active = opt;
+                    return true;
+                }
+                return false;
+            });
+            if (!active) {
+                active = options[0];
+            }
+            return String(active.getAttribute("data-value") || "");
+        }
+
+        function setSettingsSegmentedValue(group, value) {
+            var options = getSettingsSegmentedOptions(group);
+            if (!group || !options || options.length === 0) {
+                return;
+            }
+
+            var targetValue = String(value || "");
+            var activeIndex = -1;
+
+            options.forEach(function (opt, idx) {
+                var optionValue = String(opt.getAttribute("data-value") || "");
+                var isActive = optionValue === targetValue;
+                if (isActive) {
+                    activeIndex = idx;
+                }
+                opt.classList.toggle("is-active", isActive);
+                opt.setAttribute("aria-checked", isActive ? "true" : "false");
+                opt.setAttribute("tabindex", isActive ? "0" : "-1");
+            });
+
+            if (activeIndex < 0) {
+                activeIndex = 0;
+                options.forEach(function (opt, idx) {
+                    var isActive = idx === 0;
+                    opt.classList.toggle("is-active", isActive);
+                    opt.setAttribute("aria-checked", isActive ? "true" : "false");
+                    opt.setAttribute("tabindex", isActive ? "0" : "-1");
+                });
+            }
+
+            var activeOption = options[activeIndex];
+            var thumbLeft = 0;
+            var thumbWidth = 0;
+            if (activeOption && group.getBoundingClientRect && activeOption.getBoundingClientRect) {
+                var groupRect = group.getBoundingClientRect();
+                var optionRect = activeOption.getBoundingClientRect();
+                thumbLeft = optionRect.left - groupRect.left;
+                thumbWidth = optionRect.width;
+            }
+            if (!isFinite(thumbLeft) || thumbLeft < 0) {
+                thumbLeft = 0;
+            }
+            if (!isFinite(thumbWidth) || thumbWidth < 0) {
+                thumbWidth = 0;
+            }
+
+            group.style.setProperty("--fab-settings-segment-left", thumbLeft.toFixed(2) + "px");
+            group.style.setProperty("--fab-settings-segment-width", thumbWidth.toFixed(2) + "px");
+            group.setAttribute("data-active-index", String(activeIndex));
+            group.setAttribute("data-active-value", String(options[activeIndex].getAttribute("data-value") || ""));
+        }
+
+        function bindSettingsSegmentedControl(group, onChange) {
+            if (!group || !group.addEventListener || typeof onChange !== "function") {
+                return;
+            }
+            group.addEventListener("click", function (e) {
+                var target = e ? e.target : null;
+                if (!target || !target.closest) {
+                    return;
+                }
+                var option = target.closest(".fab-settings-segmented-option[data-value]");
+                if (!option || !group.contains(option)) {
+                    return;
+                }
+                var value = String(option.getAttribute("data-value") || "");
+                if (!value) {
+                    return;
+                }
+                var prev = getSettingsSegmentedValue(group);
+                setSettingsSegmentedValue(group, value);
+                if (value !== prev) {
+                    onChange(value);
+                }
+            });
+        }
+
         function syncPostsSettingsUI() {
             if (!postsSettings) {
                 return;
             }
-            if (settingsSortModeSelect) {
-                settingsSortModeSelect.value = postsSettings.sortMode;
+            if (settingsSortModeControl) {
+                setSettingsSegmentedValue(settingsSortModeControl, postsSettings.sortMode);
             }
-            if (settingsOrderSelect) {
-                settingsOrderSelect.value = postsSettings.order;
+            if (settingsOrderControl) {
+                setSettingsSegmentedValue(settingsOrderControl, postsSettings.order);
             }
-            if (settingsListModeSelect) {
-                settingsListModeSelect.value = postsSettings.listMode;
+            if (settingsListModeControl) {
+                setSettingsSegmentedValue(settingsListModeControl, postsSettings.listMode);
             }
         }
 
@@ -791,42 +894,36 @@
         applyPostsSettingsToAllLists();
         updateSettingsFabVisibility();
 
-        if (settingsSortModeSelect) {
-            settingsSortModeSelect.addEventListener("change", function () {
-                savePostsSettings({
-                    sortMode: settingsSortModeSelect.value,
-                    order: settingsOrderSelect ? settingsOrderSelect.value : postsSettings.order,
-                    listMode: settingsListModeSelect ? settingsListModeSelect.value : postsSettings.listMode
-                });
-                applyPostsSettingsToAllLists();
+        bindSettingsSegmentedControl(settingsSortModeControl, function (value) {
+            savePostsSettings({
+                sortMode: value,
+                order: getSettingsSegmentedValue(settingsOrderControl) || postsSettings.order,
+                listMode: getSettingsSegmentedValue(settingsListModeControl) || postsSettings.listMode
             });
-        }
+            applyPostsSettingsToAllLists();
+        });
 
-        if (settingsOrderSelect) {
-            settingsOrderSelect.addEventListener("change", function () {
-                savePostsSettings({
-                    sortMode: settingsSortModeSelect ? settingsSortModeSelect.value : postsSettings.sortMode,
-                    order: settingsOrderSelect.value,
-                    listMode: settingsListModeSelect ? settingsListModeSelect.value : postsSettings.listMode
-                });
-                applyPostsSettingsToAllLists();
+        bindSettingsSegmentedControl(settingsOrderControl, function (value) {
+            savePostsSettings({
+                sortMode: getSettingsSegmentedValue(settingsSortModeControl) || postsSettings.sortMode,
+                order: value,
+                listMode: getSettingsSegmentedValue(settingsListModeControl) || postsSettings.listMode
             });
-        }
+            applyPostsSettingsToAllLists();
+        });
 
-        if (settingsListModeSelect) {
-            settingsListModeSelect.addEventListener("change", function () {
-                savePostsSettings({
-                    sortMode: settingsSortModeSelect ? settingsSortModeSelect.value : postsSettings.sortMode,
-                    order: settingsOrderSelect ? settingsOrderSelect.value : postsSettings.order,
-                    listMode: settingsListModeSelect.value
-                });
-                applyPostsSettingsToAllLists();
-                // Ensure the popover doesn't drift after layout changes (excerpt insertion).
-                if (isSettingsPopoverOpen()) {
-                    window.setTimeout(positionSettingsPopover, 0);
-                }
+        bindSettingsSegmentedControl(settingsListModeControl, function (value) {
+            savePostsSettings({
+                sortMode: getSettingsSegmentedValue(settingsSortModeControl) || postsSettings.sortMode,
+                order: getSettingsSegmentedValue(settingsOrderControl) || postsSettings.order,
+                listMode: value
             });
-        }
+            applyPostsSettingsToAllLists();
+            // Ensure the popover doesn't drift after layout changes (excerpt insertion).
+            if (isSettingsPopoverOpen()) {
+                window.setTimeout(positionSettingsPopover, 0);
+            }
+        });
 
         if (settingsBtn) {
             settingsBtn.addEventListener("click", function () {
@@ -921,6 +1018,7 @@
         window.addEventListener("resize", function () {
             updateSettingsFabVisibility();
             if (isSettingsPopoverOpen()) {
+                syncPostsSettingsUI();
                 positionSettingsPopover();
             }
             if (isRewardPopoverOpen()) {
