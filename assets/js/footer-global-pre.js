@@ -2749,6 +2749,51 @@
             }
         }
 
+        function findDirectChildByClass(parent, className) {
+            if (!parent || !className) {
+                return null;
+            }
+            var children = parent.children || [];
+            for (var i = 0; i < children.length; i++) {
+                var node = children[i];
+                if (node && node.classList && node.classList.contains(className)) {
+                    return node;
+                }
+            }
+            return null;
+        }
+
+        function placeEditBlockUnderReply(item, block) {
+            if (!item || !block) {
+                return;
+            }
+
+            var replyRow = findDirectChildByClass(item, "comment-reply");
+            var childrenWrap = findDirectChildByClass(item, "comment-children");
+            if (!replyRow) {
+                if (childrenWrap) {
+                    item.insertBefore(block, childrenWrap);
+                } else {
+                    item.appendChild(block);
+                }
+                return;
+            }
+
+            var next = replyRow.nextSibling;
+            if (next === block) {
+                return;
+            }
+            if (childrenWrap) {
+                item.insertBefore(block, childrenWrap);
+                return;
+            }
+            if (next) {
+                item.insertBefore(block, next);
+            } else {
+                item.appendChild(block);
+            }
+        }
+
         function openCommentEdit(btn) {
             if (!btn || !btn.closest) {
                 return;
@@ -2789,13 +2834,11 @@
             if (item) {
                 if (role === "reply") {
                     var respondWrap = form.closest("[data-comment-respond]") || form.closest(".respond") || form.closest("#respond");
-                    if (respondWrap && respondWrap.parentNode !== item) {
-                        item.appendChild(respondWrap);
+                    if (respondWrap) {
+                        placeEditBlockUnderReply(item, respondWrap);
                     }
                 } else if (isMemoryComments) {
-                    if (form.parentNode !== item) {
-                        item.appendChild(form);
-                    }
+                    placeEditBlockUnderReply(item, form);
                     if (form.classList) {
                         form.classList.add("comment-edit-inline");
                     }
