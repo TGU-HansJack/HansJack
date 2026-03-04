@@ -5397,6 +5397,11 @@ html.theme-dark .fab-reward-backdrop {
     --comment-avatar-line-color: rgba(162, 162, 162, 0.62);
     --comment-avatar-line-fade: rgba(162, 162, 162, 0);
     --comment-avatar-border: rgba(162, 162, 162, 0.55);
+    --comment-content-right-gap: 0.6rem;
+    --comment-content-right-gap: max(0.6rem, env(safe-area-inset-right));
+    --comment-bubble-bg: rgba(158, 158, 158, 0.16);
+    --comment-bubble-tail-size: 7px;
+    --comment-bubble-avatar-gap: 4px;
     --comment-target-bg: rgba(156, 156, 156, 0.16);
     --comment-target-bg-strong: rgba(138, 138, 138, 0.24);
 }   
@@ -5611,21 +5616,7 @@ html.theme-dark .fab-reward-backdrop {
 } 
 
 .comments .comment-author span[itemprop="image"]::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: calc(100% + var(--comment-avatar-line-gap-start));
-    transform: translateX(-50%);
-    width: var(--comment-avatar-line-width);
-    height: var(--comment-avatar-line-height, 0px);
-    border-radius: 999px;
-    pointer-events: none;
-    background: linear-gradient(
-        to bottom,
-        var(--comment-avatar-line-color) 0,
-        var(--comment-avatar-line-color) calc(100% - var(--comment-avatar-line-fade-length)),
-        var(--comment-avatar-line-fade) 100%
-    );
+    display: none;
 }
 
 .comments .comment-body.is-avatar-line-hidden .comment-author span[itemprop="image"]::after {
@@ -5721,13 +5712,31 @@ html.theme-dark .fab-reward-backdrop {
 }
 
 .comments .comment-content {  
-    margin-top: 0.6rem;  
-    padding-left: calc(var(--comment-avatar-size) + var(--comment-avatar-gap));  
-    padding-right: 0.6rem;
-    padding-right: max(0.6rem, env(safe-area-inset-right));
+    margin-top: calc(var(--comment-bubble-tail-size) + var(--comment-bubble-avatar-gap));
+    margin-left: 0;
+    margin-right: var(--comment-content-right-gap);
+    width: calc(100% - var(--comment-content-right-gap));
+    box-sizing: border-box;
+    padding: 0.34rem 0.68rem;
+    border-radius: 4px;
+    background: var(--comment-bubble-bg);
+    position: relative;
+    line-height: 1.6;
     min-width: 0; 
     overflow-wrap: anywhere; 
 } 
+
+.comments .comment-content::after {
+    content: "";
+    position: absolute;
+    left: calc(var(--comment-avatar-size) / 2 - var(--comment-bubble-tail-size));
+    top: calc(-1 * var(--comment-bubble-tail-size));
+    width: calc(var(--comment-bubble-tail-size) * 2);
+    height: var(--comment-bubble-tail-size);
+    background: var(--comment-bubble-bg);
+    clip-path: polygon(50% 0, 0 100%, 100% 100%);
+    pointer-events: none;
+}
 
 .comments .comment-content p {
     margin: 0;
@@ -5745,7 +5754,7 @@ html.theme-dark .fab-reward-backdrop {
     align-items: center;      
     gap: 0.28rem;      
     padding: 0;  
-    padding-left: calc(var(--comment-avatar-size) + var(--comment-avatar-gap)); 
+    padding-left: 0; 
     background: transparent;    
 }       
  
@@ -6480,7 +6489,7 @@ html.theme-dark .fab-reward-backdrop {
     top: 0;
     right: 0;
     bottom: 0;
-    left: calc(var(--comment-avatar-size) + var(--comment-avatar-gap));
+    left: 0;
     pointer-events: none;
     background: repeating-linear-gradient(
         135deg,
@@ -8200,6 +8209,7 @@ html.login-modal-open .login-modal {
         --comment-avatar-line-color: rgba(183, 183, 183, 0.46);
         --comment-avatar-line-fade: rgba(183, 183, 183, 0);
         --comment-avatar-border: rgba(183, 183, 183, 0.5);
+        --comment-bubble-bg: rgba(173, 173, 173, 0.2);
         --comment-target-bg: rgba(164, 164, 164, 0.2);
         --comment-target-bg-strong: rgba(186, 186, 186, 0.28);
     }
@@ -8892,6 +8902,7 @@ html.theme-dark .comments {
     --comment-avatar-line-color: rgba(183, 183, 183, 0.46);
     --comment-avatar-line-fade: rgba(183, 183, 183, 0);
     --comment-avatar-border: rgba(183, 183, 183, 0.5);
+    --comment-bubble-bg: rgba(173, 173, 173, 0.2);
     --comment-target-bg: rgba(164, 164, 164, 0.2);
     --comment-target-bg-strong: rgba(186, 186, 186, 0.28);
 }
