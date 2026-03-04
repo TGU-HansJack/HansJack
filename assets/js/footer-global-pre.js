@@ -2455,6 +2455,222 @@
             });
         })();
 
+        (function setupCommentReplyTrace() {
+            var bubbles = Array.prototype.slice.call(comments.querySelectorAll(".comment-body.comment-child > .comment-content"));
+            if (!bubbles || bubbles.length === 0) {
+                return;
+            }
+
+            var svgNS = "http://www.w3.org/2000/svg";
+            var overlay = null;
+            var active = null;
+            var raf = window.requestAnimationFrame || function (fn) { return window.setTimeout(fn, 16); };
+            var scheduled = false;
+
+            function ensureOverlay() {
+                if (overlay && overlay.parentNode) {
+                    return overlay;
+                }
+                overlay = document.createElementNS(svgNS, "svg");
+                overlay.setAttribute("data-comment-reply-trace", "");
+                overlay.setAttribute("aria-hidden", "true");
+                overlay.style.position = "fixed";
+                overlay.style.left = "0";
+                overlay.style.top = "0";
+                overlay.style.width = "100vw";
+                overlay.style.height = "100vh";
+                overlay.style.pointerEvents = "none";
+                overlay.style.overflow = "visible";
+                overlay.style.zIndex = "95";
+                overlay.style.display = "none";
+                document.body.appendChild(overlay);
+                return overlay;
+            }
+
+            function clearOverlay() {
+                if (!overlay) {
+                    return;
+                }
+                overlay.innerHTML = "";
+                overlay.style.display = "none";
+            }
+
+            function findParentComment(item) {
+                if (!item || !item.parentElement || !item.parentElement.closest) {
+                    return null;
+                }
+                return item.parentElement.closest(".comment-body");
+            }
+
+            function findDirectCommentContent(row) {
+                if (!row) {
+                    return null;
+                }
+                var nodes = row.children || [];
+                for (var i = 0; i < nodes.length; i++) {
+                    var node = nodes[i];
+                    if (node && node.classList && node.classList.contains("comment-content")) {
+                        return node;
+                    }
+                }
+                if (row.querySelector) {
+                    return row.querySelector(".comment-content");
+                }
+                return null;
+            }
+
+            function requestDraw() {
+                if (scheduled) {
+                    return;
+                }
+                scheduled = true;
+                raf(function () {
+                    scheduled = false;
+                    drawTrace();
+                });
+            }
+
+            function clearActive() {
+                active = null;
+                clearOverlay();
+            }
+
+            function drawTrace() {
+                if (!active || !active.item || !active.content) {
+                    clearOverlay();
+                    return;
+                }
+
+                var item = active.item;
+                var content = active.content;
+                var parent = findParentComment(item);
+                if (!parent) {
+                    clearActive();
+                    return;
+                }
+
+                var avatar = parent.querySelector(".comment-author span[itemprop=\"image\"]");
+                if (!avatar) {
+                    clearActive();
+                    return;
+                }
+                var parentContent = findDirectCommentContent(parent);
+                if (!parentContent) {
+                    clearActive();
+                    return;
+                }
+
+                var contentRect = null;
+                var avatarRect = null;
+                var parentContentRect = null;
+                try {
+                    contentRect = content.getBoundingClientRect();
+                    avatarRect = avatar.getBoundingClientRect();
+                    parentContentRect = parentContent.getBoundingClientRect();
+                } catch (e) {
+                    contentRect = null;
+                    avatarRect = null;
+                    parentContentRect = null;
+                }
+                if (!contentRect || !avatarRect || !parentContentRect || contentRect.width <= 0 || contentRect.height <= 0 || parentContentRect.width <= 0 || parentContentRect.height <= 0) {
+                    clearOverlay();
+                    return;
+                }
+
+                var sx = contentRect.left + 1;
+                var sy = contentRect.top + contentRect.height * 0.5;
+                var exBase = avatarRect.left + avatarRect.width * 0.5;
+                var ex = Math.max(parentContentRect.left + 8, Math.min(parentContentRect.right - 8, exBase));
+                var ey = parentContentRect.bottom - 1;
+
+                var commentsStyle = window.getComputedStyle ? window.getComputedStyle(comments) : null;
+                var stroke = commentsStyle ? String(commentsStyle.getPropertyValue("--comment-reply-trace-color") || "").trim() : "";
+                if (!stroke) {
+                    stroke = "rgba(146, 146, 146, 0.9)";
+                }
+                var strokeWidth = 1.5;
+                var dx = Math.abs(sx - ex);
+                var dy = Math.abs(sy - ey);
+                var c1x = sx - Math.max(18, Math.min(42, dx * 0.35));
+                var c1y = sy;
+                var c2x = ex + Math.max(14, Math.min(34, dx * 0.3));
+                var c2y = ey + Math.max(10, Math.min(24, dy * 0.22));
+
+                var svg = ensureOverlay();
+                svg.innerHTML = "";
+                svg.style.display = "block";
+
+                var path = document.createElementNS(svgNS, "path");
+                path.setAttribute(
+                    "d",
+                    "M " + sx.toFixed(2) + " " + sy.toFixed(2) +
+                    " C " + c1x.toFixed(2) + " " + c1y.toFixed(2) +
+                    ", " + c2x.toFixed(2) + " " + c2y.toFixed(2) +
+                    ", " + ex.toFixed(2) + " " + ey.toFixed(2)
+                );
+                path.setAttribute("fill", "none");
+                path.setAttribute("stroke", stroke);
+                path.setAttribute("stroke-width", String(strokeWidth));
+                path.setAttribute("stroke-linecap", "round");
+                path.setAttribute("stroke-dasharray", "4 4");
+                path.setAttribute("vector-effect", "non-scaling-stroke");
+                svg.appendChild(path);
+
+                var angle = Math.atan2(ey - c2y, ex - c2x);
+                var arrowLen = 7;
+                var wing = Math.PI / 6;
+                var ax1 = ex - arrowLen * Math.cos(angle - wing);
+                var ay1 = ey - arrowLen * Math.sin(angle - wing);
+                var ax2 = ex - arrowLen * Math.cos(angle + wing);
+                var ay2 = ey - arrowLen * Math.sin(angle + wing);
+
+                var head = document.createElementNS(svgNS, "path");
+                head.setAttribute(
+                    "d",
+                    "M " + ax1.toFixed(2) + " " + ay1.toFixed(2) +
+                    " L " + ex.toFixed(2) + " " + ey.toFixed(2) +
+                    " L " + ax2.toFixed(2) + " " + ay2.toFixed(2)
+                );
+                head.setAttribute("fill", "none");
+                head.setAttribute("stroke", stroke);
+                head.setAttribute("stroke-width", String(strokeWidth));
+                head.setAttribute("stroke-linecap", "round");
+                head.setAttribute("stroke-linejoin", "round");
+                head.setAttribute("vector-effect", "non-scaling-stroke");
+                svg.appendChild(head);
+            }
+
+            bubbles.forEach(function (content) {
+                var item = content.closest ? content.closest(".comment-body") : null;
+                if (!item) {
+                    return;
+                }
+                content.addEventListener("mouseenter", function () {
+                    active = { item: item, content: content };
+                    requestDraw();
+                });
+                content.addEventListener("mouseleave", function () {
+                    clearActive();
+                });
+            });
+
+            window.addEventListener("scroll", function () {
+                if (active) {
+                    requestDraw();
+                }
+            }, { passive: true });
+            window.addEventListener("resize", function () {
+                if (active) {
+                    requestDraw();
+                }
+            });
+            comments.addEventListener("click", function () {
+                if (active) {
+                    requestDraw();
+                }
+            }, true);
+        })();
+
         (function setupCommentAvatarSizing() {
             // Make the avatar diameter match the author-meta two-line height.
             // We also update --comment-avatar-size and the connector line height.

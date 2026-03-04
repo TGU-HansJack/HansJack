@@ -5402,6 +5402,7 @@ html.theme-dark .fab-reward-backdrop {
     --comment-bubble-bg: rgba(158, 158, 158, 0.16);
     --comment-bubble-tail-size: 7px;
     --comment-bubble-avatar-gap: 4px;
+    --comment-reply-trace-color: rgba(146, 146, 146, 0.9);
     --comment-target-bg: rgba(156, 156, 156, 0.16);
     --comment-target-bg-strong: rgba(138, 138, 138, 0.24);
 }   
@@ -8210,6 +8211,7 @@ html.login-modal-open .login-modal {
         --comment-avatar-line-fade: rgba(183, 183, 183, 0);
         --comment-avatar-border: rgba(183, 183, 183, 0.5);
         --comment-bubble-bg: rgba(173, 173, 173, 0.2);
+        --comment-reply-trace-color: rgba(233, 233, 233, 0.9);
         --comment-target-bg: rgba(164, 164, 164, 0.2);
         --comment-target-bg-strong: rgba(186, 186, 186, 0.28);
     }
@@ -8903,6 +8905,7 @@ html.theme-dark .comments {
     --comment-avatar-line-fade: rgba(183, 183, 183, 0);
     --comment-avatar-border: rgba(183, 183, 183, 0.5);
     --comment-bubble-bg: rgba(173, 173, 173, 0.2);
+    --comment-reply-trace-color: rgba(233, 233, 233, 0.9);
     --comment-target-bg: rgba(164, 164, 164, 0.2);
     --comment-target-bg-strong: rgba(186, 186, 186, 0.28);
 }
