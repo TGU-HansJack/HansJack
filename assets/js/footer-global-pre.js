@@ -76,17 +76,82 @@
                 });
         }
 
+        function readScrollTop() {
+            var doc = document.documentElement;
+            var body = document.body;
+            if (typeof window.pageYOffset === "number") {
+                return window.pageYOffset || 0;
+            }
+            if (doc && typeof doc.scrollTop === "number" && doc.scrollTop) {
+                return doc.scrollTop;
+            }
+            if (body && typeof body.scrollTop === "number" && body.scrollTop) {
+                return body.scrollTop;
+            }
+            return 0;
+        }
+
+        function readScrollBehavior() {
+            try {
+                if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                    return "auto";
+                }
+            } catch (e) {}
+            return "smooth";
+        }
+
         var scrollBtn = document.querySelector(".scroll-down");
         if (scrollBtn) {
-            scrollBtn.addEventListener("click", function () {
-                var target =
-                    document.querySelector("#recent") ||
-                    document.querySelector(".recent") ||
-                    document.querySelector("#footer") ||
-                    document.querySelector(".footer");
-                if (target && target.scrollIntoView) {
-                    target.scrollIntoView({ behavior: "smooth", block: "start" });
+            scrollBtn.addEventListener("click", function (e) {
+                if (e && e.preventDefault) {
+                    e.preventDefault();
                 }
+
+                var currentTop = readScrollTop();
+                var behavior = readScrollBehavior();
+                var recentTarget = document.querySelector("#recent") || document.querySelector(".recent");
+                if (recentTarget && recentTarget.getBoundingClientRect) {
+                    var recentTop = currentTop;
+                    try {
+                        recentTop = currentTop + (recentTarget.getBoundingClientRect().top || 0);
+                    } catch (err) {
+                        recentTop = currentTop;
+                    }
+
+                    if (window.scrollTo) {
+                        try {
+                            window.scrollTo({ top: Math.max(0, Math.round(recentTop)), behavior: behavior });
+                            return;
+                        } catch (err) {}
+                    }
+                    if (recentTarget.scrollIntoView) {
+                        recentTarget.scrollIntoView({ behavior: behavior, block: "start" });
+                    }
+                    return;
+                }
+
+                // The `recent` section may be disabled; in that case, scroll down about one viewport
+                // instead of jumping straight to footer to avoid a noticeable first-frame hitch.
+                var footerTarget = document.querySelector("#footer") || document.querySelector(".footer");
+                var viewportH = window.innerHeight || (document.documentElement ? document.documentElement.clientHeight : 0) || 0;
+                var nextTop = currentTop + Math.max(220, Math.round(viewportH * 0.92));
+                if (footerTarget && footerTarget.getBoundingClientRect) {
+                    try {
+                        var footerTop = currentTop + (footerTarget.getBoundingClientRect().top || 0);
+                        if (isFinite(footerTop)) {
+                            nextTop = Math.min(nextTop, footerTop);
+                        }
+                    } catch (err) {}
+                }
+                nextTop = Math.max(0, Math.round(nextTop));
+
+                if (window.scrollTo) {
+                    try {
+                        window.scrollTo({ top: nextTop, behavior: behavior });
+                        return;
+                    } catch (err) {}
+                }
+                window.scrollTo(0, nextTop);
             });
         }
     })();
@@ -161,53 +226,74 @@
             );
         }
 
-        function readScrollState() {
+        var topRing = topBtn ? topBtn.querySelector(".fab-top-ring-fg") : null;
+        var topRingCirc = 0;
+        var topRingOffsetLast = "";
+        var cachedScrollMax = 1;
+
+        if (topRing) {
+            var ringRadius = parseFloat(topRing.getAttribute("r") || "0");
+            if (!isFinite(ringRadius) || ringRadius <= 0) {
+                ringRadius = 18.5;
+            }
+            topRingCirc = Math.PI * 2 * ringRadius;
+            topRing.style.strokeDasharray = topRingCirc.toFixed(2) + " " + topRingCirc.toFixed(2);
+        }
+
+        function readScrollTop() {
             var doc = document.documentElement;
             var body = document.body;
-            var top = 0;
+            if (typeof window.pageYOffset === "number") {
+                return window.pageYOffset || 0;
+            }
+            if (doc && typeof doc.scrollTop === "number" && doc.scrollTop) {
+                return doc.scrollTop;
+            }
+            if (body && typeof body.scrollTop === "number" && body.scrollTop) {
+                return body.scrollTop;
+            }
+            return 0;
+        }
+
+        function recomputeScrollMetrics() {
+            var doc = document.documentElement;
+            var body = document.body;
             var height = 0;
             var view = 0;
 
             if (doc) {
-                top = doc.scrollTop || 0;
                 height = doc.scrollHeight || 0;
                 view = doc.clientHeight || 0;
             }
             if (!height && body) {
                 height = body.scrollHeight || 0;
             }
-            if (!top && body) {
-                top = body.scrollTop || 0;
-            }
             if (!view) {
                 view = window.innerHeight || 0;
             }
 
-            var max = Math.max(1, height - view);
-            var p = top / max;
+            cachedScrollMax = Math.max(1, height - view);
+        }
+
+        function readScrollState() {
+            var top = readScrollTop();
+            var p = top / cachedScrollMax;
             if (p < 0) p = 0;
             if (p > 1) p = 1;
-
             return { top: top, progress: p };
         }
 
         function updateTopProgress() {
-            if (!topBtn) {
+            if (!topRing || topRingCirc <= 0) {
                 return;
             }
             var state = readScrollState();
-            var ring = topBtn.querySelector(".fab-top-ring-fg");
-            if (!ring) {
+            var offset = (topRingCirc * (1 - state.progress)).toFixed(2);
+            if (offset === topRingOffsetLast) {
                 return;
             }
-            var progress = state.progress;
-            var r = parseFloat(ring.getAttribute("r") || "0");
-            if (!isFinite(r) || r <= 0) {
-                r = 18.5;
-            }
-            var c = Math.PI * 2 * r;
-            ring.style.strokeDasharray = c.toFixed(2) + " " + c.toFixed(2);
-                ring.style.strokeDashoffset = (c * (1 - progress)).toFixed(2);
+            topRingOffsetLast = offset;
+            topRing.style.strokeDashoffset = offset;
         }
 
         function isMobileTocOpen() {
@@ -1031,6 +1117,7 @@
             syncPostsSettingsUI();
             applyPostsSettingsToAllLists();
             updateSettingsFabVisibility();
+            recomputeScrollMetrics();
             updateTopProgress();
             if (isSettingsPopoverOpen()) {
                 closeSettingsPopover();
@@ -1126,13 +1213,32 @@
             });
         }
 
+        recomputeScrollMetrics();
         updateTopProgress();
         try {
             window.addEventListener("scroll", requestTick, { passive: true });
         } catch (e) {
             window.addEventListener("scroll", requestTick);
         }
-        window.addEventListener("resize", requestTick);
+        window.addEventListener("resize", function () {
+            recomputeScrollMetrics();
+            requestTick();
+        });
+
+        window.addEventListener("load", function () {
+            recomputeScrollMetrics();
+            requestTick();
+        });
+
+        // Async landing quote/content changes can shift page height shortly after paint.
+        window.setTimeout(function () {
+            recomputeScrollMetrics();
+            requestTick();
+        }, 180);
+        window.setTimeout(function () {
+            recomputeScrollMetrics();
+            requestTick();
+        }, 560);
     })();
 
 /* block 4 */
