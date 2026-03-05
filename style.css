@@ -6699,8 +6699,9 @@ html.theme-dark .fab-reward-backdrop {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-start;
+    width: 100%;
 }
 
 .login-modal-github,
@@ -6721,6 +6722,8 @@ html.theme-dark .fab-reward-backdrop {
     line-height: 1;
     text-decoration: none;
     box-sizing: border-box;
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .login-modal-github svg,
