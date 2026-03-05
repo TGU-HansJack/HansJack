@@ -128,6 +128,45 @@ function themeConfig($form)
     );
     $form->addInput($githubOauthScope);
 
+    $qqOauthEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'qqOauthEnabled',
+        [
+            '0' => _t('关闭'),
+            '1' => _t('开启'),
+        ],
+        '0',
+        _t('QQ OAuth2 登录'),
+        _t('开启后，可在评论登录弹窗中使用 QQ 登录。')
+    );
+    $form->addInput($qqOauthEnabled);
+
+    $qqOauthAppId = new \Typecho\Widget\Helper\Form\Element\Text(
+        'qqOauthAppId',
+        null,
+        '',
+        _t('QQ App ID'),
+        _t('QQ 互联网站应用的 App ID。')
+    );
+    $form->addInput($qqOauthAppId);
+
+    $qqOauthAppKey = new \Typecho\Widget\Helper\Form\Element\Password(
+        'qqOauthAppKey',
+        null,
+        '',
+        _t('QQ App Key'),
+        _t('QQ 互联网站应用的 App Key。')
+    );
+    $form->addInput($qqOauthAppKey);
+
+    $qqOauthScope = new \Typecho\Widget\Helper\Form\Element\Text(
+        'qqOauthScope',
+        null,
+        'get_user_info',
+        _t('QQ OAuth Scope'),
+        _t('默认：get_user_info。')
+    );
+    $form->addInput($qqOauthScope);
+
     $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
         'githubBindUid',
         null,
@@ -163,6 +202,37 @@ function themeConfig($form)
     $bindPanel->label(_t('GitHub账号绑定'));
     $bindPanel->description(githubBindingPanelHtml($options));
     $form->addInput($bindPanel);
+
+    $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
+        'qqBindUid',
+        null,
+        trim((string) ($options->qqBindUid ?? ''))
+    ));
+    $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
+        'qqBindOpenid',
+        null,
+        trim((string) ($options->qqBindOpenid ?? ''))
+    ));
+    $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
+        'qqBindNickname',
+        null,
+        trim((string) ($options->qqBindNickname ?? ''))
+    ));
+    $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
+        'qqBindAvatar',
+        null,
+        trim((string) ($options->qqBindAvatar ?? ''))
+    ));
+    $form->addInput(new \Typecho\Widget\Helper\Form\Element\Hidden(
+        'qqBindAt',
+        null,
+        trim((string) ($options->qqBindAt ?? ''))
+    ));
+
+    $qqBindPanel = new \Typecho\Widget\Helper\Form\Element\Fake('qqBindPanel', '');
+    $qqBindPanel->label(_t('QQ账号绑定'));
+    $qqBindPanel->description(qqBindingPanelHtml($options));
+    $form->addInput($qqBindPanel);
 
     $icpBeian = new \Typecho\Widget\Helper\Form\Element\Text(
         'icpBeian',
@@ -233,6 +303,7 @@ function themeInit(Archive $archive)
     handleCommentEditRequest($archive);
     handleMemoryReactionRequest($archive);
     handleGithubOauthRequest($archive);
+    handleQqOauthRequest($archive);
     enableFeedStylesheet($archive);
 
     if ($archive->is('category', 'posts') || $archive->is('category', 'notes')) {
@@ -1764,9 +1835,74 @@ function githubBindingPanelHtml(Options $options): string
     return $html;
 }
 
+function qqBindingPanelHtml(Options $options): string
+{
+    $enabled = qqOauthEnabled($options);
+    $appId = trim((string) ($options->qqOauthAppId ?? ''));
+    $appKey = trim((string) ($options->qqOauthAppKey ?? ''));
+
+    $bindNickname = trim((string) ($options->qqBindNickname ?? ''));
+    $bindOpenid = trim((string) ($options->qqBindOpenid ?? ''));
+    $bindAt = trim((string) ($options->qqBindAt ?? ''));
+
+    $bindStatus = _t('未绑定');
+    if ($bindNickname !== '' || $bindOpenid !== '') {
+        $name = ($bindNickname !== '') ? $bindNickname : _t('QQ用户');
+        $bindStatus = _t('已绑定：%s', escape($name));
+        if ($bindOpenid !== '') {
+            $bindStatus .= ' · OpenID ' . escape($bindOpenid);
+        }
+        if ($bindAt !== '') {
+            $bindStatus .= ' · ' . escape($bindAt);
+        }
+    }
+
+    $adminUid = 0;
+    $isAdmin = githubCurrentAdminUid($adminUid);
+    $adminReturn = Common::url('options-theme.php', (string) $options->adminUrl);
+    $bindUrl = qqOauthActionUrl('bind', ['return' => $adminReturn]);
+    $unbindUrl = qqOauthActionUrl('unbind', ['return' => $adminReturn]);
+
+    $notes = [];
+    if (!$enabled) {
+        $notes[] = _t('请先开启 QQ OAuth2 登录。');
+    }
+    if ($appId === '' || $appKey === '') {
+        $notes[] = _t('请先填写 QQ App ID / App Key。');
+    }
+    if (!$isAdmin) {
+        $notes[] = _t('请先用管理员账号登录后台后再绑定。');
+    }
+
+    $html = '<div class="qq-bind-panel">';
+    $html .= '<div>' . _t('绑定状态：') . $bindStatus . '</div>';
+
+    if (!empty($notes)) {
+        $html .= '<div style="margin-top:6px;color:#b46a00;">' . implode('<br>', array_map('escape', $notes)) . '</div>';
+    }
+
+    if ($isAdmin) {
+        $html .= '<div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">';
+        $html .= '<a href="' . escape($bindUrl) . '">' . _t('QQ账号绑定') . '</a>';
+        if ($bindNickname !== '' || $bindOpenid !== '') {
+            $html .= '<a href="' . escape($unbindUrl) . '">' . _t('解除绑定') . '</a>';
+        }
+        $html .= '</div>';
+    }
+
+    $html .= '</div>';
+    return $html;
+}
+
 function githubOauthEnabled(Options $options): bool
 {
     $raw = strtolower(trim((string) ($options->githubOauthEnabled ?? '0')));
+    return in_array($raw, ['1', 'on', 'true', 'yes'], true);
+}
+
+function qqOauthEnabled(Options $options): bool
+{
+    $raw = strtolower(trim((string) ($options->qqOauthEnabled ?? '0')));
     return in_array($raw, ['1', 'on', 'true', 'yes'], true);
 }
 
@@ -1833,6 +1969,36 @@ function githubOauthActionUrl(string $action, array $params = []): string
     $base = (string) $options->index;
 
     $query = ['github_oauth' => trim($action)];
+    foreach ($params as $key => $value) {
+        if ($key === '') {
+            continue;
+        }
+        if ($value === null) {
+            continue;
+        }
+
+        $text = trim((string) $value);
+        if ($text === '') {
+            continue;
+        }
+        $query[$key] = $text;
+    }
+
+    $qs = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+    if ($qs === '') {
+        return $base;
+    }
+
+    $sep = (strpos($base, '?') === false) ? '?' : '&';
+    return $base . $sep . $qs;
+}
+
+function qqOauthActionUrl(string $action, array $params = []): string
+{
+    $options = Options::alloc();
+    $base = (string) $options->index;
+
+    $query = ['qq_oauth' => trim($action)];
     foreach ($params as $key => $value) {
         if ($key === '') {
             continue;
@@ -2015,6 +2181,17 @@ function saveGithubBinding(Options $options, array $binding): bool
     return themeOptionSave($options, $settings);
 }
 
+function saveQqBinding(Options $options, array $binding): bool
+{
+    $settings = themeOptionLoad($options);
+
+    foreach ($binding as $key => $value) {
+        $settings[(string) $key] = trim((string) $value);
+    }
+
+    return themeOptionSave($options, $settings);
+}
+
 function githubOauthStateSet(string $state, string $mode, string $returnUrl): void
 {
     $expire = 600;
@@ -2037,6 +2214,30 @@ function githubOauthStateClear(): void
     Cookie::delete('__github_oauth_state');
     Cookie::delete('__github_oauth_mode');
     Cookie::delete('__github_oauth_return');
+}
+
+function qqOauthStateSet(string $state, string $mode, string $returnUrl): void
+{
+    $expire = 600;
+    Cookie::set('__qq_oauth_state', $state, $expire);
+    Cookie::set('__qq_oauth_mode', $mode, $expire);
+    Cookie::set('__qq_oauth_return', $returnUrl, $expire);
+}
+
+function qqOauthStateRead(): array
+{
+    return [
+        'state' => trim((string) Cookie::get('__qq_oauth_state', '')),
+        'mode' => trim((string) Cookie::get('__qq_oauth_mode', '')),
+        'return' => trim((string) Cookie::get('__qq_oauth_return', '')),
+    ];
+}
+
+function qqOauthStateClear(): void
+{
+    Cookie::delete('__qq_oauth_state');
+    Cookie::delete('__qq_oauth_mode');
+    Cookie::delete('__qq_oauth_return');
 }
 
 function githubOauthRandomState(): string
@@ -2246,6 +2447,158 @@ function githubResolveEmail(array $user, array $emails): string
     return '';
 }
 
+function qqExchangeToken(Options $options, string $code): string
+{
+    $appId = trim((string) ($options->qqOauthAppId ?? ''));
+    $appKey = trim((string) ($options->qqOauthAppKey ?? ''));
+    if ($appId === '' || $appKey === '' || $code === '') {
+        return '';
+    }
+
+    $tokenUrl = 'https://graph.qq.com/oauth2.0/token?' . http_build_query([
+        'grant_type' => 'authorization_code',
+        'client_id' => $appId,
+        'client_secret' => $appKey,
+        'code' => $code,
+        'redirect_uri' => qqOauthActionUrl('callback'),
+    ], '', '&', PHP_QUERY_RFC3986);
+
+    $resp = githubHttpRequest(
+        'GET',
+        $tokenUrl,
+        [
+            'Accept: */*',
+            'User-Agent: Typecho-OAuth',
+        ]
+    );
+
+    if ((int) ($resp['status'] ?? 0) < 200 || (int) ($resp['status'] ?? 0) >= 300) {
+        return '';
+    }
+
+    $body = trim((string) ($resp['body'] ?? ''));
+    if ($body === '') {
+        return '';
+    }
+
+    $pairs = [];
+    parse_str($body, $pairs);
+    $accessToken = trim((string) ($pairs['access_token'] ?? ''));
+    if ($accessToken !== '') {
+        return $accessToken;
+    }
+
+    // Error style: callback( {"error":100016,"error_description":"..."} );
+    if (preg_match('/callback\s*\(\s*(\{[\s\S]*\})\s*\)\s*;?/i', $body, $m)) {
+        $json = json_decode((string) ($m[1] ?? ''), true);
+        if (is_array($json)) {
+            return trim((string) ($json['access_token'] ?? ''));
+        }
+    }
+
+    return '';
+}
+
+function qqExtractOpenid(string $raw): string
+{
+    $raw = trim($raw);
+    if ($raw === '') {
+        return '';
+    }
+
+    $jsonText = '';
+    if (preg_match('/callback\s*\(\s*(\{[\s\S]*\})\s*\)\s*;?/i', $raw, $m)) {
+        $jsonText = trim((string) ($m[1] ?? ''));
+    } else {
+        $jsonText = $raw;
+    }
+
+    if ($jsonText === '') {
+        return '';
+    }
+
+    $json = json_decode($jsonText, true);
+    if (!is_array($json)) {
+        return '';
+    }
+
+    return trim((string) ($json['openid'] ?? ''));
+}
+
+function qqFetchOpenid(string $accessToken): string
+{
+    if ($accessToken === '') {
+        return '';
+    }
+
+    $url = 'https://graph.qq.com/oauth2.0/me?' . http_build_query([
+        'access_token' => $accessToken,
+    ], '', '&', PHP_QUERY_RFC3986);
+
+    $resp = githubHttpRequest(
+        'GET',
+        $url,
+        [
+            'Accept: */*',
+            'User-Agent: Typecho-OAuth',
+        ]
+    );
+
+    if ((int) ($resp['status'] ?? 0) < 200 || (int) ($resp['status'] ?? 0) >= 300) {
+        return '';
+    }
+
+    return qqExtractOpenid((string) ($resp['body'] ?? ''));
+}
+
+function qqFetchUserInfo(string $accessToken, string $appId, string $openid): array
+{
+    if ($accessToken === '' || $appId === '' || $openid === '') {
+        return [];
+    }
+
+    $url = 'https://graph.qq.com/user/get_user_info?' . http_build_query([
+        'access_token' => $accessToken,
+        'oauth_consumer_key' => $appId,
+        'openid' => $openid,
+    ], '', '&', PHP_QUERY_RFC3986);
+
+    $resp = githubHttpRequest(
+        'GET',
+        $url,
+        [
+            'Accept: application/json',
+            'User-Agent: Typecho-OAuth',
+        ]
+    );
+
+    if ((int) ($resp['status'] ?? 0) < 200 || (int) ($resp['status'] ?? 0) >= 300) {
+        return [];
+    }
+
+    $data = json_decode((string) ($resp['body'] ?? ''), true);
+    if (!is_array($data)) {
+        return [];
+    }
+
+    $ret = (int) ($data['ret'] ?? -1);
+    if ($ret !== 0) {
+        return [];
+    }
+
+    return $data;
+}
+
+function qqResolveEmailByOpenid(string $openid): string
+{
+    $openid = trim($openid);
+    if ($openid === '') {
+        return '';
+    }
+
+    return 'qq_' . substr(sha1($openid), 0, 24) . '@qq.connect.local';
+}
+
 function handleGithubOauthRequest(Archive $archive): void
 {
     $action = '';
@@ -2433,6 +2786,195 @@ function handleGithubOauthRequest(Archive $archive): void
 
     $author = ($login !== '') ? $login : _t('GitHub用户');
     $profileUrl = ($login !== '') ? ('https://github.com/' . $login) : 'https://github.com/';
+    $expire = 30 * 24 * 3600;
+
+    Cookie::set('__typecho_remember_author', $author, $expire);
+    Cookie::set('__typecho_remember_mail', $email, $expire);
+    Cookie::set('__typecho_remember_url', $profileUrl, $expire);
+
+    $archive->response->redirect($stateReturn);
+}
+
+function handleQqOauthRequest(Archive $archive): void
+{
+    $action = '';
+    try {
+        $action = strtolower(trim((string) $archive->request->get('qq_oauth', '')));
+    } catch (\Throwable $e) {
+        $action = '';
+    }
+
+    if ($action === '') {
+        return;
+    }
+
+    if (!in_array($action, ['login', 'bind', 'callback', 'unbind'], true)) {
+        return;
+    }
+
+    $options = Options::alloc();
+
+    $returnRaw = '';
+    try {
+        $returnRaw = trim((string) $archive->request->get('return', ''));
+    } catch (\Throwable $e) {
+        $returnRaw = '';
+    }
+    $returnUrl = githubNormalizeReturnUrl($returnRaw, $options);
+
+    if ($action === 'login' || $action === 'bind') {
+        if (!qqOauthEnabled($options)) {
+            $archive->response->redirect($returnUrl);
+            return;
+        }
+
+        if ($action === 'bind') {
+            $adminUid = 0;
+            if (!githubCurrentAdminUid($adminUid)) {
+                $archive->response->redirect($returnUrl);
+                return;
+            }
+        }
+
+        $appId = trim((string) ($options->qqOauthAppId ?? ''));
+        $appKey = trim((string) ($options->qqOauthAppKey ?? ''));
+        if ($appId === '' || $appKey === '') {
+            $archive->response->redirect($returnUrl);
+            return;
+        }
+
+        $scope = trim((string) ($options->qqOauthScope ?? ''));
+        if ($scope === '') {
+            $scope = 'get_user_info';
+        }
+
+        $state = githubOauthRandomState();
+        qqOauthStateSet($state, $action, $returnUrl);
+
+        $authUrl = 'https://graph.qq.com/oauth2.0/authorize?' . http_build_query([
+            'response_type' => 'code',
+            'client_id' => $appId,
+            'redirect_uri' => qqOauthActionUrl('callback'),
+            'scope' => $scope,
+            'state' => $state,
+        ], '', '&', PHP_QUERY_RFC3986);
+
+        $archive->response->redirect($authUrl);
+        return;
+    }
+
+    if ($action === 'unbind') {
+        $adminUid = 0;
+        if (!githubCurrentAdminUid($adminUid)) {
+            $archive->response->redirect($returnUrl);
+            return;
+        }
+
+        saveQqBinding($options, [
+            'qqBindUid' => '',
+            'qqBindOpenid' => '',
+            'qqBindNickname' => '',
+            'qqBindAvatar' => '',
+            'qqBindAt' => '',
+        ]);
+        $archive->response->redirect($returnUrl);
+        return;
+    }
+
+    $stateData = qqOauthStateRead();
+    qqOauthStateClear();
+
+    $expectedState = trim((string) ($stateData['state'] ?? ''));
+    $mode = strtolower(trim((string) ($stateData['mode'] ?? '')));
+    $stateReturn = githubNormalizeReturnUrl((string) ($stateData['return'] ?? ''), $options);
+    if ($stateReturn === '') {
+        $stateReturn = $returnUrl;
+    }
+
+    $recvState = '';
+    $code = '';
+    try {
+        $recvState = trim((string) $archive->request->get('state', ''));
+        $code = trim((string) $archive->request->get('code', ''));
+    } catch (\Throwable $e) {
+        $recvState = '';
+        $code = '';
+    }
+
+    if ($expectedState === '' || $recvState === '' || !hash_equals($expectedState, $recvState) || $code === '') {
+        $archive->response->redirect($stateReturn);
+        return;
+    }
+
+    $accessToken = qqExchangeToken($options, $code);
+    if ($accessToken === '') {
+        $archive->response->redirect($stateReturn);
+        return;
+    }
+
+    $appId = trim((string) ($options->qqOauthAppId ?? ''));
+    $openid = qqFetchOpenid($accessToken);
+    if ($openid === '' || $appId === '') {
+        $archive->response->redirect($stateReturn);
+        return;
+    }
+
+    $qqUser = qqFetchUserInfo($accessToken, $appId, $openid);
+    $nickname = trim((string) ($qqUser['nickname'] ?? ''));
+    $avatar = trim((string) (
+        $qqUser['figureurl_qq_2']
+        ?? $qqUser['figureurl_qq_1']
+        ?? $qqUser['figureurl_2']
+        ?? $qqUser['figureurl_1']
+        ?? ''
+    ));
+    $email = qqResolveEmailByOpenid($openid);
+
+    if ($mode === 'bind') {
+        $adminUid = 0;
+        if (!githubCurrentAdminUid($adminUid)) {
+            $archive->response->redirect($stateReturn);
+            return;
+        }
+
+        saveQqBinding($options, [
+            'qqBindUid' => (string) $adminUid,
+            'qqBindOpenid' => $openid,
+            'qqBindNickname' => $nickname,
+            'qqBindAvatar' => $avatar,
+            'qqBindAt' => date('Y-m-d H:i:s'),
+        ]);
+
+        $archive->response->redirect($stateReturn);
+        return;
+    }
+
+    if ($mode !== 'login') {
+        $archive->response->redirect($stateReturn);
+        return;
+    }
+
+    $boundUid = (int) trim((string) ($options->qqBindUid ?? '0'));
+    $boundOpenid = trim((string) ($options->qqBindOpenid ?? ''));
+    $isBoundMatch = false;
+    if ($boundUid > 0 && $boundOpenid !== '' && hash_equals($boundOpenid, $openid)) {
+        $isBoundMatch = true;
+    }
+
+    if ($isBoundMatch) {
+        try {
+            $userWidget = \Typecho\Widget::widget('Widget_User');
+            if ($userWidget && method_exists($userWidget, 'simpleLogin') && $userWidget->simpleLogin($boundUid, false)) {
+                $archive->response->redirect($stateReturn);
+                return;
+            }
+        } catch (\Throwable $e) {
+            // Fallback to guest identity cookies below.
+        }
+    }
+
+    $author = ($nickname !== '') ? $nickname : _t('QQ用户');
+    $profileUrl = 'https://connect.qq.com/';
     $expire = 30 * 24 * 3600;
 
     Cookie::set('__typecho_remember_author', $author, $expire);

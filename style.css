@@ -6697,10 +6697,14 @@ html.theme-dark .fab-reward-backdrop {
     padding-top: 0.5rem;
     border-top: 1px solid var(--line-day);
     display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
     justify-content: flex-start;
 }
 
-.login-modal-github {
+.login-modal-github,
+.login-modal-qq {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -6719,27 +6723,37 @@ html.theme-dark .fab-reward-backdrop {
     box-sizing: border-box;
 }
 
-.login-modal-github svg {
+.login-modal-github svg,
+.login-modal-qq svg {
     width: 18px;
     height: 18px;
     display: block;
     flex: 0 0 auto;
 }
 
-.login-modal-github span {
+.login-modal-qq svg {
+    width: 20px;
+    height: 20px;
+}
+
+.login-modal-github span,
+.login-modal-qq span {
     display: inline-flex;
     align-items: center;
     line-height: 1;
 }
 
 .login-modal-github:hover,
-.login-modal-github:focus-visible {
+.login-modal-github:focus-visible,
+.login-modal-qq:hover,
+.login-modal-qq:focus-visible {
     background: var(--day-black);
     color: var(--day-white);
     text-decoration: none;
 }
 
-.login-modal-github:focus-visible {
+.login-modal-github:focus-visible,
+.login-modal-qq:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
 }
@@ -8349,7 +8363,8 @@ html.login-modal-open .login-modal {
         border-top-color: var(--line-night);
     }
 
-    html:not(.theme-light) .login-modal-github {
+    html:not(.theme-light) .login-modal-github,
+    html:not(.theme-light) .login-modal-qq {
         border-color: rgba(221, 221, 219, 0.35);
     }
 
@@ -9057,7 +9072,8 @@ html.theme-dark .login-modal-oauth {
     border-top-color: var(--line-night);
 }
 
-html.theme-dark .login-modal-github {
+html.theme-dark .login-modal-github,
+html.theme-dark .login-modal-qq {
     border-color: rgba(221, 221, 219, 0.35);
 }
 
