@@ -1,0 +1,14 @@
+{
+  "name": "hansjack-theme-assets",
+  "private": true,
+  "version": "1.0.0",
+  "description": "HansJack theme asset build tools",
+  "scripts": {
+    "build:minify": "node ./scripts/build-min-assets.mjs",
+    "build:compress": "node ./scripts/build-precompressed-assets.mjs",
+    "build:assets": "npm run build:minify && npm run build:compress"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.9"
+  }
+}

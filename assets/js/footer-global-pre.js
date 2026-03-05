@@ -1026,6 +1026,20 @@
             }
         });
 
+        window.addEventListener("hansjack:pjax:after", function () {
+            // Re-run list-state sync after PJAX swapped `.main`.
+            syncPostsSettingsUI();
+            applyPostsSettingsToAllLists();
+            updateSettingsFabVisibility();
+            updateTopProgress();
+            if (isSettingsPopoverOpen()) {
+                closeSettingsPopover();
+            }
+            if (isRewardPopoverOpen()) {
+                closeRewardPopover(true);
+            }
+        });
+
         if (commentBtn) {
             var target = findCommentTarget();
             if (!target) {

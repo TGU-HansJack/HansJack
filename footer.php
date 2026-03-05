@@ -253,7 +253,7 @@ if ($customJavaScript !== '') {
 
 <div class="theme-curtain" aria-hidden="true"></div>
 
-<script src="<?php echo escape(assetUrl($this->options, 'assets/js/footer-global-pre.js')); ?>"></script>
+<script src="<?php echo escape(assetUrlSmart($this->options, 'assets/js/footer-global-pre.js')); ?>"></script>
 
 <?php if ($this->is('post') || $this->is('page')): ?>
     <script>
@@ -762,7 +762,7 @@ if ($customJavaScript !== '') {
         })();
     </script>
     <script src="<?php echo escape(assetUrl($this->options, 'assets/vendor/medium-zoom/medium-zoom.min.js')); ?>"></script>
-    <script src="<?php echo escape(assetUrl($this->options, 'assets/js/content-static.js')); ?>"></script>
+    <script src="<?php echo escape(assetUrlSmart($this->options, 'assets/js/content-static.js')); ?>"></script>
     <script>
         (function () {
             var contents = Array.prototype.slice.call(document.querySelectorAll(".article-content, .comment-content"));
@@ -956,7 +956,8 @@ if ($customJavaScript !== '') {
     </script>
 <?php endif; ?>
 
-<script src="<?php echo escape(assetUrl($this->options, 'assets/js/footer-global-tail.js')); ?>"></script>
+<script src="<?php echo escape(assetUrlSmart($this->options, 'assets/js/footer-global-tail.js')); ?>"></script>
+<script src="<?php echo escape(assetUrlSmart($this->options, 'assets/js/pjax-lite.js')); ?>"></script>
 
 <?php $this->footer(); ?>
 <?php if ($customJavaScript !== ''): ?>

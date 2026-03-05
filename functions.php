@@ -208,6 +208,18 @@ function themeConfig($form)
         _t('将以 &lt;script&gt; 注入到页面底部（body 末尾）。请填写纯 JavaScript。')
     );
     $form->addInput($customJavaScript);
+
+    $preferMinAssets = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'preferMinAssets',
+        [
+            '1' => _t('开启'),
+            '0' => _t('关闭'),
+        ],
+        '1',
+        _t('优先加载压缩资源'),
+        _t('开启后优先加载 .min.css / .min.js（不存在则自动回退源文件）。')
+    );
+    $form->addInput($preferMinAssets);
 }
 
 /**
@@ -1671,7 +1683,7 @@ function renderFeedHtmlFromXml(string $xml): string
     $theme = trim((string) ($options->theme ?? ''));
     $themeStyleHref = '';
     if ($theme !== '') {
-        $themeStyleHref = assetUrl($options, 'style.css', $theme);
+        $themeStyleHref = assetUrlSmart($options, 'style.css', $theme);
     }
     $themeStyleTag = '';
     if ($themeStyleHref !== '') {
@@ -2685,6 +2697,72 @@ function assetUrl(Options $options, string $assetPath, string $theme = ''): stri
 
     $separator = (strpos($url, '?') === false) ? '?' : '&';
     return $url . $separator . 'v=' . rawurlencode($version);
+}
+
+function shouldPreferMinAssets(Options $options): bool
+{
+    $raw = '';
+    try {
+        $raw = (string) ($options->preferMinAssets ?? '1');
+    } catch (\Throwable $e) {
+        $raw = '1';
+    }
+    $raw = trim($raw);
+    return !($raw === '0' || strtolower($raw) === 'false' || strtolower($raw) === 'off');
+}
+
+function minifiedAssetPath(string $assetPath): string
+{
+    $assetPath = ltrim(str_replace('\\', '/', trim($assetPath)), '/');
+    if ($assetPath === '') {
+        return '';
+    }
+
+    if (preg_match('/\.min\.(css|js)$/i', $assetPath) === 1) {
+        return $assetPath;
+    }
+
+    $dotPos = strrpos($assetPath, '.');
+    if ($dotPos === false) {
+        return '';
+    }
+
+    $ext = strtolower(substr($assetPath, $dotPos + 1));
+    if ($ext !== 'css' && $ext !== 'js') {
+        return '';
+    }
+
+    return substr($assetPath, 0, $dotPos) . '.min.' . $ext;
+}
+
+function themeAssetExists(string $assetPath, string $themeName): bool
+{
+    $assetPath = ltrim(str_replace('\\', '/', trim($assetPath)), '/');
+    $themeName = trim($themeName);
+    if ($assetPath === '' || $themeName === '') {
+        return false;
+    }
+
+    $root = rtrim(str_replace('\\', '/', (string) __TYPECHO_ROOT_DIR__), '/');
+    $fullPath = $root . '/usr/themes/' . $themeName . '/' . $assetPath;
+    return is_file($fullPath) && is_readable($fullPath);
+}
+
+function assetUrlSmart(Options $options, string $assetPath, string $theme = ''): string
+{
+    $resolvedTheme = trim($theme);
+    if ($resolvedTheme === '') {
+        $resolvedTheme = trim((string) ($options->theme ?? ''));
+    }
+
+    if (shouldPreferMinAssets($options)) {
+        $minPath = minifiedAssetPath($assetPath);
+        if ($minPath !== '' && themeAssetExists($minPath, $resolvedTheme)) {
+            return assetUrl($options, $minPath, $resolvedTheme);
+        }
+    }
+
+    return assetUrl($options, $assetPath, $resolvedTheme);
 }
 
 function normalizeAssetUrl(Options $options, string $value): string

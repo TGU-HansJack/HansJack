@@ -56,7 +56,7 @@ try {
     $needsLandingWelcomeFont = false;
 }
 
-$themeStyleHref = assetUrl($this->options, 'style.css');
+$themeStyleHref = assetUrlSmart($this->options, 'style.css');
 $serifFontCssAsset = 'assets/fonts/NotoSerifSC-ExtraLight/subset-800/subset-font.css';
 $serifFontCssHref = assetUrl($this->options, $serifFontCssAsset);
 $digitFontCssHref = assetUrl($this->options, 'assets/fonts/MapleMono-NF-CN-Regular/digits/digits.css');

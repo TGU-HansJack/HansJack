@@ -944,6 +944,21 @@
             clearTimer();
         });
 
+        window.addEventListener("hansjack:pjax:after", function (e) {
+            var detail = e && e.detail ? e.detail : null;
+            if (!detail || detail.listPage !== true) {
+                return;
+            }
+            // New list page after PJAX should establish a fresh polling baseline.
+            hasUpdate = false;
+            stopped = false;
+            inFlight = false;
+            baselineVersion = "";
+            nextInterval = baseInterval;
+            clearTimer();
+            scheduleNext(1200);
+        });
+
         showQueuedToast();
         scheduleNext(1800);
     })();

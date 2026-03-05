@@ -39,3 +39,30 @@
 - 更丰富的「更多」下拉内容（页面集合、专题入口）
 - 首页第二屏长期阅读推荐区
 - 评论区视觉与交互优化
+
+## 静态资源压缩（Brotli/Gzip + Minify）
+主题已内置可选的压缩资源加载逻辑：
+- 后台开关：`优先加载压缩资源`
+- 开启后优先加载 `.min.css/.min.js`，文件不存在时自动回退源文件
+
+### 构建命令
+在主题目录执行：
+
+```bash
+npm install
+npm run build:minify
+npm run build:compress
+# 或一次完成
+npm run build:assets
+```
+
+构建结果：
+- Minify：`style.min.css`、`assets/js/*.min.js`
+- 预压缩：为关键 CSS/JS 生成 `.gz` 和 `.br`
+
+### Nginx 配置示例
+可参考：
+
+`scripts/nginx-compression-example.conf`
+
+将其合并到你的 `server` 配置中即可启用 Brotli/Gzip 与静态缓存。
