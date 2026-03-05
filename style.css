@@ -1890,8 +1890,8 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 
 .posts-item {
     display: grid;
-    /* Let titles keep more width; the tags column stays compact instead of stealing 50%. */
-    grid-template-columns: minmax(0, 1fr) minmax(0, clamp(8rem, 30%, 14rem));
+    /* Let the tags column size to content instead of a fixed range. */
+    grid-template-columns: minmax(0, 1fr) auto;
     column-gap: 1.2rem;
     /* Keep the vertical rhythm controlled by the title/excerpt/time margins. */
     row-gap: 0;
@@ -1978,9 +1978,12 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 
 .posts-item-right {
     min-width: 0;
+    width: fit-content;
+    max-width: 100%;
+    justify-self: end;
     display: flex;
     flex-wrap: wrap;
-    justify-content: flex-end;
+    justify-content: flex-start;
     align-items: baseline;
     gap: 0.6rem;
     padding-top: 0.25rem;
@@ -2242,6 +2245,7 @@ html.theme-dark .posts-pager.page-navigator.is-affixed {
     .posts-item-right {
         /* Title -> tags -> time on narrow screens. */
         order: 2;
+        width: auto;
         justify-content: flex-start;
         padding-top: 0;
         gap: 0.35rem 0.75rem;
