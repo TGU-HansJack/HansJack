@@ -4531,7 +4531,7 @@ html.theme-dark .activity-bubble.is-private {
 .article-meta {
     margin: 0.55rem 0 0;
     color: var(--muted-day);
-    font-family: var(--font-ui);
+    font-family: "Maple Mono NF CN Digits", var(--font-ui);
     font-size: 0.88rem;
     display: flex;
     align-items: center;
@@ -4567,7 +4567,7 @@ html.theme-dark .activity-bubble.is-private {
     border-radius: 8px;
     background: var(--nav-block-bg);
     color: var(--nav-block-fg);
-    font-family: var(--font-ui);
+    font-family: "Maple Mono NF CN Digits", var(--font-ui);
     font-size: 0.75rem;
     line-height: 1.38;
     white-space: normal;
