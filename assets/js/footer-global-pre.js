@@ -100,6 +100,15 @@
             return "smooth";
         }
 
+        function isCoarsePointerDevice() {
+            try {
+                if (window.matchMedia) {
+                    return !!window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+                }
+            } catch (e) {}
+            return false;
+        }
+
         var scrollBtn = document.querySelector(".scroll-down");
         if (scrollBtn) {
             scrollBtn.addEventListener("click", function (e) {
@@ -154,6 +163,561 @@
                 window.scrollTo(0, nextTop);
             });
         }
+    })();
+
+/* block 2.5 */
+(function () {
+        var body = document.body;
+        if (!body) {
+            return;
+        }
+
+        function hasArticleContent() {
+            return !!document.querySelector(".article-content");
+        }
+        if (!hasArticleContent()) {
+            return;
+        }
+
+        var toolbar = document.createElement("div");
+        toolbar.className = "selection-actions-popover";
+        toolbar.setAttribute("role", "toolbar");
+        toolbar.setAttribute("aria-label", "选中文本操作");
+        toolbar.setAttribute("aria-hidden", "true");
+
+        var copyBtn = document.createElement("button");
+        copyBtn.type = "button";
+        copyBtn.className = "selection-actions-btn";
+        copyBtn.setAttribute("data-event", "selection-copy");
+        copyBtn.textContent = "复制";
+
+        var sep = document.createElement("span");
+        sep.className = "selection-actions-sep";
+        sep.setAttribute("aria-hidden", "true");
+
+        var quoteBtn = document.createElement("button");
+        quoteBtn.type = "button";
+        quoteBtn.className = "selection-actions-btn";
+        quoteBtn.setAttribute("data-event", "selection-comment");
+        quoteBtn.textContent = "引用评论";
+
+        toolbar.appendChild(copyBtn);
+        toolbar.appendChild(sep);
+        toolbar.appendChild(quoteBtn);
+        body.appendChild(toolbar);
+
+        var raf = window.requestAnimationFrame
+            ? window.requestAnimationFrame.bind(window)
+            : function (callback) {
+                return window.setTimeout(callback, 16);
+            };
+        var cancelRaf = window.cancelAnimationFrame
+            ? window.cancelAnimationFrame.bind(window)
+            : function (id) {
+                window.clearTimeout(id);
+            };
+
+        var tickId = 0;
+        var activeText = "";
+        var showTimer = 0;
+        var pointerSelecting = false;
+
+        function readScrollBehavior() {
+            try {
+                if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                    return "auto";
+                }
+            } catch (e) {}
+            return "smooth";
+        }
+
+        function isCoarsePointerDevice() {
+            try {
+                if (window.matchMedia) {
+                    return !!window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+                }
+            } catch (e) {}
+            return false;
+        }
+
+        function normalizeSelectionText(raw) {
+            var text = String(raw || "").replace(/\u00A0/g, " ").replace(/\r\n?/g, "\n");
+            text = text.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+            return text;
+        }
+
+        function hideToolbar() {
+            if (tickId) {
+                cancelRaf(tickId);
+                tickId = 0;
+            }
+            if (showTimer) {
+                window.clearTimeout(showTimer);
+                showTimer = 0;
+            }
+            activeText = "";
+            toolbar.classList.remove("is-visible");
+            toolbar.setAttribute("aria-hidden", "true");
+        }
+
+        function readShowDelayMs() {
+            return isCoarsePointerDevice() ? 320 : 220;
+        }
+
+        function fallbackCopyText(text) {
+            var ok = false;
+            try {
+                var ta = document.createElement("textarea");
+                ta.value = String(text || "");
+                ta.setAttribute("readonly", "readonly");
+                ta.style.position = "fixed";
+                ta.style.top = "-9999px";
+                ta.style.left = "-9999px";
+                ta.style.opacity = "0";
+                ta.style.pointerEvents = "none";
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                ta.setSelectionRange(0, ta.value.length);
+                try {
+                    ok = document.execCommand("copy");
+                } catch (e) {
+                    ok = false;
+                }
+                document.body.removeChild(ta);
+            } catch (e) {
+                ok = false;
+            }
+            return ok;
+        }
+
+        function copyText(text) {
+            var payload = String(text || "").trim();
+            if (!payload) {
+                return Promise.resolve(false);
+            }
+            if (navigator && navigator.clipboard && window && window.isSecureContext) {
+                return navigator.clipboard.writeText(payload).then(function () {
+                    return true;
+                }).catch(function () {
+                    return fallbackCopyText(payload);
+                });
+            }
+            return Promise.resolve(fallbackCopyText(payload));
+        }
+
+        function getCommentTextarea() {
+            var selectors = [
+                "[data-comment-form][data-comment-role=\"top\"] textarea[name=\"text\"]",
+                "[data-comment-form][data-comment-role=\"reply\"] textarea[name=\"text\"]",
+                "#comment-form-top textarea[name=\"text\"]",
+                "#comment-form textarea[name=\"text\"]",
+                ".comment-form textarea[name=\"text\"]"
+            ];
+            for (var i = 0; i < selectors.length; i++) {
+                var node = document.querySelector(selectors[i]);
+                if (node) {
+                    return node;
+                }
+            }
+            return null;
+        }
+
+        function toMarkdownQuote(text) {
+            var raw = normalizeSelectionText(text);
+            if (!raw) {
+                return "";
+            }
+            var lines = raw.split("\n");
+            var out = [];
+            for (var i = 0; i < lines.length; i++) {
+                var line = String(lines[i] || "");
+                if (line === "") {
+                    out.push(">");
+                } else {
+                    out.push("> " + line);
+                }
+            }
+            return out.join("\n");
+        }
+
+        function insertQuoteIntoTextarea(textarea, quoteMarkdown) {
+            if (!textarea || !quoteMarkdown) {
+                return false;
+            }
+
+            var existing = String(textarea.value || "").replace(/\r\n?/g, "\n");
+            var next = existing;
+            if (next.trim() !== "") {
+                next = next.replace(/\s*$/, "");
+                next += "\n\n";
+            }
+            next += quoteMarkdown + "\n\n";
+            textarea.value = next;
+
+            try {
+                textarea.dispatchEvent(new Event("input", { bubbles: true }));
+            } catch (e) {}
+
+            return true;
+        }
+
+        function scrollToCommentBox(textarea) {
+            if (!textarea) {
+                return;
+            }
+            var target = textarea.closest("[data-comment-box]") || textarea.closest(".comment-box") || textarea;
+            try {
+                target.scrollIntoView({ behavior: readScrollBehavior(), block: "center" });
+            } catch (e) {
+                try {
+                    target.scrollIntoView();
+                } catch (e2) {}
+            }
+            window.setTimeout(function () {
+                try {
+                    textarea.focus();
+                    var len = (textarea.value || "").length;
+                    textarea.setSelectionRange(len, len);
+                } catch (e) {}
+            }, 80);
+        }
+
+        function syncQuoteBtnState() {
+            var hasTextarea = !!getCommentTextarea();
+            quoteBtn.disabled = !hasTextarea;
+            quoteBtn.setAttribute("aria-disabled", hasTextarea ? "false" : "true");
+            if (hasTextarea) {
+                quoteBtn.removeAttribute("title");
+            } else {
+                quoteBtn.setAttribute("title", "当前页面未找到评论框");
+            }
+        }
+
+        function resolveSelectionPayload() {
+            if (!hasArticleContent()) {
+                return null;
+            }
+
+            var sel;
+            try {
+                sel = window.getSelection ? window.getSelection() : null;
+            } catch (e) {
+                sel = null;
+            }
+            if (!sel || sel.isCollapsed || sel.rangeCount <= 0) {
+                return null;
+            }
+
+            var text = normalizeSelectionText(sel.toString());
+            if (!text) {
+                return null;
+            }
+
+            var range;
+            try {
+                range = sel.getRangeAt(0);
+            } catch (e) {
+                range = null;
+            }
+            if (!range) {
+                return null;
+            }
+
+            var articleRoot = document.querySelector(".article-content");
+            if (!articleRoot) {
+                return null;
+            }
+
+            var common = range.commonAncestorContainer;
+            var node = common ? (common.nodeType === 1 ? common : common.parentNode) : null;
+            if (!node || !articleRoot.contains(node)) {
+                return null;
+            }
+            if (node.closest && node.closest("textarea, input, button, [contenteditable=\"true\"], .selection-actions-popover")) {
+                return null;
+            }
+
+            var rect;
+            try {
+                rect = range.getBoundingClientRect();
+            } catch (e) {
+                rect = null;
+            }
+            if (!rect || (!rect.width && !rect.height)) {
+                return null;
+            }
+
+            var anchorRect = rect;
+            try {
+                var rectList = range.getClientRects ? range.getClientRects() : null;
+                if (rectList && rectList.length > 0) {
+                    var candidate = rectList[rectList.length - 1];
+                    if (candidate && (candidate.width || candidate.height)) {
+                        anchorRect = candidate;
+                    }
+                }
+            } catch (e) {}
+
+            return {
+                text: text,
+                rect: rect,
+                anchorRect: anchorRect
+            };
+        }
+
+        function positionToolbar(rect, anchorRect) {
+            if (!rect) {
+                return;
+            }
+
+            toolbar.classList.add("is-visible");
+            toolbar.setAttribute("aria-hidden", "false");
+            toolbar.style.left = "0px";
+            toolbar.style.top = "0px";
+
+            var pageX = window.pageXOffset || (document.documentElement ? document.documentElement.scrollLeft : 0) || 0;
+            var pageY = window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0) || 0;
+            var vw = window.innerWidth || (document.documentElement ? document.documentElement.clientWidth : 0) || 0;
+            var vh = window.innerHeight || (document.documentElement ? document.documentElement.clientHeight : 0) || 0;
+            var pad = 10;
+            var gap = 10;
+
+            var width = toolbar.offsetWidth || 220;
+            var height = toolbar.offsetHeight || 40;
+            var anchor = anchorRect || rect;
+
+            var anchorLeft = pageX + anchor.left;
+            var anchorRight = pageX + anchor.right;
+            var anchorTop = pageY + anchor.top;
+            var anchorBottom = pageY + anchor.bottom;
+            var anchorHeight = Math.max(0, anchorBottom - anchorTop);
+
+            var minLeft = pageX + pad;
+            var maxLeft = pageX + vw - width - pad;
+            var minTop = pageY + pad;
+            var maxTop = pageY + vh - height - pad;
+            if (maxLeft < minLeft) {
+                maxLeft = minLeft;
+            }
+            if (maxTop < minTop) {
+                maxTop = minTop;
+            }
+
+            function fits(pos) {
+                return pos && pos.left >= minLeft && pos.left <= maxLeft && pos.top >= minTop && pos.top <= maxTop;
+            }
+
+            function clamp(pos) {
+                var left = pos && isFinite(pos.left) ? pos.left : minLeft;
+                var top = pos && isFinite(pos.top) ? pos.top : minTop;
+                if (left < minLeft) {
+                    left = minLeft;
+                }
+                if (left > maxLeft) {
+                    left = maxLeft;
+                }
+                if (top < minTop) {
+                    top = minTop;
+                }
+                if (top > maxTop) {
+                    top = maxTop;
+                }
+                return { left: left, top: top };
+            }
+
+            var rightSide = {
+                left: anchorRight + gap,
+                top: anchorTop + (anchorHeight - height) / 2
+            };
+            var rightBottom = {
+                left: anchorRight + gap,
+                top: anchorBottom + gap
+            };
+            var belowRight = {
+                left: anchorRight - width,
+                top: anchorBottom + gap
+            };
+            var belowLeft = {
+                left: anchorLeft,
+                top: anchorBottom + gap
+            };
+            var aboveRight = {
+                left: anchorRight - width,
+                top: anchorTop - height - gap
+            };
+            var aboveLeft = {
+                left: anchorLeft,
+                top: anchorTop - height - gap
+            };
+
+            var coarsePointer = isCoarsePointerDevice();
+            var candidates = coarsePointer
+                ? [rightBottom, belowRight, rightSide, belowLeft, aboveRight, aboveLeft]
+                : [rightSide, rightBottom, belowRight, belowLeft, aboveRight, aboveLeft];
+
+            var pos = null;
+            for (var i = 0; i < candidates.length; i++) {
+                if (fits(candidates[i])) {
+                    pos = candidates[i];
+                    break;
+                }
+            }
+            if (!pos) {
+                pos = clamp(coarsePointer ? belowRight : rightSide);
+            }
+
+            var left = pos.left;
+            var top = pos.top;
+            if (left < minLeft) {
+                left = minLeft;
+            }
+            if (left > maxLeft) {
+                left = maxLeft;
+            }
+            if (top < minTop) {
+                top = minTop;
+            }
+            if (top > maxTop) {
+                top = maxTop;
+            }
+            if (!isFinite(left)) {
+                left = minLeft;
+            }
+            if (!isFinite(top)) {
+                top = minTop;
+            }
+
+            toolbar.style.left = Math.round(left) + "px";
+            toolbar.style.top = Math.round(top) + "px";
+        }
+
+        function queueToolbarShow(payload) {
+            if (!payload) {
+                return;
+            }
+            if (showTimer) {
+                window.clearTimeout(showTimer);
+                showTimer = 0;
+            }
+            var delay = readShowDelayMs();
+            showTimer = window.setTimeout(function () {
+                showTimer = 0;
+                if (pointerSelecting) {
+                    return;
+                }
+                var latest = resolveSelectionPayload();
+                if (!latest) {
+                    hideToolbar();
+                    return;
+                }
+                activeText = latest.text;
+                syncQuoteBtnState();
+                positionToolbar(latest.rect, latest.anchorRect);
+            }, delay);
+        }
+
+        function updateBySelection() {
+            tickId = 0;
+            if (pointerSelecting) {
+                hideToolbar();
+                return;
+            }
+            var payload = resolveSelectionPayload();
+            if (!payload) {
+                hideToolbar();
+                return;
+            }
+            queueToolbarShow(payload);
+        }
+
+        function scheduleSelectionUpdate() {
+            if (tickId) {
+                return;
+            }
+            tickId = raf(updateBySelection);
+        }
+
+        copyBtn.addEventListener("click", function (e) {
+            if (e && e.preventDefault) {
+                e.preventDefault();
+            }
+            var text = normalizeSelectionText(activeText);
+            if (!text) {
+                return;
+            }
+            copyText(text);
+        });
+
+        quoteBtn.addEventListener("click", function (e) {
+            if (e && e.preventDefault) {
+                e.preventDefault();
+            }
+            if (quoteBtn.disabled) {
+                return;
+            }
+
+            var text = normalizeSelectionText(activeText);
+            var quoteMarkdown = toMarkdownQuote(text);
+            if (!quoteMarkdown) {
+                return;
+            }
+
+            var textarea = getCommentTextarea();
+            if (!textarea) {
+                syncQuoteBtnState();
+                return;
+            }
+
+            if (!insertQuoteIntoTextarea(textarea, quoteMarkdown)) {
+                return;
+            }
+
+            try {
+                var sel = window.getSelection ? window.getSelection() : null;
+                if (sel && sel.removeAllRanges) {
+                    sel.removeAllRanges();
+                }
+            } catch (err) {}
+
+            hideToolbar();
+            scrollToCommentBox(textarea);
+        });
+
+        document.addEventListener("selectionchange", scheduleSelectionUpdate);
+        document.addEventListener("mouseup", function () {
+            pointerSelecting = false;
+            window.setTimeout(scheduleSelectionUpdate, 0);
+        });
+        document.addEventListener("touchstart", function () {
+            pointerSelecting = true;
+        }, { passive: true });
+        document.addEventListener("touchend", function () {
+            pointerSelecting = false;
+            window.setTimeout(scheduleSelectionUpdate, 40);
+        }, { passive: true });
+        document.addEventListener("touchcancel", function () {
+            pointerSelecting = false;
+            hideToolbar();
+        }, { passive: true });
+
+        document.addEventListener("mousedown", function (e) {
+            pointerSelecting = true;
+            var t = e ? e.target : null;
+            if (!t || !toolbar.contains(t)) {
+                hideToolbar();
+            }
+        }, true);
+
+        window.addEventListener("scroll", hideToolbar, { passive: true });
+        window.addEventListener("resize", hideToolbar);
+        window.addEventListener("hansjack:pjax:after", hideToolbar);
+        window.addEventListener("keydown", function (e) {
+            var key = e && (e.key || e.code);
+            if (key === "Escape" || key === "Esc") {
+                hideToolbar();
+            }
+        });
     })();
 
 /* block 3 */
