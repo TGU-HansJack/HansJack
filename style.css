@@ -14,7 +14,8 @@
     --day-text: var(--day-black);
     --night-text: var(--night-white);
     --desktop-width: 86%;
-    --font-main: "Noto Serif SC XL Core", "Noto Serif SC XL Fallback", "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+    --font-main: "Noto Serif SC VF Core", "Noto Serif SC VF Fallback", "Noto Serif SC XL Core", "Noto Serif SC XL Fallback", "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+    --font-main-weight: 450;
     --font-ui: var(--font-main);
     --font-brand: var(--font-main);
 
@@ -25,7 +26,7 @@
     --muted-day: var(--day-gray);
     --muted-night: var(--night-gray);
     --accent: var(--day-black);
-    --nav-font-size: 1rem;
+    --nav-font-size: 1.0625rem;
     --nav-icon-size: 20px;
     --nav-icon-gap: 3px;
     --nav-block-bg: var(--day-black);
@@ -67,6 +68,7 @@ body {
     min-height: 100vh;
     line-height: 1.75;
     font-family: var(--font-main);
+    font-weight: var(--font-main-weight);
 }
 
 /* Mobile browsers often apply a default focus/tap highlight (blue rectangle) after tapping links/buttons. */
@@ -1865,6 +1867,7 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 
 .posts {
     padding: 2rem 0 clamp(2.2rem, 6vw, 4.2rem);
+    font-size: 1.0625rem;
     --posts-pager-line: rgba(42, 42, 40, 0.38);
 }
 
@@ -1924,7 +1927,7 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 
 .posts-title {
     display: inline-block;
-    font-size: 1rem;
+    font-size: 1.0625rem;
     line-height: 1.42;
     letter-spacing: 0.01em;
     overflow-wrap: anywhere;
@@ -1942,7 +1945,7 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 
 .posts-title-prefix {
     display: inline-block;
-    font-size: 1rem;
+    font-size: 1.0625rem;
     line-height: 1.42;
     letter-spacing: 0.01em;
     opacity: 0.86;
@@ -1955,7 +1958,7 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 .posts-date {
     display: block;
     margin-top: -0.08rem;
-    font-family: "Maple Mono NF CN Digits", var(--font-ui);
+    font-family: var(--font-ui);
     font-size: 0.74rem;
     line-height: 1.25;
     color: var(--muted-day);
@@ -3331,7 +3334,7 @@ a.links-feed-entry-title:focus-visible {
     padding-bottom: 0.45rem;
     border-bottom: 2px solid var(--accent);
     font-family: var(--font-ui);
-    font-size: 1rem;
+    font-size: 1.0625rem;
     line-height: 1.2;
     font-weight: 700;
 }
@@ -3411,7 +3414,7 @@ a.links-feed-entry-title:focus-visible {
 
 .links-aside-favicon span {
     font-family: var(--font-ui);
-    font-size: 1rem;
+    font-size: 1.0625rem;
     font-weight: 700;
     line-height: 1;
 }
@@ -4531,7 +4534,7 @@ html.theme-dark .activity-bubble.is-private {
 .article-meta {
     margin: 0.55rem 0 0;
     color: var(--muted-day);
-    font-family: "Maple Mono NF CN Digits", var(--font-ui);
+    font-family: var(--font-ui);
     font-size: 0.88rem;
     display: flex;
     align-items: center;
@@ -4567,7 +4570,7 @@ html.theme-dark .activity-bubble.is-private {
     border-radius: 8px;
     background: var(--nav-block-bg);
     color: var(--nav-block-fg);
-    font-family: "Maple Mono NF CN Digits", var(--font-ui);
+    font-family: var(--font-ui);
     font-size: 0.75rem;
     line-height: 1.38;
     white-space: normal;
@@ -4749,6 +4752,16 @@ html:not(.theme-light) .selection-actions-sep {
     --task-check-stroke: var(--day-white);
 }
 
+.article-content {
+    font-size: 1.0625rem;
+}
+
+@media (max-width: 768px) {
+    .article-content {
+        font-size: 1rem;
+    }
+}
+
 .article-layout {
     display: block;
     min-width: 0;
@@ -4776,7 +4789,7 @@ html:not(.theme-light) .selection-actions-sep {
     align-items: center;
     gap: 0.42rem;
     font-family: var(--font-ui);
-    font-size: 1rem;
+    font-size: 1.0625rem;
     font-weight: 700;
     line-height: 1.2;
 }
@@ -4836,7 +4849,7 @@ html:not(.theme-light) .selection-actions-sep {
 .article-toc-title {
     margin: 0;
     font-family: var(--font-ui);
-    font-size: 1rem;
+    font-size: 1.0625rem;
     font-weight: 700;
     color: var(--accent);
 }
@@ -4875,7 +4888,7 @@ html:not(.theme-light) .selection-actions-sep {
     flex-direction: column;
     gap: 0.35rem;
     font-family: var(--font-ui);
-    font-size: 0.86rem;
+    font-size: 16px;
 }
 
 .article-toc-sublist {
@@ -4885,17 +4898,18 @@ html:not(.theme-light) .selection-actions-sep {
 
 .article-toc-link {
     display: inline;
-    color: inherit;
+    color: #b7b7b3;
     text-decoration: none;
     text-decoration-skip-ink: auto;
     overflow-wrap: anywhere;
-    font-weight: 400;
-    opacity: 0.82;
+    font-weight: 700;
+    opacity: 1;
     transition: opacity 0.16s ease, font-weight 0s;
 }
 
 .article-toc-link:hover,
 .article-toc-link:focus-visible {
+    color: #93938f;
     opacity: 1;
     text-decoration: none;
 }
@@ -4907,8 +4921,23 @@ html:not(.theme-light) .selection-actions-sep {
 
 .article-toc-link.is-active,
 .article-toc-link[aria-current="location"] {
+    color: var(--accent);
     font-weight: 700;
     opacity: 1;
+}
+
+html:not(.theme-light) .article-toc-link {
+    color: #878783;
+}
+
+html:not(.theme-light) .article-toc-link:hover,
+html:not(.theme-light) .article-toc-link:focus-visible {
+    color: #a9a9a5;
+}
+
+html:not(.theme-light) .article-toc-link.is-active,
+html:not(.theme-light) .article-toc-link[aria-current="location"] {
+    color: var(--night-white);
 }
 
 .fab {
@@ -6239,7 +6268,7 @@ html.theme-dark .fab-reward-backdrop {
 .respond-title {
     margin: 0 0 1rem;
     font-family: var(--font-ui);
-    font-size: 1rem;
+    font-size: 1.0625rem;
     font-weight: 400;
 }
 
@@ -7371,7 +7400,7 @@ html.login-modal-open .login-modal {
     padding: 0.65rem 0.85rem;
     border-left: 3px solid var(--alert-accent, #50504d);
     background: var(--alert-bg, rgba(80, 80, 77, 0.08));
-    border-radius: 0 4px 4px 0;
+    border-radius: 0;
 }
 
 :is(.article-content, .comment-content) .markdown-alert + .markdown-alert {
@@ -9494,4 +9523,24 @@ html.theme-dark .live-toast {
     border-color: var(--night-white);
     background: rgba(16, 16, 14, 0.96);
     color: var(--night-white);
+}
+
+@media (max-width: 768px) {
+    :root {
+        --nav-font-size: 1rem;
+    }
+
+    .posts,
+    .posts-title,
+    .posts-title-prefix,
+    .links-aside-title,
+    .links-aside-favicon span,
+    .article-content,
+    .article-guess-title,
+    .article-toc-title,
+    .comments-title,
+    .comments-closed,
+    .respond-title {
+        font-size: 1rem;
+    }
 }
