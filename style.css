@@ -5985,6 +5985,57 @@ html.theme-dark .fab-reward-backdrop {
     stroke-width: 2.1;
 }
 
+.comments .comment-author-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    color: #000;
+    opacity: 1;
+    line-height: 1;
+}
+
+.comments .comment-author-badge svg {
+    display: block;
+    width: 0.96rem;
+    height: 0.96rem;
+    stroke-width: 1.9;
+}
+
+.comments .comment-author-badge::after {
+    content: attr(data-comment-author-tip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 6px);
+    transform: translate(-50%, 4px);
+    padding: 0.14rem 0.42rem;
+    border-radius: 4px;
+    background: var(--nav-block-bg);
+    color: var(--nav-block-fg);
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 2;
+    transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
+}
+
+.comments .comment-author-badge:hover,
+.comments .comment-author-badge:focus-visible {
+    opacity: 1;
+}
+
+.comments .comment-author-badge:hover::after,
+.comments .comment-author-badge:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+}
+
 .comments .comment-author .fn a:hover,
 .comments .comment-author .fn a:focus-visible {
     text-decoration: underline;
@@ -9673,4 +9724,47 @@ html.theme-dark .live-toast {
     .respond-title {
         font-size: 1rem;
     }
+}
+
+.comments .comment-author-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    color: #000;
+    opacity: 1;
+    line-height: 1;
+}
+
+html:not(.theme-light) .comments .comment-author-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    color: #000;
+    opacity: 1;
+    line-height: 1;
+}
+
+html.theme-dark .comments .comment-author-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    color: #000;
+    opacity: 1;
+    line-height: 1;
+}
+
+html:not(.theme-light) .comments .comment-author-badge {
+    color: var(--night-white);
+    opacity: 1;
+}
+
+html.theme-dark .comments .comment-author-badge {
+    color: var(--night-white);
+    opacity: 1;
 }
