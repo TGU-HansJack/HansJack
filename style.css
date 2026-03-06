@@ -5900,6 +5900,7 @@ html.theme-dark .fab-reward-backdrop {
     gap: 0.45rem;
     min-width: 0;
     min-height: var(--comment-avatar-size);
+    flex: 1 1 100%;
 }
 
 .comments .comment-author-meta {
@@ -6017,17 +6018,20 @@ html.theme-dark .fab-reward-backdrop {
     letter-spacing: 0.02em;
 }
 
-.comments .comment-content,
 .comments .comment-reply,
 .comments .comment-children {
     flex-basis: 100%;
 }
 
-.comments .comment-content {  
+.comments .comment-content {
     margin-top: calc(var(--comment-bubble-tail-size) + var(--comment-bubble-avatar-gap));
     margin-left: 0;
     margin-right: var(--comment-content-right-gap);
-    width: calc(100% - var(--comment-content-right-gap));
+    flex: 0 1 auto;
+    flex-basis: auto;
+    align-self: flex-start;
+    width: fit-content;
+    max-width: calc(100% - var(--comment-content-right-gap));
     box-sizing: border-box;
     padding: 0.34rem 0.68rem;
     border-radius: 4px;
