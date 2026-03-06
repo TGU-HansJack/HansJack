@@ -492,51 +492,94 @@ $this->need('header.php');
                     }
                 });
 
-                var rootList = document.createElement("ol");
-                rootList.className = "article-toc-list";
-
-                var stack = [{ level: 1, list: rootList }];
-
-                function currentFrame() {
-                    return stack[stack.length - 1];
-                }
-
+                var tocItems = [];
+                var lastLevel = 1;
                 headings.forEach(function (h) {
                     var rawLevel = headingLevel(h);
                     var level = rawLevel - minLevel + 1;
                     if (level < 1) {
                         level = 1;
                     }
-
-                    var cur = currentFrame();
-                    if (level > cur.level + 1) {
-                        level = cur.level + 1;
+                    if (level > lastLevel + 1) {
+                        level = lastLevel + 1;
                     }
+                    lastLevel = level;
+                    tocItems.push({
+                        heading: h,
+                        level: level,
+                        depth: level - 1
+                    });
+                });
 
-                    while (level > currentFrame().level) {
-                        var parentList = currentFrame().list;
-                        var parentLi = parentList.lastElementChild;
-                        if (!parentLi) {
-                            break;
+                var depths = tocItems.map(function (item) {
+                    return item.depth;
+                });
+
+                function hasMoreForColumn(index, columnDepth) {
+                    for (var i = index + 1; i < depths.length; i += 1) {
+                        // Keep ancestor stem only when a later item exists on the same ancestor depth.
+                        if (depths[i] === columnDepth) {
+                            return true;
                         }
-                        var sub = document.createElement("ol");
-                        sub.className = "article-toc-sublist";
-                        parentLi.appendChild(sub);
-                        stack.push({ level: currentFrame().level + 1, list: sub });
+                        if (depths[i] < columnDepth) {
+                            return false;
+                        }
                     }
+                    return false;
+                }
 
-                    while (level < currentFrame().level) {
-                        stack.pop();
+                function hasNextSibling(index, depth) {
+                    for (var i = index + 1; i < depths.length; i += 1) {
+                        if (depths[i] < depth) {
+                            return false;
+                        }
+                        if (depths[i] === depth) {
+                            return true;
+                        }
                     }
+                    return false;
+                }
+
+                var rootList = document.createElement("ul");
+                rootList.className = "article-toc-list";
+
+                tocItems.forEach(function (item, index) {
+                    var depth = item.depth;
+                    var title = (item.heading.textContent || "").trim();
 
                     var li = document.createElement("li");
-                    var a = document.createElement("a");
                     li.className = "article-toc-item";
+                    li.setAttribute("data-toc-depth", String(depth));
+
+                    var indicator = document.createElement("span");
+                    indicator.className = "article-toc-indicator";
+                    indicator.setAttribute("aria-hidden", "true");
+
+                    for (var col = 0; col <= depth; col += 1) {
+                        var marker = document.createElement("span");
+                        marker.className = "article-toc-indicator-col";
+
+                        if (col < depth) {
+                            if (hasMoreForColumn(index, col)) {
+                                marker.classList.add("is-stem");
+                            }
+                        } else {
+                            marker.classList.add("is-node");
+                            marker.classList.add(hasNextSibling(index, depth) ? "is-continue" : "is-end");
+                        }
+
+                        indicator.appendChild(marker);
+                    }
+
+                    var a = document.createElement("a");
                     a.className = "article-toc-link";
-                    a.href = "#" + h.id;
-                    a.textContent = (h.textContent || "").trim();
+                    a.href = "#" + item.heading.id;
+                    a.title = title;
+                    a.textContent = title;
+
+                    li.appendChild(indicator);
                     li.appendChild(a);
-                    currentFrame().list.appendChild(li);
+                    rootList.appendChild(li);
                 });
 
                 tocNav.textContent = "";
