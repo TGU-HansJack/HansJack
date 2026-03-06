@@ -466,16 +466,6 @@ if ($this->is('post')) {
                         <span class="user-dropdown-text"><?php echo escape($item['label']); ?></span>
                     </a>
                 <?php endforeach; ?>
-                <?php if (!empty($navCategories)): ?>
-                    <div class="mobile-nav-section-title"><?php _e('博文分类'); ?></div>
-                    <?php foreach ($navCategories as $cat): ?>
-                        <a class="user-dropdown-item mobile-nav-subitem"
-                           role="menuitem"
-                           href="<?php echo escape($cat['url']); ?>">
-                            <span class="user-dropdown-text"><?php echo escape($cat['name']); ?></span>
-                        </a>
-                    <?php endforeach; ?>
-                <?php endif; ?>
             </nav>
 
             <div class="mobile-nav-section-title"><?php _e('功能'); ?></div>
