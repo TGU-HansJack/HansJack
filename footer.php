@@ -13,6 +13,85 @@ $customJavaScript = trim((string) ($this->options->customJavaScript ?? ''));
 if ($customJavaScript !== '') {
     $customJavaScript = str_ireplace('</script>', '<\/script>', $customJavaScript);
 }
+
+$internalLinkMetaJson = '{}';
+if ($this->is('post') || $this->is('page')) {
+    $internalLinkMeta = [];
+    $normalizePath = static function (string $path): string {
+        $path = trim($path);
+        if ($path === '') {
+            return '';
+        }
+
+        $path = preg_replace('#/+#', '/', $path);
+        if (!is_string($path)) {
+            return '';
+        }
+
+        if (!startsWith($path, '/')) {
+            $path = '/' . ltrim($path, '/');
+        }
+
+        $path = rtrim($path, '/');
+        return $path === '' ? '/' : $path;
+    };
+
+    $internalMetaPosts = null;
+    try {
+        $this->widget('Widget_Contents_Post_Recent@internal_link_meta', 'pageSize=2000', null, false)->to($internalMetaPosts);
+    } catch (\Throwable $e) {
+        $internalMetaPosts = null;
+    }
+
+    if ($internalMetaPosts && $internalMetaPosts->have()) {
+        while ($internalMetaPosts->next()) {
+            $postUrl = trim((string) ($internalMetaPosts->permalink ?? ''));
+            if ($postUrl === '') {
+                continue;
+            }
+
+            $pathRaw = trim((string) (parse_url($postUrl, PHP_URL_PATH) ?? ''));
+            $pathKey = $normalizePath($pathRaw);
+            if ($pathKey === '') {
+                continue;
+            }
+
+            $postTitle = trim((string) ($internalMetaPosts->title ?? ''));
+            if ($postTitle === '') {
+                $postTitle = _t('无标题');
+            }
+
+            $postCreated = (int) ($internalMetaPosts->created ?? 0);
+            $postModified = (int) ($internalMetaPosts->modified ?? 0);
+
+            $payload = [
+                'title' => $postTitle,
+                'created' => max(0, $postCreated),
+                'modified' => max(0, $postModified),
+            ];
+
+            $internalLinkMeta[$pathKey] = $payload;
+
+            $decodedPath = $normalizePath(rawurldecode($pathKey));
+            if ($decodedPath !== '' && $decodedPath !== $pathKey) {
+                $internalLinkMeta[$decodedPath] = $payload;
+            }
+        }
+    }
+
+    $encodedInternalLinkMeta = json_encode(
+        $internalLinkMeta,
+        JSON_UNESCAPED_UNICODE
+            | JSON_UNESCAPED_SLASHES
+            | JSON_HEX_TAG
+            | JSON_HEX_AMP
+            | JSON_HEX_APOS
+            | JSON_HEX_QUOT
+    );
+    if (is_string($encodedInternalLinkMeta) && $encodedInternalLinkMeta !== '') {
+        $internalLinkMetaJson = $encodedInternalLinkMeta;
+    }
+}
 ?>
 </div>
 
@@ -959,6 +1038,9 @@ if ($customJavaScript !== '') {
     </script>
 <?php endif; ?>
 
+<script>
+window.__hansjackInternalLinkMeta = <?php echo $internalLinkMetaJson; ?>;
+</script>
 <script src="<?php echo escape(assetUrlSmart($this->options, 'assets/js/footer-global-tail.js')); ?>"></script>
 <script src="<?php echo escape(assetUrlSmart($this->options, 'assets/js/pjax-lite.js')); ?>"></script>
 

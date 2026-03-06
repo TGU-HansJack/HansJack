@@ -453,6 +453,517 @@
             return;
         }
 
+        var internalLinkMeta = {};
+        try {
+            if (window.__hansjackInternalLinkMeta && typeof window.__hansjackInternalLinkMeta === "object") {
+                internalLinkMeta = window.__hansjackInternalLinkMeta;
+            }
+        } catch (e) {
+            internalLinkMeta = {};
+        }
+
+        var internalTipMap = typeof WeakMap === "function" ? new WeakMap() : null;
+        var internalTipFallback = [];
+        var internalTipBound = typeof WeakSet === "function" ? new WeakSet() : null;
+        var tooltipEl = null;
+        var activeAnchor = null;
+        var repositionRaf = 0;
+
+        function normalizePathname(pathname) {
+            var path = String(pathname || "").trim();
+            if (!path) {
+                return "";
+            }
+
+            path = path.replace(/\/{2,}/g, "/");
+            if (path.charAt(0) !== "/") {
+                path = "/" + path.replace(/^\/+/, "");
+            }
+            if (path.length > 1) {
+                path = path.replace(/\/+$/, "");
+            }
+            return path || "/";
+        }
+
+        function setTipForAnchor(a, text) {
+            if (!a) {
+                return;
+            }
+
+            var normalized = String(text || "").trim();
+            if (internalTipMap) {
+                if (normalized) {
+                    internalTipMap.set(a, normalized);
+                } else {
+                    internalTipMap.delete(a);
+                }
+                return;
+            }
+
+            for (var i = 0; i < internalTipFallback.length; i++) {
+                var item = internalTipFallback[i];
+                if (!item || item.anchor !== a) {
+                    continue;
+                }
+                if (normalized) {
+                    item.text = normalized;
+                } else {
+                    internalTipFallback.splice(i, 1);
+                }
+                return;
+            }
+
+            if (normalized) {
+                internalTipFallback.push({
+                    anchor: a,
+                    text: normalized
+                });
+            }
+        }
+
+        function clearTipForAnchor(a) {
+            setTipForAnchor(a, "");
+        }
+
+        function getTipForAnchor(a) {
+            if (!a) {
+                return "";
+            }
+
+            if (internalTipMap) {
+                return String(internalTipMap.get(a) || "").trim();
+            }
+
+            for (var i = 0; i < internalTipFallback.length; i++) {
+                var item = internalTipFallback[i];
+                if (item && item.anchor === a) {
+                    return String(item.text || "").trim();
+                }
+            }
+
+            return "";
+        }
+
+        function ensureTooltip() {
+            if (tooltipEl && tooltipEl.parentNode) {
+                return tooltipEl;
+            }
+
+            try {
+                var existing = document.querySelector(".link-internal-tooltip[data-link-internal-tooltip='1']");
+                if (existing) {
+                    tooltipEl = existing;
+                    return tooltipEl;
+                }
+            } catch (e) {}
+
+            try {
+                tooltipEl = document.createElement("span");
+                tooltipEl.className = "link-internal-tooltip";
+                tooltipEl.setAttribute("role", "tooltip");
+                tooltipEl.setAttribute("aria-hidden", "true");
+                tooltipEl.setAttribute("data-link-internal-tooltip", "1");
+                document.body.appendChild(tooltipEl);
+                return tooltipEl;
+            } catch (e) {
+                tooltipEl = null;
+                return null;
+            }
+        }
+
+        function formatTipDate(unixSeconds) {
+            var ts = parseInt(unixSeconds || "0", 10);
+            if (!Number.isFinite(ts) || ts <= 0) {
+                return "";
+            }
+
+            var d = new Date(ts * 1000);
+            if (!d || Number.isNaN(d.getTime())) {
+                return "";
+            }
+
+            function pad(value) {
+                var n = parseInt(value || "0", 10);
+                if (!Number.isFinite(n)) {
+                    n = 0;
+                }
+                return n < 10 ? "0" + n : String(n);
+            }
+
+            return (
+                String(d.getFullYear()) +
+                "-" +
+                pad(d.getMonth() + 1) +
+                "-" +
+                pad(d.getDate()) +
+                " " +
+                pad(d.getHours()) +
+                ":" +
+                pad(d.getMinutes())
+            );
+        }
+
+        function readInternalMeta(urlObj) {
+            if (!urlObj || !urlObj.pathname) {
+                return null;
+            }
+
+            var key = normalizePathname(urlObj.pathname);
+            if (!key) {
+                return null;
+            }
+
+            var meta = internalLinkMeta[key];
+            if (!meta && key !== "/") {
+                meta = internalLinkMeta[key + "/"];
+            }
+            if (!meta || typeof meta !== "object") {
+                return null;
+            }
+
+            var title = String(meta.title || "").trim();
+            var created = parseInt(meta.created || "0", 10);
+            var modified = parseInt(meta.modified || "0", 10);
+
+            if (!Number.isFinite(created) || created < 0) {
+                created = 0;
+            }
+            if (!Number.isFinite(modified) || modified < 0) {
+                modified = 0;
+            }
+
+            return {
+                title: title,
+                created: created,
+                modified: modified
+            };
+        }
+
+        function buildInternalTipText(meta, fallbackTitle) {
+            if (!meta || typeof meta !== "object") {
+                return "";
+            }
+
+            var title = String(meta.title || fallbackTitle || "").trim();
+            var created = parseInt(meta.created || "0", 10);
+            var modified = parseInt(meta.modified || "0", 10);
+            if (!Number.isFinite(created) || created < 0) {
+                created = 0;
+            }
+            if (!Number.isFinite(modified) || modified < 0) {
+                modified = 0;
+            }
+            if (modified <= 0) {
+                modified = created;
+            }
+
+            var lines = [];
+            if (title) {
+                lines.push(title);
+            }
+            if (modified > 0) {
+                lines.push("最后修改于 " + formatTipDate(modified));
+            }
+            if (created > 0) {
+                lines.push("创建于 " + formatTipDate(created));
+            }
+
+            return lines.join("\n").trim();
+        }
+
+        function resolveInternalTipText(a, rawHref, urlObj) {
+            if (!a || !a.classList || !urlObj) {
+                return "";
+            }
+            if (a.classList.contains("footnote-ref") || a.classList.contains("footnote-backref")) {
+                return "";
+            }
+
+            var rawText = String(rawHref || "").trim();
+            if (!rawText || rawText.charAt(0) === "#") {
+                return "";
+            }
+
+            var currentPath = normalizePathname(window.location.pathname || "");
+            var targetPath = normalizePathname((urlObj && urlObj.pathname) || "");
+            if (targetPath && currentPath && targetPath === currentPath) {
+                var hashText = "";
+                try {
+                    hashText = String((urlObj && urlObj.hash) || "").trim();
+                } catch (e) {
+                    hashText = "";
+                }
+                if (hashText !== "") {
+                    return "";
+                }
+            }
+
+            var meta = readInternalMeta(urlObj);
+            if (!meta) {
+                return "";
+            }
+
+            var fallbackTitle = String(a.textContent || "").trim();
+
+            var tipText = buildInternalTipText(meta, fallbackTitle);
+            if (!tipText) {
+                return "";
+            }
+
+            return tipText;
+        }
+
+        function hideTooltip() {
+            activeAnchor = null;
+            if (!tooltipEl) {
+                return;
+            }
+
+            try {
+                tooltipEl.classList.remove("is-visible");
+                tooltipEl.classList.remove("is-measuring");
+                tooltipEl.setAttribute("aria-hidden", "true");
+            } catch (e) {}
+        }
+
+        function readTopGap(anchor, rect) {
+            var lineHeight = 0;
+            var fontSize = 0;
+            try {
+                var style = window.getComputedStyle ? window.getComputedStyle(anchor) : null;
+                var rawLineHeight = style ? String(style.lineHeight || "").trim() : "";
+                var rawFontSize = style ? String(style.fontSize || "").trim() : "";
+
+                if (rawLineHeight && rawLineHeight !== "normal" && rawLineHeight.indexOf("px") !== -1) {
+                    var parsedLineHeight = parseFloat(rawLineHeight);
+                    if (Number.isFinite(parsedLineHeight) && parsedLineHeight > 0) {
+                        lineHeight = parsedLineHeight;
+                    }
+                }
+
+                if (rawFontSize && rawFontSize.indexOf("px") !== -1) {
+                    var parsedFontSize = parseFloat(rawFontSize);
+                    if (Number.isFinite(parsedFontSize) && parsedFontSize > 0) {
+                        fontSize = parsedFontSize;
+                    }
+                }
+            } catch (e) {
+                lineHeight = 0;
+                fontSize = 0;
+            }
+
+            var lineSpacing = 0;
+            if (lineHeight > 0 && fontSize > 0) {
+                lineSpacing = lineHeight - fontSize;
+            }
+
+            if (!Number.isFinite(lineSpacing) || lineSpacing <= 0) {
+                if (lineHeight > 0) {
+                    lineSpacing = lineHeight * 0.25;
+                } else if (fontSize > 0) {
+                    lineSpacing = fontSize * 0.25;
+                } else {
+                    var rectHeight = rect && Number.isFinite(rect.height) ? rect.height : 0;
+                    lineSpacing = rectHeight > 0 ? rectHeight * 0.2 : 6;
+                }
+            }
+
+            if (!Number.isFinite(lineSpacing) || lineSpacing <= 0) {
+                lineSpacing = 6;
+            }
+
+            return Math.max(4, Math.min(14, Math.round(lineSpacing)));
+        }
+
+        function positionTooltip(anchor) {
+            if (!anchor || !anchor.getBoundingClientRect) {
+                hideTooltip();
+                return;
+            }
+
+            var tip = ensureTooltip();
+            if (!tip) {
+                return;
+            }
+
+            var rect = anchor.getBoundingClientRect();
+            if (
+                !rect ||
+                !Number.isFinite(rect.left) ||
+                !Number.isFinite(rect.top) ||
+                (!Number.isFinite(rect.width) && !Number.isFinite(rect.height))
+            ) {
+                hideTooltip();
+                return;
+            }
+
+            var scrollX = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0;
+            var scrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+            var viewportW = Math.max(window.innerWidth || 0, (document.documentElement && document.documentElement.clientWidth) || 0);
+            var viewportH = Math.max(window.innerHeight || 0, (document.documentElement && document.documentElement.clientHeight) || 0);
+            if (viewportW <= 0 || viewportH <= 0) {
+                hideTooltip();
+                return;
+            }
+
+            var anchorX = rect.left + rect.width / 2;
+            var anchorTop = rect.top;
+            var anchorBottom = rect.bottom;
+            var viewportPad = 8;
+            var gapTop = readTopGap(anchor, rect);
+            var gapBottom = 10;
+
+            tip.style.left = "0px";
+            tip.style.top = "0px";
+            tip.setAttribute("data-placement", "top");
+            tip.classList.add("is-measuring");
+            tip.classList.add("is-visible");
+            tip.setAttribute("aria-hidden", "false");
+
+            var tipRect = tip.getBoundingClientRect();
+            var tipW = tipRect && Number.isFinite(tipRect.width) ? tipRect.width : 0;
+            var tipH = tipRect && Number.isFinite(tipRect.height) ? tipRect.height : 0;
+            if (tipW <= 0 || tipH <= 0) {
+                tip.classList.remove("is-measuring");
+                return;
+            }
+
+            var leftViewport = anchorX - tipW / 2;
+            var minLeft = viewportPad;
+            var maxLeft = Math.max(viewportPad, viewportW - viewportPad - tipW);
+            if (leftViewport < minLeft) {
+                leftViewport = minLeft;
+            } else if (leftViewport > maxLeft) {
+                leftViewport = maxLeft;
+            }
+
+            var placement = "top";
+            var topViewport = anchorTop - gapTop - tipH;
+            var maxTop = Math.max(viewportPad, viewportH - viewportPad - tipH);
+            if (topViewport < viewportPad) {
+                placement = "bottom";
+                topViewport = anchorBottom + gapBottom;
+                if (topViewport > maxTop) {
+                    topViewport = maxTop;
+                }
+            } else if (topViewport > maxTop) {
+                topViewport = maxTop;
+            }
+
+            var docLeft = leftViewport + scrollX;
+            var docTop = topViewport + scrollY;
+            tip.style.left = Math.round(docLeft) + "px";
+            tip.style.top = Math.round(docTop) + "px";
+            tip.setAttribute("data-placement", placement);
+
+            var arrowX = anchorX - leftViewport;
+            var arrowPad = 11;
+            if (tipW > arrowPad * 2) {
+                if (arrowX < arrowPad) {
+                    arrowX = arrowPad;
+                } else if (arrowX > tipW - arrowPad) {
+                    arrowX = tipW - arrowPad;
+                }
+            } else {
+                arrowX = tipW / 2;
+            }
+            tip.style.setProperty("--internal-link-tooltip-arrow-x", Math.round(arrowX) + "px");
+            tip.classList.remove("is-measuring");
+        }
+
+        function showTooltip(anchor, text) {
+            var normalizedText = String(text || "").trim();
+            if (!anchor || !normalizedText) {
+                hideTooltip();
+                return;
+            }
+
+            var tip = ensureTooltip();
+            if (!tip) {
+                return;
+            }
+
+            try {
+                tip.textContent = normalizedText;
+            } catch (e) {
+                tip.textContent = "";
+            }
+
+            activeAnchor = anchor;
+            tip.classList.add("is-visible");
+            tip.setAttribute("aria-hidden", "false");
+            positionTooltip(anchor);
+        }
+
+        function scheduleReposition() {
+            if (!activeAnchor) {
+                return;
+            }
+            if (repositionRaf) {
+                return;
+            }
+            repositionRaf = window.requestAnimationFrame(function () {
+                repositionRaf = 0;
+                if (!activeAnchor || !document.contains(activeAnchor)) {
+                    hideTooltip();
+                    return;
+                }
+                positionTooltip(activeAnchor);
+            });
+        }
+
+        function bindTooltipEvents(a) {
+            if (!a || !a.addEventListener) {
+                return;
+            }
+            if (internalTipBound && internalTipBound.has(a)) {
+                return;
+            }
+            if (internalTipBound) {
+                internalTipBound.add(a);
+            }
+
+            a.addEventListener("mouseenter", function () {
+                var text = getTipForAnchor(a);
+                if (!text) {
+                    if (activeAnchor === a) {
+                        hideTooltip();
+                    }
+                    return;
+                }
+                showTooltip(a, text);
+            });
+
+            a.addEventListener("mouseleave", function () {
+                if (activeAnchor === a) {
+                    hideTooltip();
+                }
+            });
+
+            a.addEventListener("focus", function () {
+                var text = getTipForAnchor(a);
+                if (!text) {
+                    if (activeAnchor === a) {
+                        hideTooltip();
+                    }
+                    return;
+                }
+                showTooltip(a, text);
+            });
+
+            a.addEventListener("blur", function () {
+                if (activeAnchor === a) {
+                    hideTooltip();
+                }
+            });
+
+            a.addEventListener("click", function () {
+                if (activeAnchor === a) {
+                    hideTooltip();
+                }
+            });
+        }
+
         function markLinkKind(a, href) {
             if (!a || !a.classList) {
                 return;
@@ -468,6 +979,12 @@
                     a.classList.toggle("link-internal", kind === "internal");
                     a.classList.toggle("link-external", kind === "external");
                 } catch (e) {}
+                if (kind !== "internal") {
+                    clearTipForAnchor(a);
+                    if (activeAnchor === a) {
+                        hideTooltip();
+                    }
+                }
             }
 
             var lower = raw.toLowerCase();
@@ -499,7 +1016,15 @@
                 isInternal = false;
             }
 
-            setLinkKind(isInternal ? "internal" : "external");
+            var kind = isInternal ? "internal" : "external";
+            setLinkKind(kind);
+            if (kind === "internal") {
+                var tipText = resolveInternalTipText(a, raw, url);
+                setTipForAnchor(a, tipText);
+                if (!tipText && activeAnchor === a) {
+                    hideTooltip();
+                }
+            }
         }
 
         for (var c = 0; c < contents.length; c++) {
@@ -524,8 +1049,43 @@
 
                 var href = a.getAttribute("href") || "";
                 markLinkKind(a, href);
+                bindTooltipEvents(a);
             });
         }
+
+        window.addEventListener("scroll", scheduleReposition, { passive: true });
+        window.addEventListener("resize", scheduleReposition);
+
+        document.addEventListener("keydown", function (ev) {
+            var key = ev && ev.key ? String(ev.key) : "";
+            if (key === "Escape" || key === "Esc") {
+                hideTooltip();
+            }
+        });
+
+        document.addEventListener("visibilitychange", function () {
+            if (document.visibilityState && document.visibilityState !== "visible") {
+                hideTooltip();
+            }
+        });
+
+        document.addEventListener("pointerdown", function (ev) {
+            if (!activeAnchor) {
+                return;
+            }
+            var target = ev && ev.target ? ev.target : null;
+            if (target && target.closest) {
+                var active = target.closest("a[href]");
+                if (active === activeAnchor) {
+                    return;
+                }
+            }
+            hideTooltip();
+        }, true);
+
+        window.addEventListener("hansjack:pjax:after", function () {
+            hideTooltip();
+        });
     })();
 
 /* block 24 */
