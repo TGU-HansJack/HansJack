@@ -429,12 +429,33 @@ $this->need('header.php');
                     <span class="article-meta-text"><?php echo (int) $wordCount; ?> <?php _e('字'); ?></span>
                 </span>
             </p>
+            <?php
+            $seriesItems = [];
+            try {
+                $seriesItems = hansjackSeriesItemsByCid((int) ($this->cid ?? 0));
+            } catch (\Throwable $e) {
+                $seriesItems = [];
+            }
+            $seriesVisible = count($seriesItems) >= 2;
+            $seriesItemsJson = json_encode(
+                $seriesItems,
+                JSON_UNESCAPED_UNICODE
+                    | JSON_UNESCAPED_SLASHES
+                    | JSON_HEX_TAG
+                    | JSON_HEX_AMP
+                    | JSON_HEX_APOS
+                    | JSON_HEX_QUOT
+            );
+            if (!is_string($seriesItemsJson) || $seriesItemsJson === '') {
+                $seriesItemsJson = '[]';
+            }
+            ?>
         </header>
         <div class="article-layout" data-article-layout>
             <div class="article-content">
                 <?php echoArchiveContent($this); ?>
             </div>
-            <aside class="article-aside" aria-label="<?php _e('目录'); ?>">
+            <aside class="article-aside" aria-label="<?php _e('右侧栏'); ?>">
                 <div class="article-toc">
                     <div class="article-toc-header">
                         <h2 class="article-toc-title"><?php _e('目录'); ?></h2>
@@ -444,6 +465,57 @@ $this->need('header.php');
                     </div>
                     <nav class="article-toc-nav" aria-label="<?php _e('文章目录'); ?>"></nav>
                 </div>
+                <?php if ($seriesVisible): ?>
+                <section
+                    class="article-series"
+                    aria-label="<?php _e('系列'); ?>"
+                    data-article-series
+                    data-series-cid="<?php echo (int) ($this->cid ?? 0); ?>"
+                    data-series-order="desc"
+                    data-series-endpoint="<?php echo escape($this->permalink); ?>"
+                >
+                    <div class="article-series-header">
+                        <h2 class="article-series-title"><?php _e('系列'); ?></h2>
+                        <div class="article-series-actions" aria-label="<?php _e('操作'); ?>">
+                            <button class="article-series-btn article-series-refresh-btn" type="button" aria-label="<?php _e('刷新系列'); ?>" title="<?php _e('刷新系列'); ?>" data-series-refresh>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw-icon lucide-refresh-cw" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                            </button>
+                            <button class="article-series-btn article-series-sort-btn" type="button" aria-label="<?php _e('切换为时间升序'); ?>" title="<?php _e('切换为时间升序'); ?>" data-series-sort-toggle>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-arrow-up-icon lucide-clock-arrow-up" aria-hidden="true"><path d="M12 6v6l1.56.78"/><path d="M13.227 21.925a10 10 0 1 1 8.767-9.588"/><path d="m14 18 4-4 4 4"/><path d="M18 22v-8"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <ul class="article-series-list article-toc-list" aria-label="<?php _e('系列文章'); ?>" data-series-list>
+                        <?php if (!empty($seriesItems)): ?>
+                            <?php foreach ($seriesItems as $seriesItem): ?>
+                                <?php
+                                $seriesCid = (int) ($seriesItem['cid'] ?? 0);
+                                $seriesTitle = trim((string) ($seriesItem['title'] ?? ''));
+                                if ($seriesTitle === '') {
+                                    $seriesTitle = _t('无标题');
+                                }
+                                $seriesUrl = trim((string) ($seriesItem['url'] ?? ''));
+                                if ($seriesUrl === '') {
+                                    continue;
+                                }
+                                $seriesCreated = (int) ($seriesItem['created'] ?? 0);
+                                $seriesDateTime = trim((string) ($seriesItem['dateTime'] ?? ''));
+                                $seriesDateLabel = trim((string) ($seriesItem['dateLabel'] ?? ''));
+                                $seriesCurrent = !empty($seriesItem['isCurrent']);
+                                ?>
+                                <li class="article-series-item article-toc-item" data-series-created="<?php echo (int) $seriesCreated; ?>" data-series-cid="<?php echo (int) $seriesCid; ?>">
+                                    <a class="article-series-link article-toc-link<?php echo $seriesCurrent ? ' is-active' : ''; ?>" href="<?php echo escape($seriesUrl); ?>" title="<?php echo escape($seriesTitle); ?>"<?php if ($seriesCurrent): ?> aria-current="location"<?php endif; ?>>
+                                        <span class="article-series-link-title"><?php echo escape($seriesTitle); ?></span>
+                                        <time class="article-series-date"<?php if ($seriesDateTime !== ''): ?> datetime="<?php echo escape($seriesDateTime); ?>"<?php endif; ?>><?php echo escape($seriesDateLabel); ?></time>
+                                    </a>
+                                </li>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <li class="article-series-empty"><?php _e('暂无系列文章'); ?></li>
+                        <?php endif; ?>
+                    </ul>
+                </section>
+                <?php endif; ?>
             </aside>
         </div>
 
@@ -699,6 +771,327 @@ $this->need('header.php');
                 requestUpdateTocActive();
                 window.setTimeout(requestUpdateTocActive, 0);
                 window.setTimeout(requestUpdateTocActive, 300);
+            })();
+        </script>
+        <script>
+            (function () {
+                var layout = document.querySelector("[data-article-layout]");
+                if (!layout) {
+                    return;
+                }
+
+                var seriesRoot = layout.querySelector("[data-article-series]");
+                if (!seriesRoot) {
+                    return;
+                }
+
+                var seriesList = seriesRoot.querySelector("[data-series-list]");
+                if (!seriesList) {
+                    return;
+                }
+
+                var refreshBtn = seriesRoot.querySelector("[data-series-refresh]");
+                var sortBtn = seriesRoot.querySelector("[data-series-sort-toggle]");
+                var tocNav = layout.querySelector(".article-toc-nav");
+                var tocBlock = layout.querySelector(".article-toc");
+
+                var currentCid = parseInt(seriesRoot.getAttribute("data-series-cid") || "0", 10);
+                if (!Number.isFinite(currentCid)) {
+                    currentCid = 0;
+                }
+
+                var initialItems = <?php echo $seriesItemsJson; ?>;
+                if (!Array.isArray(initialItems)) {
+                    initialItems = [];
+                }
+
+                var state = {
+                    items: initialItems.slice(),
+                    order: "desc",
+                    loading: false
+                };
+
+                var orderRaw = (seriesRoot.getAttribute("data-series-order") || "").toLowerCase();
+                if (orderRaw === "asc" || orderRaw === "desc") {
+                    state.order = orderRaw;
+                }
+
+                var iconAsc = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-arrow-up-icon lucide-clock-arrow-up" aria-hidden="true"><path d="M12 6v6l1.56.78"/><path d="M13.227 21.925a10 10 0 1 1 8.767-9.588"/><path d="m14 18 4-4 4 4"/><path d="M18 22v-8"/></svg>';
+                var iconDesc = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-arrow-down-icon lucide-clock-arrow-down" aria-hidden="true"><path d="M12 6v6l2 1"/><path d="M12.337 21.994a10 10 0 1 1 9.588-8.767"/><path d="m14 18 4 4 4-4"/><path d="M18 14v8"/></svg>';
+                var iconRefresh = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw-icon lucide-refresh-cw" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>';
+
+                function normalizeItems(items) {
+                    if (!Array.isArray(items)) {
+                        return [];
+                    }
+
+                    var result = [];
+                    var seen = Object.create(null);
+                    for (var i = 0; i < items.length; i += 1) {
+                        var item = items[i];
+                        if (!item || typeof item !== "object") {
+                            continue;
+                        }
+
+                        var cid = parseInt(item.cid || "0", 10);
+                        if (!Number.isFinite(cid) || cid <= 0) {
+                            continue;
+                        }
+                        if (seen[cid]) {
+                            continue;
+                        }
+                        seen[cid] = true;
+
+                        var title = String(item.title || "").trim();
+                        if (!title) {
+                            title = "无标题";
+                        }
+                        var url = String(item.url || "").trim();
+                        if (!url) {
+                            continue;
+                        }
+
+                        var created = parseInt(item.created || "0", 10);
+                        if (!Number.isFinite(created) || created < 0) {
+                            created = 0;
+                        }
+
+                        var dateTime = String(item.dateTime || "").trim();
+                        var dateLabel = String(item.dateLabel || "").trim();
+                        var isCurrent = !!item.isCurrent || (currentCid > 0 && cid === currentCid);
+
+                        result.push({
+                            cid: cid,
+                            title: title,
+                            url: url,
+                            created: created,
+                            dateTime: dateTime,
+                            dateLabel: dateLabel,
+                            isCurrent: isCurrent
+                        });
+                    }
+
+                    return result;
+                }
+
+                function sortedItems(items, order) {
+                    var list = normalizeItems(items).slice();
+                    list.sort(function (a, b) {
+                        var av = parseInt(a.created || "0", 10);
+                        var bv = parseInt(b.created || "0", 10);
+                        if (av !== bv) {
+                            return order === "asc" ? av - bv : bv - av;
+                        }
+                        return order === "asc" ? a.cid - b.cid : b.cid - a.cid;
+                    });
+                    return list;
+                }
+
+                function updateSortButton() {
+                    if (!sortBtn) {
+                        return;
+                    }
+                    var target = state.order === "desc" ? "asc" : "desc";
+                    var label = target === "asc" ? "切换为时间升序" : "切换为时间降序";
+                    sortBtn.setAttribute("aria-label", label);
+                    sortBtn.setAttribute("title", label);
+                    sortBtn.innerHTML = target === "asc" ? iconAsc : iconDesc;
+                }
+
+                function updateAsideVisibility() {
+                    var hasToc = !!(tocNav && tocNav.querySelector(".article-toc-item"));
+                    var seriesCount = seriesList ? seriesList.querySelectorAll(".article-series-item").length : 0;
+                    var hasSeries = !seriesRoot.hidden && seriesCount >= 2;
+                    if (tocBlock) {
+                        tocBlock.hidden = !hasToc;
+                        tocBlock.setAttribute("aria-hidden", hasToc ? "false" : "true");
+                    }
+                    if (hasToc || hasSeries) {
+                        layout.classList.add("is-has-toc");
+                    } else {
+                        layout.classList.remove("is-has-toc");
+                    }
+                }
+
+                function buildSeriesItemNode(item) {
+                    var li = document.createElement("li");
+                    li.className = "article-series-item article-toc-item";
+                    li.setAttribute("data-series-created", String(item.created || 0));
+                    li.setAttribute("data-series-cid", String(item.cid || 0));
+
+                    var a = document.createElement("a");
+                    a.className = "article-series-link article-toc-link";
+                    if (item.isCurrent) {
+                        a.classList.add("is-active");
+                        a.setAttribute("aria-current", "location");
+                    }
+                    a.href = item.url;
+                    a.title = item.title;
+
+                    var titleSpan = document.createElement("span");
+                    titleSpan.className = "article-series-link-title";
+                    titleSpan.textContent = item.title;
+
+                    var dateNode = document.createElement("time");
+                    dateNode.className = "article-series-date";
+                    if (item.dateTime) {
+                        dateNode.setAttribute("datetime", item.dateTime);
+                    }
+                    dateNode.textContent = item.dateLabel || "";
+
+                    a.appendChild(titleSpan);
+                    a.appendChild(dateNode);
+                    li.appendChild(a);
+                    return li;
+                }
+
+                function emitSeriesRendered() {
+                    var ev = null;
+                    try {
+                        ev = new CustomEvent("hansjack:series:rendered", {
+                            detail: {
+                                root: seriesRoot
+                            }
+                        });
+                    } catch (e) {
+                        ev = null;
+                    }
+                    if (!ev) {
+                        try {
+                            ev = document.createEvent("CustomEvent");
+                            ev.initCustomEvent("hansjack:series:rendered", true, false, {
+                                root: seriesRoot
+                            });
+                        } catch (e) {
+                            ev = null;
+                        }
+                    }
+                    if (!ev) {
+                        return;
+                    }
+                    try {
+                        window.dispatchEvent(ev);
+                    } catch (e) {}
+                }
+
+                function renderSeriesList() {
+                    var items = sortedItems(state.items, state.order);
+                    seriesRoot.setAttribute("data-series-order", state.order);
+                    seriesList.textContent = "";
+
+                    if (items.length < 2) {
+                        seriesRoot.hidden = true;
+                        seriesRoot.setAttribute("aria-hidden", "true");
+                        updateAsideVisibility();
+                        emitSeriesRendered();
+                        return;
+                    }
+
+                    var frag = document.createDocumentFragment();
+                    for (var i = 0; i < items.length; i += 1) {
+                        frag.appendChild(buildSeriesItemNode(items[i]));
+                    }
+                    seriesList.appendChild(frag);
+                    seriesRoot.hidden = false;
+                    seriesRoot.setAttribute("aria-hidden", "false");
+                    updateAsideVisibility();
+                    emitSeriesRendered();
+                }
+
+                function setLoading(on) {
+                    state.loading = !!on;
+                    if (!refreshBtn) {
+                        return;
+                    }
+                    refreshBtn.disabled = state.loading;
+                    refreshBtn.setAttribute("aria-busy", state.loading ? "true" : "false");
+                    refreshBtn.innerHTML = iconRefresh;
+                }
+
+                function buildSeriesEndpoint(forceRefresh) {
+                    var endpoint = String(seriesRoot.getAttribute("data-series-endpoint") || "").trim();
+                    if (!endpoint) {
+                        endpoint = window.location.href;
+                    }
+                    var url;
+                    try {
+                        url = new URL(endpoint, window.location.href);
+                    } catch (e) {
+                        return "";
+                    }
+
+                    url.hash = "";
+                    url.searchParams.set("series_list", "1");
+                    if (currentCid > 0) {
+                        url.searchParams.set("cid", String(currentCid));
+                    }
+                    if (forceRefresh) {
+                        url.searchParams.set("force", "1");
+                    } else {
+                        url.searchParams.delete("force");
+                    }
+                    url.searchParams.set("_ts", String(Date.now()));
+                    return url.toString();
+                }
+
+                function refreshSeries() {
+                    if (state.loading) {
+                        return;
+                    }
+                    var endpoint = buildSeriesEndpoint(true);
+                    if (!endpoint) {
+                        return;
+                    }
+
+                    setLoading(true);
+                    window.fetch(endpoint, {
+                        method: "GET",
+                        credentials: "same-origin",
+                        cache: "no-store",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                            "Accept": "application/json"
+                        }
+                    }).then(function (res) {
+                        if (!res || !res.ok) {
+                            throw new Error("series request failed");
+                        }
+                        return res.json();
+                    }).then(function (json) {
+                        if (!json || json.ok !== true) {
+                            throw new Error("series payload invalid");
+                        }
+                        state.items = normalizeItems(json.items || []);
+                        renderSeriesList();
+                    }).catch(function () {
+                    }).finally(function () {
+                        setLoading(false);
+                    });
+                }
+
+                if (sortBtn) {
+                    sortBtn.addEventListener("click", function (e) {
+                        if (e && e.preventDefault) {
+                            e.preventDefault();
+                        }
+                        state.order = state.order === "asc" ? "desc" : "asc";
+                        updateSortButton();
+                        renderSeriesList();
+                    });
+                }
+
+                if (refreshBtn) {
+                    refreshBtn.addEventListener("click", function (e) {
+                        if (e && e.preventDefault) {
+                            e.preventDefault();
+                        }
+                        refreshSeries();
+                    });
+                }
+
+                state.items = normalizeItems(state.items);
+                updateSortButton();
+                renderSeriesList();
             })();
         </script>
 

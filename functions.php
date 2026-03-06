@@ -469,6 +469,8 @@ function hansjackShouldUseAnonymousPageCache(Archive $archive, Options $options)
     if ($qs !== '') {
         $blockedKeys = [
             'live_version=',
+            'series_list=',
+            'comments_refresh=',
             'comment_upload=',
             'comment_edit=',
             'memory_reaction=',
@@ -763,6 +765,447 @@ function hansjackSavePostGuessCache(int $cid, array $items): bool
     return hansjackWriteFileAtomic($path, $json);
 }
 
+function hansjackNormalizeMidSet(array $values): array
+{
+    $map = [];
+    foreach ($values as $value) {
+        $id = (int) $value;
+        if ($id <= 0) {
+            continue;
+        }
+        $map[$id] = $id;
+    }
+
+    $result = array_values($map);
+    sort($result, SORT_NUMERIC);
+    return $result;
+}
+
+function hansjackPostTaxonomySignatureByCid(int $cid): array
+{
+    $signature = [
+        'categoryMids' => [],
+        'tagMids' => [],
+    ];
+
+    if ($cid <= 0) {
+        return $signature;
+    }
+
+    $db = githubDb();
+    if (!is_object($db)) {
+        return $signature;
+    }
+
+    $rows = [];
+    try {
+        $rows = $db->fetchAll(
+            $db->select('r.mid', 'm.type')
+                ->from('table.relationships AS r')
+                ->join('table.metas AS m', 'r.mid = m.mid', Db::LEFT_JOIN)
+                ->where('r.cid = ?', $cid)
+        );
+    } catch (\Throwable $e) {
+        $rows = [];
+    }
+
+    $categoryMids = [];
+    $tagMids = [];
+    foreach ($rows as $row) {
+        $mid = 0;
+        $type = '';
+        if (is_array($row)) {
+            $mid = (int) ($row['mid'] ?? 0);
+            $type = strtolower(trim((string) ($row['type'] ?? '')));
+        } elseif (is_object($row)) {
+            $mid = (int) ($row->mid ?? 0);
+            $type = strtolower(trim((string) ($row->type ?? '')));
+        }
+
+        if ($mid <= 0) {
+            continue;
+        }
+        if ($type === 'category') {
+            $categoryMids[] = $mid;
+        } elseif ($type === 'tag') {
+            $tagMids[] = $mid;
+        }
+    }
+
+    $signature['categoryMids'] = hansjackNormalizeMidSet($categoryMids);
+    $signature['tagMids'] = hansjackNormalizeMidSet($tagMids);
+    return $signature;
+}
+
+function hansjackPostTaxonomySignatureByPostWidget($post): array
+{
+    $categoryMids = [];
+    $tagMids = [];
+
+    $postCategories = [];
+    try {
+        $postCategories = is_array($post->categories ?? null) ? $post->categories : [];
+    } catch (\Throwable $e) {
+        $postCategories = [];
+    }
+    foreach ($postCategories as $cat) {
+        $categoryMids[] = (int) ($cat['mid'] ?? 0);
+    }
+
+    $postTags = [];
+    try {
+        $postTags = is_array($post->tags ?? null) ? $post->tags : [];
+    } catch (\Throwable $e) {
+        $postTags = [];
+    }
+    foreach ($postTags as $tag) {
+        $tagMids[] = (int) ($tag['mid'] ?? 0);
+    }
+
+    return [
+        'categoryMids' => hansjackNormalizeMidSet($categoryMids),
+        'tagMids' => hansjackNormalizeMidSet($tagMids),
+    ];
+}
+
+function hansjackSeriesCacheTtl(): int
+{
+    return 24 * 60 * 60;
+}
+
+function hansjackSeriesCacheFilePath(int $cid): string
+{
+    $safeCid = max(0, $cid);
+    return __DIR__
+        . DIRECTORY_SEPARATOR . 'cache'
+        . DIRECTORY_SEPARATOR . 'series'
+        . DIRECTORY_SEPARATOR . 'cid-' . $safeCid . '.json';
+}
+
+function hansjackNormalizeSeriesItems($items, int $currentCid): array
+{
+    if (!is_array($items)) {
+        return [];
+    }
+
+    $result = [];
+    $seen = [];
+    foreach ($items as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+
+        $postCid = (int) ($row['cid'] ?? 0);
+        if ($postCid <= 0 || isset($seen[$postCid])) {
+            continue;
+        }
+
+        $title = trim((string) ($row['title'] ?? ''));
+        if ($title === '') {
+            $title = _t('无标题');
+        }
+
+        $url = trim((string) ($row['url'] ?? ''));
+        if ($url === '') {
+            continue;
+        }
+
+        $created = (int) ($row['created'] ?? 0);
+        if ($created < 0) {
+            $created = 0;
+        }
+        $dateTime = trim((string) ($row['dateTime'] ?? ''));
+        if ($dateTime === '' && $created > 0) {
+            $dateTime = date('c', $created);
+        }
+        $dateLabel = trim((string) ($row['dateLabel'] ?? ''));
+        if ($dateLabel === '' && $created > 0) {
+            $dateLabel = date('Y-m-d', $created);
+        }
+
+        $result[] = [
+            'cid' => $postCid,
+            'title' => $title,
+            'url' => $url,
+            'created' => $created,
+            'dateTime' => $dateTime,
+            'dateLabel' => $dateLabel,
+            'isCurrent' => ($postCid === $currentCid),
+        ];
+        $seen[$postCid] = true;
+    }
+
+    usort($result, static function (array $a, array $b): int {
+        $ac = (int) ($a['created'] ?? 0);
+        $bc = (int) ($b['created'] ?? 0);
+        if ($ac !== $bc) {
+            return $bc <=> $ac;
+        }
+
+        return ((int) ($b['cid'] ?? 0)) <=> ((int) ($a['cid'] ?? 0));
+    });
+
+    return $result;
+}
+
+function hansjackLoadSeriesCache(int $cid): array
+{
+    if ($cid <= 0) {
+        return ['hit' => false, 'updated' => 0, 'items' => []];
+    }
+
+    $path = hansjackSeriesCacheFilePath($cid);
+    if (!is_file($path) || !is_readable($path)) {
+        return ['hit' => false, 'updated' => 0, 'items' => []];
+    }
+
+    $fp = @fopen($path, 'rb');
+    if (!is_resource($fp)) {
+        return ['hit' => false, 'updated' => 0, 'items' => []];
+    }
+
+    $raw = '';
+    if (@flock($fp, LOCK_SH)) {
+        $content = stream_get_contents($fp);
+        if (is_string($content)) {
+            $raw = $content;
+        }
+        @flock($fp, LOCK_UN);
+    } else {
+        $content = stream_get_contents($fp);
+        if (is_string($content)) {
+            $raw = $content;
+        }
+    }
+    @fclose($fp);
+
+    if ($raw === '') {
+        return ['hit' => false, 'updated' => 0, 'items' => []];
+    }
+
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        return ['hit' => false, 'updated' => 0, 'items' => []];
+    }
+
+    $version = (int) ($decoded['version'] ?? 0);
+    if ($version < 2) {
+        return ['hit' => false, 'updated' => 0, 'items' => []];
+    }
+
+    $now = time();
+    $updated = (int) ($decoded['updated'] ?? 0);
+    $expires = (int) ($decoded['expires'] ?? 0);
+    if ($expires <= 0 && $updated > 0) {
+        $expires = $updated + hansjackSeriesCacheTtl();
+    }
+    if ($expires <= 0 || $now > $expires) {
+        return ['hit' => false, 'updated' => max(0, $updated), 'items' => []];
+    }
+
+    return [
+        'hit' => true,
+        'updated' => max(0, $updated),
+        'items' => hansjackNormalizeSeriesItems($decoded['items'] ?? [], $cid),
+    ];
+}
+
+function hansjackSaveSeriesCache(int $cid, array $items): bool
+{
+    if ($cid <= 0) {
+        return false;
+    }
+
+    $normalizedItems = hansjackNormalizeSeriesItems($items, $cid);
+    $now = time();
+    $payload = [
+        'version' => 2,
+        'updated' => $now,
+        'expires' => $now + hansjackSeriesCacheTtl(),
+        'items' => $normalizedItems,
+    ];
+
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($json) || $json === '') {
+        return false;
+    }
+
+    $path = hansjackSeriesCacheFilePath($cid);
+    return hansjackWriteFileAtomic($path, $json);
+}
+
+function hansjackSeriesItemsByCid(int $cid, bool $forceRefresh = false): array
+{
+    if ($cid <= 0) {
+        return [];
+    }
+
+    if (!$forceRefresh) {
+        $cachePayload = hansjackLoadSeriesCache($cid);
+        if (!empty($cachePayload['hit'])) {
+            return hansjackNormalizeSeriesItems($cachePayload['items'] ?? [], $cid);
+        }
+    }
+
+    $targetSignature = hansjackPostTaxonomySignatureByCid($cid);
+    $targetCategories = $targetSignature['categoryMids'] ?? [];
+    $targetTags = $targetSignature['tagMids'] ?? [];
+    if (empty($targetTags)) {
+        hansjackSaveSeriesCache($cid, []);
+        return [];
+    }
+
+    $items = [];
+    $seen = [];
+    $pageSize = 500;
+    $page = 1;
+    $maxSafetyPages = 100000;
+
+    while ($page <= $maxSafetyPages) {
+        $posts = null;
+        try {
+            $params = 'pageSize=' . $pageSize . '&page=' . $page;
+            $widgetName = 'Widget_Contents_Post_Recent@series_scan_' . $cid . '_' . $page;
+            \Typecho\Widget::widget($widgetName, $params, null, false)->to($posts);
+        } catch (\Throwable $e) {
+            $posts = null;
+        }
+
+        if (!$posts || !$posts->have()) {
+            break;
+        }
+
+        $scanned = 0;
+        $newScanned = 0;
+        while ($posts->next()) {
+            $scanned += 1;
+
+            $postCid = (int) ($posts->cid ?? 0);
+            if ($postCid <= 0) {
+                continue;
+            }
+            if (isset($seen[$postCid])) {
+                continue;
+            }
+            $seen[$postCid] = true;
+            $newScanned += 1;
+
+            $signature = hansjackPostTaxonomySignatureByPostWidget($posts);
+            $catMids = $signature['categoryMids'] ?? [];
+            $tagMids = $signature['tagMids'] ?? [];
+
+            if ($catMids !== $targetCategories || $tagMids !== $targetTags) {
+                continue;
+            }
+
+            $title = trim((string) ($posts->title ?? ''));
+            if ($title === '') {
+                $title = _t('无标题');
+            }
+
+            $url = trim((string) ($posts->permalink ?? ''));
+            if ($url === '') {
+                continue;
+            }
+
+            $created = (int) ($posts->created ?? 0);
+            $items[] = [
+                'cid' => $postCid,
+                'title' => $title,
+                'url' => $url,
+                'created' => max(0, $created),
+                'dateTime' => $created > 0 ? date('c', $created) : '',
+                'dateLabel' => $created > 0 ? date('Y-m-d', $created) : '',
+                'isCurrent' => ($postCid === $cid),
+            ];
+        }
+
+        if ($scanned < $pageSize) {
+            break;
+        }
+
+        if ($newScanned <= 0) {
+            break;
+        }
+
+        $page += 1;
+    }
+
+    usort($items, static function (array $a, array $b): int {
+        $ac = (int) ($a['created'] ?? 0);
+        $bc = (int) ($b['created'] ?? 0);
+        if ($ac !== $bc) {
+            return $bc <=> $ac;
+        }
+
+        return ((int) ($b['cid'] ?? 0)) <=> ((int) ($a['cid'] ?? 0));
+    });
+
+    hansjackSaveSeriesCache($cid, $items);
+    return $items;
+}
+
+function handleSeriesListRequest(Archive $archive): void
+{
+    $exists = false;
+    $flag = '';
+    try {
+        $flag = trim((string) $archive->request->get('series_list', '', $exists));
+    } catch (\Throwable $e) {
+        $exists = false;
+        $flag = '';
+    }
+
+    if (!$exists || $flag === '' || $flag === '0' || strtolower($flag) === 'false') {
+        return;
+    }
+
+    if ($archive->request->isPost()) {
+        emitJson([
+            'ok' => false,
+            'message' => _t('请求方式不支持'),
+        ], 405);
+    }
+
+    $cid = 0;
+    try {
+        $cid = (int) $archive->request->get('cid', 0);
+    } catch (\Throwable $e) {
+        $cid = 0;
+    }
+    if ($cid <= 0) {
+        emitJson([
+            'ok' => false,
+            'message' => _t('文章编号无效'),
+        ], 400);
+    }
+
+    $forceExists = false;
+    $forceRaw = '';
+    try {
+        $forceRaw = trim((string) $archive->request->get('force', '', $forceExists));
+    } catch (\Throwable $e) {
+        $forceExists = false;
+        $forceRaw = '';
+    }
+    $forceRefresh = false;
+    if ($forceExists) {
+        $forceRefresh = !(
+            $forceRaw === ''
+            || $forceRaw === '0'
+            || strtolower($forceRaw) === 'false'
+        );
+    }
+
+    $items = hansjackSeriesItemsByCid($cid, $forceRefresh);
+    emitJson([
+        'ok' => true,
+        'cid' => $cid,
+        'items' => $items,
+        'total' => count($items),
+    ]);
+}
+
 /**
  * Theme entry hook.
  * Keep root "posts"/"notes" archives at a fixed 15 items per page.
@@ -770,6 +1213,7 @@ function hansjackSavePostGuessCache(int $cid, array $items): bool
 function themeInit(Archive $archive)
 {
     handleLiveVersionRequest($archive);
+    handleSeriesListRequest($archive);
     handleCommentUploadRequest($archive);
     handleCommentEditRequest($archive);
     handleMemoryReactionRequest($archive);
@@ -2459,6 +2903,7 @@ function hansjackThemeCacheTargetPaths(): array
     return [
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'page-cache',
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'post-guess',
+        __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'series',
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'internal-link-meta.json',
     ];
 }
@@ -2577,7 +3022,7 @@ function hansjackThemeCachePanelHtml(Options $options): string
     }
 
     $html = '<div class="hansjack-cache-panel">';
-    $html .= '<div>' . _t('目标缓存：page-cache、post-guess、internal-link-meta。') . '</div>';
+    $html .= '<div>' . _t('目标缓存：page-cache、post-guess、series、internal-link-meta。') . '</div>';
 
     if ($message !== '') {
         $html .= '<div style="margin-top:6px;color:' . escape($messageColor) . ';">' . escape($message) . '</div>';

@@ -2979,26 +2979,142 @@
 
 /* block 10 */
 (function () { 
-        var comments = document.querySelector(".comments"); 
-        if (!comments) { 
-            return; 
-        } 
+        function initCommentsSection() {
+            var comments = document.querySelector(".comments"); 
+            if (!comments) { 
+                return; 
+            } 
 
         (function setupCommentsToolbar() {
             var refreshBtn = comments.querySelector("[data-comments-refresh]");
+            var refreshBusy = false;
+
+            function setRefreshBusy(on) {
+                refreshBusy = !!on;
+                if (!refreshBtn) {
+                    return;
+                }
+                refreshBtn.disabled = refreshBusy;
+                refreshBtn.setAttribute("aria-busy", refreshBusy ? "true" : "false");
+            }
+
+            function buildCommentsRefreshUrl() {
+                var url;
+                try {
+                    url = new URL(window.location.href);
+                } catch (e) {
+                    return "";
+                }
+                url.hash = "";
+                url.searchParams.set("comments_refresh", "1");
+                url.searchParams.set("_ts", String(Date.now()));
+                return url.toString();
+            }
+
+            function replaceCommentsSectionByHtml(htmlText) {
+                if (typeof window.DOMParser !== "function") {
+                    return false;
+                }
+
+                var parser;
+                try {
+                    parser = new DOMParser();
+                } catch (e) {
+                    parser = null;
+                }
+                if (!parser) {
+                    return false;
+                }
+
+                var nextDoc;
+                try {
+                    nextDoc = parser.parseFromString(String(htmlText || ""), "text/html");
+                } catch (e) {
+                    nextDoc = null;
+                }
+                if (!nextDoc || !nextDoc.querySelector) {
+                    return false;
+                }
+
+                var nextComments = nextDoc.querySelector(".comments");
+                if (!nextComments) {
+                    return false;
+                }
+
+                var currentComments = document.querySelector(".comments");
+                if (!currentComments || !currentComments.parentNode) {
+                    return false;
+                }
+
+                try {
+                    currentComments.parentNode.replaceChild(nextComments, currentComments);
+                } catch (e) {
+                    return false;
+                }
+
+                try {
+                    if (window && window.location && window.location.hash !== "#comments") {
+                        window.location.hash = "comments";
+                    }
+                } catch (e) {}
+
+                try {
+                    if (typeof window.__hansjackInitCommentsSection === "function") {
+                        window.__hansjackInitCommentsSection();
+                    }
+                } catch (e) {}
+
+                try {
+                    window.dispatchEvent(new Event("resize"));
+                } catch (e) {}
+
+                return true;
+            }
+
+            function refreshCommentsOnly() {
+                if (!refreshBtn || refreshBusy || !window.fetch) {
+                    return;
+                }
+
+                var endpoint = buildCommentsRefreshUrl();
+                if (!endpoint) {
+                    return;
+                }
+
+                setRefreshBusy(true);
+                window.fetch(endpoint, {
+                    method: "GET",
+                    credentials: "same-origin",
+                    cache: "no-store",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        "Accept": "text/html"
+                    }
+                }).then(function (res) {
+                    if (!res || !res.ok) {
+                        throw new Error("comments refresh failed");
+                    }
+                    return res.text();
+                }).then(function (htmlText) {
+                    if (!replaceCommentsSectionByHtml(htmlText)) {
+                        throw new Error("comments replace failed");
+                    }
+                }).catch(function () {
+                    try {
+                        window.location.reload();
+                    } catch (e) {}
+                }).finally(function () {
+                    setRefreshBusy(false);
+                });
+            }
+
             if (refreshBtn) {
+                setRefreshBusy(false);
                 refreshBtn.addEventListener("click", function (e) {
                     if (e && e.preventDefault) {
                         e.preventDefault();
                     }
-                    try {
-                        if (window && window.location && window.location.hash !== "#comments") {
-                            window.location.hash = "comments";
-                        }
-                    } catch (err) {}
-                    try {
-                        window.location.reload();
-                    } catch (err2) {}
+                    refreshCommentsOnly();
                 });
             }
 
@@ -5219,6 +5335,10 @@
         forms.forEach(function (f) {
             setupComposer(f);
         });
+        }
+
+        window.__hansjackInitCommentsSection = initCommentsSection;
+        initCommentsSection();
     })();
 
 /* block 11 */

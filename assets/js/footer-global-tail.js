@@ -3,7 +3,8 @@
 /* block 22 */
 (function () {
         var contents = Array.prototype.slice.call(document.querySelectorAll(".article-content, .comment-content"));
-        if (!contents || contents.length === 0) {
+        var seriesRoots = Array.prototype.slice.call(document.querySelectorAll("[data-article-series]"));
+        if ((!contents || contents.length === 0) && (!seriesRoots || seriesRoots.length === 0)) {
             return;
         }
 
@@ -713,6 +714,50 @@
             return tipText;
         }
 
+        function isSeriesAnchor(a) {
+            if (!a || !a.classList || !a.closest) {
+                return false;
+            }
+            if (!a.classList.contains("article-series-link")) {
+                return false;
+            }
+            return !!a.closest("[data-article-series]");
+        }
+
+        function buildSeriesTipText(a) {
+            if (!isSeriesAnchor(a)) {
+                return "";
+            }
+
+            var title = "";
+            var dateLabel = "";
+            try {
+                var titleNode = a.querySelector(".article-series-link-title");
+                var dateNode = a.querySelector(".article-series-date");
+                title = String((titleNode && titleNode.textContent) || a.getAttribute("title") || "").trim();
+                dateLabel = String((dateNode && dateNode.textContent) || "").trim();
+            } catch (e) {
+                title = String(a.getAttribute("title") || "").trim();
+                dateLabel = "";
+            }
+
+            if (title && dateLabel) {
+                return title + " · " + dateLabel;
+            }
+            return (title || dateLabel || "").trim();
+        }
+
+        function syncSeriesTooltipForAnchor(a) {
+            if (!a) {
+                return;
+            }
+            var tipText = buildSeriesTipText(a);
+            setTipForAnchor(a, tipText);
+            if (!tipText && activeAnchor === a) {
+                hideTooltip();
+            }
+        }
+
         function hideTooltip() {
             activeAnchor = null;
             if (!tooltipEl) {
@@ -807,11 +852,14 @@
             }
 
             var anchorX = rect.left + rect.width / 2;
+            var anchorY = rect.top + rect.height / 2;
             var anchorTop = rect.top;
             var anchorBottom = rect.bottom;
             var viewportPad = 8;
             var gapTop = readTopGap(anchor, rect);
             var gapBottom = 10;
+            var sideGap = 10;
+            var preferSidePlacement = isSeriesAnchor(anchor);
 
             tip.style.left = "0px";
             tip.style.top = "0px";
@@ -828,26 +876,48 @@
                 return;
             }
 
-            var leftViewport = anchorX - tipW / 2;
+            var placement = "top";
             var minLeft = viewportPad;
             var maxLeft = Math.max(viewportPad, viewportW - viewportPad - tipW);
-            if (leftViewport < minLeft) {
-                leftViewport = minLeft;
-            } else if (leftViewport > maxLeft) {
-                leftViewport = maxLeft;
-            }
-
-            var placement = "top";
+            var leftViewport = anchorX - tipW / 2;
             var topViewport = anchorTop - gapTop - tipH;
             var maxTop = Math.max(viewportPad, viewportH - viewportPad - tipH);
-            if (topViewport < viewportPad) {
-                placement = "bottom";
-                topViewport = anchorBottom + gapBottom;
-                if (topViewport > maxTop) {
+
+            if (preferSidePlacement) {
+                placement = "right";
+                leftViewport = rect.right + sideGap;
+                if (leftViewport > maxLeft) {
+                    placement = "left";
+                    leftViewport = rect.left - sideGap - tipW;
+                }
+                if (leftViewport < minLeft) {
+                    leftViewport = minLeft;
+                } else if (leftViewport > maxLeft) {
+                    leftViewport = maxLeft;
+                }
+
+                topViewport = anchorY - tipH / 2;
+                if (topViewport < viewportPad) {
+                    topViewport = viewportPad;
+                } else if (topViewport > maxTop) {
                     topViewport = maxTop;
                 }
-            } else if (topViewport > maxTop) {
-                topViewport = maxTop;
+            } else {
+                if (leftViewport < minLeft) {
+                    leftViewport = minLeft;
+                } else if (leftViewport > maxLeft) {
+                    leftViewport = maxLeft;
+                }
+
+                if (topViewport < viewportPad) {
+                    placement = "bottom";
+                    topViewport = anchorBottom + gapBottom;
+                    if (topViewport > maxTop) {
+                        topViewport = maxTop;
+                    }
+                } else if (topViewport > maxTop) {
+                    topViewport = maxTop;
+                }
             }
 
             var docLeft = leftViewport + scrollX;
@@ -856,18 +926,35 @@
             tip.style.top = Math.round(docTop) + "px";
             tip.setAttribute("data-placement", placement);
 
-            var arrowX = anchorX - leftViewport;
-            var arrowPad = 11;
-            if (tipW > arrowPad * 2) {
-                if (arrowX < arrowPad) {
-                    arrowX = arrowPad;
-                } else if (arrowX > tipW - arrowPad) {
-                    arrowX = tipW - arrowPad;
+            if (placement === "left" || placement === "right") {
+                var arrowY = anchorY - topViewport;
+                var arrowPadY = 11;
+                if (tipH > arrowPadY * 2) {
+                    if (arrowY < arrowPadY) {
+                        arrowY = arrowPadY;
+                    } else if (arrowY > tipH - arrowPadY) {
+                        arrowY = tipH - arrowPadY;
+                    }
+                } else {
+                    arrowY = tipH / 2;
                 }
+                tip.style.setProperty("--internal-link-tooltip-arrow-y", Math.round(arrowY) + "px");
+                tip.style.removeProperty("--internal-link-tooltip-arrow-x");
             } else {
-                arrowX = tipW / 2;
+                var arrowX = anchorX - leftViewport;
+                var arrowPadX = 11;
+                if (tipW > arrowPadX * 2) {
+                    if (arrowX < arrowPadX) {
+                        arrowX = arrowPadX;
+                    } else if (arrowX > tipW - arrowPadX) {
+                        arrowX = tipW - arrowPadX;
+                    }
+                } else {
+                    arrowX = tipW / 2;
+                }
+                tip.style.setProperty("--internal-link-tooltip-arrow-x", Math.round(arrowX) + "px");
+                tip.style.removeProperty("--internal-link-tooltip-arrow-y");
             }
-            tip.style.setProperty("--internal-link-tooltip-arrow-x", Math.round(arrowX) + "px");
             tip.classList.remove("is-measuring");
         }
 
@@ -1027,31 +1114,55 @@
             }
         }
 
-        for (var c = 0; c < contents.length; c++) {
-            var content = contents[c];
-            if (!content || !content.querySelectorAll) {
-                continue;
+        function bindSeriesLinks(scope) {
+            var root = scope && scope.querySelectorAll ? scope : document;
+            var links = [];
+            try {
+                links = Array.prototype.slice.call(root.querySelectorAll("a.article-series-link[href]"));
+            } catch (e) {
+                links = [];
             }
-            var links = Array.prototype.slice.call(content.querySelectorAll("a[href]"));
-            if (links.length === 0) {
-                continue;
+            if (!links || links.length === 0) {
+                return;
             }
 
             links.forEach(function (a) {
                 if (!a) {
                     return;
                 }
-
-                var text = ((a.textContent || "") + "").trim();
-                if (!text) {
-                    return;
-                }
-
-                var href = a.getAttribute("href") || "";
-                markLinkKind(a, href);
+                syncSeriesTooltipForAnchor(a);
                 bindTooltipEvents(a);
             });
         }
+
+        if (contents && contents.length > 0) {
+            for (var c = 0; c < contents.length; c++) {
+                var content = contents[c];
+                if (!content || !content.querySelectorAll) {
+                    continue;
+                }
+                var links = Array.prototype.slice.call(content.querySelectorAll("a[href]"));
+                if (links.length === 0) {
+                    continue;
+                }
+
+                links.forEach(function (a) {
+                    if (!a) {
+                        return;
+                    }
+
+                    var text = ((a.textContent || "") + "").trim();
+                    if (!text) {
+                        return;
+                    }
+
+                    var href = a.getAttribute("href") || "";
+                    markLinkKind(a, href);
+                    bindTooltipEvents(a);
+                });
+            }
+        }
+        bindSeriesLinks(document);
 
         window.addEventListener("scroll", scheduleReposition, { passive: true });
         window.addEventListener("resize", scheduleReposition);
@@ -1082,6 +1193,13 @@
             }
             hideTooltip();
         }, true);
+
+        window.addEventListener("hansjack:series:rendered", function (ev) {
+            var detail = ev && ev.detail ? ev.detail : null;
+            var root = detail && detail.root && detail.root.querySelectorAll ? detail.root : document;
+            bindSeriesLinks(root);
+            scheduleReposition();
+        });
 
         window.addEventListener("hansjack:pjax:after", function () {
             hideTooltip();
