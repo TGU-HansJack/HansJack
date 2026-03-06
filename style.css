@@ -1044,9 +1044,9 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
         top: 0;
         right: 0;
         height: 100%;
-        width: 66.666vw;
-        max-width: 66.666vw;
-        min-width: 0;
+        width: 33.333vw;
+        max-width: calc(100vw - 12px);
+        min-width: 33.333vw;
         font-size: 0.95rem;
         border-left: 2px solid var(--day-black);
         background: var(--day-bg);
@@ -1093,6 +1093,7 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
         display: flex;
         flex-direction: column;
         gap: 0.25rem;
+        width: 100%;
     }
 
     .mobile-nav-section-title {
@@ -1102,22 +1103,27 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
         letter-spacing: 0.02em;
         color: var(--muted-day);
     }
-
-    .mobile-nav-divider {
-        height: 1px;
-        background: var(--line-day);
-        margin: 0.7rem 0;
-    }
-
     .mobile-nav-panel .user-dropdown-item {
-        padding: 0.44rem 0.5rem;
+        display: flex;
+        align-self: stretch;
+        width: calc(100% + 1.5rem);
+        max-width: calc(100% + 1.5rem);
+        margin-left: -0.75rem;
+        margin-right: -0.75rem;
+        box-sizing: border-box;
+        padding: 0.44rem 1.25rem;
     }
-
     .mobile-nav-panel button.user-dropdown-item {
         border: 0;
         background: transparent;
         cursor: pointer;
         text-align: left;
+    }
+
+    .mobile-nav-panel .user-dropdown-text {
+        white-space: nowrap;
+        overflow-wrap: normal;
+        word-break: keep-all;
     }
 
     .landing-main {
@@ -8827,10 +8833,6 @@ html.login-modal-open .login-modal {
         background: rgba(0, 0, 0, 0.5);
     }
 
-    html:not(.theme-light) .mobile-nav-divider {
-        background: var(--line-night);
-    }
-
     html:not(.theme-light) .mobile-nav-section-title {
         color: var(--muted-night);
     }
@@ -9539,10 +9541,6 @@ html.theme-dark .mobile-nav-panel {
 
 html.theme-dark .mobile-nav-backdrop {
     background: rgba(0, 0, 0, 0.5);
-}
-
-html.theme-dark .mobile-nav-divider {
-    background: var(--line-night);
 }
 
 html.theme-dark .mobile-nav-section-title {

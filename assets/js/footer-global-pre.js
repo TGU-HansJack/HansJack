@@ -2002,6 +2002,38 @@
         var openClass = "is-open";
         var rootOpenClass = "mobile-nav-open";
 
+        function syncPanelWidth() {
+            var viewportWidth = window.innerWidth || (document.documentElement ? document.documentElement.clientWidth : 0) || 0;
+            if (!viewportWidth) {
+                return;
+            }
+            if (viewportWidth > 980) {
+                panel.style.removeProperty("width");
+                return;
+            }
+
+            var requiredWidth = viewportWidth / 3;
+            var maxAllowedWidth = Math.max(requiredWidth, viewportWidth - 12);
+            var items = panel.querySelectorAll(".user-dropdown-item");
+
+            items.forEach(function (item) {
+                var itemStyle = window.getComputedStyle(item);
+                var text = item.querySelector(".user-dropdown-text");
+                var icon = item.querySelector(".user-dropdown-icon");
+                var paddingLeft = parseFloat(itemStyle.paddingLeft || "0") || 0;
+                var paddingRight = parseFloat(itemStyle.paddingRight || "0") || 0;
+                var gap = parseFloat(itemStyle.columnGap || itemStyle.gap || "0") || 0;
+                var textWidth = text ? Math.ceil(text.scrollWidth) : Math.ceil(item.scrollWidth);
+                var iconWidth = icon ? Math.ceil(icon.getBoundingClientRect().width) : 0;
+                var nextWidth = paddingLeft + paddingRight + textWidth + (iconWidth > 0 ? iconWidth + gap : 0);
+                if (nextWidth > requiredWidth) {
+                    requiredWidth = nextWidth;
+                }
+            });
+
+            panel.style.width = Math.min(Math.ceil(requiredWidth), Math.ceil(maxAllowedWidth)) + "px";
+        }
+
         function closeOtherHeaderMenus() {
             var pagesMenu = document.querySelector(".pages-menu");
             var userMenu = document.querySelector(".user-menu");
@@ -2026,6 +2058,7 @@
         }
 
         function openMenu() {
+            syncPanelWidth();
             closeOtherHeaderMenus();
             mobileNav.classList.add(openClass);
             toggle.setAttribute("aria-expanded", "true");
@@ -2063,6 +2096,14 @@
                 closeMenu();
             }
         });
+
+        window.addEventListener("resize", syncPanelWidth);
+
+        if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === "function") {
+            document.fonts.ready.then(syncPanelWidth).catch(function () {});
+        } else {
+            window.setTimeout(syncPanelWidth, 0);
+        }
 
         panel.querySelectorAll("a").forEach(function (link) {
             link.addEventListener("click", function () {

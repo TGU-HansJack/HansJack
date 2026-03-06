@@ -467,7 +467,6 @@ if ($this->is('post')) {
                     </a>
                 <?php endforeach; ?>
                 <?php if (!empty($navCategories)): ?>
-                    <div class="mobile-nav-divider" role="separator" aria-hidden="true"></div>
                     <div class="mobile-nav-section-title"><?php _e('博文分类'); ?></div>
                     <?php foreach ($navCategories as $cat): ?>
                         <a class="user-dropdown-item mobile-nav-subitem"
@@ -479,7 +478,6 @@ if ($this->is('post')) {
                 <?php endif; ?>
             </nav>
 
-            <div class="mobile-nav-divider" role="separator" aria-hidden="true"></div>
             <div class="mobile-nav-section-title"><?php _e('功能'); ?></div>
             <div class="mobile-nav-section" aria-label="<?php _e('功能'); ?>">
                 <button class="user-dropdown-item mobile-nav-action" type="button" data-theme-toggle="true">
@@ -501,7 +499,6 @@ if ($this->is('post')) {
                 </a>
             </div>
 
-            <div class="mobile-nav-divider" role="separator" aria-hidden="true"></div>
             <div class="mobile-nav-section-title"><?php _e('前往'); ?></div>
             <nav class="mobile-nav-section" aria-label="<?php _e('独立页面'); ?>">
                 <?php
@@ -528,7 +525,6 @@ if ($this->is('post')) {
                 <?php endif; ?>
             </nav>
 
-            <div class="mobile-nav-divider" role="separator" aria-hidden="true"></div>
             <div class="mobile-nav-section-title"><?php _e('用户'); ?></div>
             <nav class="mobile-nav-section" aria-label="<?php _e('用户'); ?>">
                 <?php if ($this->user->hasLogin()): ?>
