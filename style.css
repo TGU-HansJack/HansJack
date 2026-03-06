@@ -5586,13 +5586,41 @@ html.theme-dark .fab-reward-backdrop {
     justify-content: center;
 }
 
-.fab-top .fab-icon {
+.fab-top-progress {
     font-family: var(--font-ui);
     font-size: 0.72rem;
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
+}
+
+.fab-top .fab-top-progress,
+.fab-top .fab-top-symbol {
+    position: absolute;
+    inset: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    pointer-events: none;
+    transition: opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fab-top .fab-top-progress {
+    opacity: 0;
+}
+
+.fab-top .fab-top-symbol {
+    opacity: 1;
+}
+
+.fab-top.is-scrolling:not(:hover):not(:focus-visible) .fab-top-progress {
+    opacity: 1;
+}
+
+.fab-top.is-scrolling:not(:hover):not(:focus-visible) .fab-top-symbol {
+    opacity: 0;
 }
 
 .fab-top-progress-value {

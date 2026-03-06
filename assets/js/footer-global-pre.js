@@ -796,6 +796,8 @@
         var topRingOffsetLast = "";
         var topProgressLast = "";
         var cachedScrollMax = 1;
+        var topScrollIdleTimer = 0;
+        var topScrollIdleDelay = 420;
 
         if (topRing) {
             var ringRadius = parseFloat(topRing.getAttribute("r") || "0");
@@ -849,14 +851,14 @@
             return { top: top, progress: p };
         }
 
-        function updateTopProgress() {
+        function updateTopProgress(allowProgressTextUpdate) {
             if ((!topRing || topRingCirc <= 0) && !topProgressValue) {
                 return;
             }
             var state = readScrollState();
             var progressText = String(Math.round(state.progress * 100));
 
-            if (topProgressValue && progressText !== topProgressLast) {
+            if (allowProgressTextUpdate && topProgressValue && progressText !== topProgressLast) {
                 topProgressLast = progressText;
                 topProgressValue.textContent = progressText;
             }
@@ -868,6 +870,32 @@
                     topRing.style.strokeDashoffset = offset;
                 }
             }
+        }
+
+        function setTopScrollingState(active) {
+            if (!topBtn || !topBtn.classList) {
+                return;
+            }
+            if (active) {
+                topBtn.classList.add("is-scrolling");
+            } else {
+                topBtn.classList.remove("is-scrolling");
+            }
+        }
+
+        function markTopScrolling() {
+            if (!topBtn) {
+                return;
+            }
+            setTopScrollingState(true);
+            if (topScrollIdleTimer) {
+                window.clearTimeout(topScrollIdleTimer);
+                topScrollIdleTimer = 0;
+            }
+            topScrollIdleTimer = window.setTimeout(function () {
+                topScrollIdleTimer = 0;
+                setTopScrollingState(false);
+            }, topScrollIdleDelay);
         }
 
         function isMobileTocOpen() {
@@ -1692,7 +1720,7 @@
             applyPostsSettingsToAllLists();
             updateSettingsFabVisibility();
             recomputeScrollMetrics();
-            updateTopProgress();
+            updateTopProgress(false);
             if (isSettingsPopoverOpen()) {
                 closeSettingsPopover();
             }
@@ -1776,42 +1804,53 @@
         }
 
         var ticking = false;
-        function requestTick() {
+        var tickFromScroll = false;
+        function requestTick(fromScroll) {
+            tickFromScroll = !!fromScroll || tickFromScroll;
             if (ticking) {
                 return;
             }
             ticking = true;
             raf(function () {
                 ticking = false;
-                updateTopProgress();
+                updateTopProgress(tickFromScroll);
+                if (tickFromScroll) {
+                    markTopScrolling();
+                }
+                tickFromScroll = false;
             });
         }
 
         recomputeScrollMetrics();
-        updateTopProgress();
+        setTopScrollingState(false);
+        updateTopProgress(false);
         try {
-            window.addEventListener("scroll", requestTick, { passive: true });
+            window.addEventListener("scroll", function () {
+                requestTick(true);
+            }, { passive: true });
         } catch (e) {
-            window.addEventListener("scroll", requestTick);
+            window.addEventListener("scroll", function () {
+                requestTick(true);
+            });
         }
         window.addEventListener("resize", function () {
             recomputeScrollMetrics();
-            requestTick();
+            requestTick(false);
         });
 
         window.addEventListener("load", function () {
             recomputeScrollMetrics();
-            requestTick();
+            requestTick(false);
         });
 
         // Async landing quote/content changes can shift page height shortly after paint.
         window.setTimeout(function () {
             recomputeScrollMetrics();
-            requestTick();
+            requestTick(false);
         }, 180);
         window.setTimeout(function () {
             recomputeScrollMetrics();
-            requestTick();
+            requestTick(false);
         }, 560);
     })();
 
