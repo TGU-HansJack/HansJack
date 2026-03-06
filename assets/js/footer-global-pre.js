@@ -791,8 +791,10 @@
         }
 
         var topRing = topBtn ? topBtn.querySelector(".fab-top-ring-fg") : null;
+        var topProgressValue = topBtn ? topBtn.querySelector(".fab-top-progress-value") : null;
         var topRingCirc = 0;
         var topRingOffsetLast = "";
+        var topProgressLast = "";
         var cachedScrollMax = 1;
 
         if (topRing) {
@@ -848,16 +850,24 @@
         }
 
         function updateTopProgress() {
-            if (!topRing || topRingCirc <= 0) {
+            if ((!topRing || topRingCirc <= 0) && !topProgressValue) {
                 return;
             }
             var state = readScrollState();
-            var offset = (topRingCirc * (1 - state.progress)).toFixed(2);
-            if (offset === topRingOffsetLast) {
-                return;
+            var progressText = String(Math.round(state.progress * 100));
+
+            if (topProgressValue && progressText !== topProgressLast) {
+                topProgressLast = progressText;
+                topProgressValue.textContent = progressText;
             }
-            topRingOffsetLast = offset;
-            topRing.style.strokeDashoffset = offset;
+
+            if (topRing && topRingCirc > 0) {
+                var offset = (topRingCirc * (1 - state.progress)).toFixed(2);
+                if (offset !== topRingOffsetLast) {
+                    topRingOffsetLast = offset;
+                    topRing.style.strokeDashoffset = offset;
+                }
+            }
         }
 
         function isMobileTocOpen() {

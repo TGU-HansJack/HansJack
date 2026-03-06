@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     /* Global palette (softer than pure black/white). */
     --day-black: #2a2a28;
     --day-white: #fffffd;
@@ -5512,6 +5512,21 @@ html.theme-dark .fab-reward-backdrop {
     justify-content: center;
 }
 
+.fab-top .fab-icon {
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+.fab-top-progress-value {
+    display: block;
+    min-width: 2.2em;
+    text-align: center;
+}
+
 .fab-icon svg {
     width: 16px;
     height: 16px;
@@ -9548,3 +9563,4 @@ html.theme-dark .live-toast {
         font-size: 1rem;
     }
 }
+

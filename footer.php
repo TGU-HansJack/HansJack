@@ -93,8 +93,8 @@ if ($customJavaScript !== '') {
                 <circle class="fab-ring-fg fab-top-ring-fg" cx="20" cy="20" r="18" stroke-dasharray="113.10 113.10" stroke-dashoffset="113.10"></circle>
             </svg>
         </span>
-        <span class="fab-icon" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-to-line-icon lucide-arrow-up-to-line" aria-hidden="true"><path d="M5 3h14"/><path d="m18 13-6-6-6 6"/><path d="M12 7v14"/></svg>
+        <span class="fab-icon fab-top-progress" aria-hidden="true">
+            <span class="fab-top-progress-value">0</span>
         </span>
         <span class="fab-tip" aria-hidden="true"><?php _e('返回顶部'); ?></span>
     </button>
