@@ -234,6 +234,11 @@ function themeConfig($form)
     $qqBindPanel->description(qqBindingPanelHtml($options));
     $form->addInput($qqBindPanel);
 
+    $themeCachePanel = new \Typecho\Widget\Helper\Form\Element\Fake('themeCachePanel', '');
+    $themeCachePanel->label(_t('主题缓存维护'));
+    $themeCachePanel->description(hansjackThemeCachePanelHtml($options));
+    $form->addInput($themeCachePanel);
+
     $icpBeian = new \Typecho\Widget\Helper\Form\Element\Text(
         'icpBeian',
         null,
@@ -279,6 +284,42 @@ function themeConfig($form)
     );
     $form->addInput($customJavaScript);
 
+    $visitorLivePollingEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'visitorLivePollingEnabled',
+        [
+            '1' => _t('开启'),
+            '0' => _t('关闭'),
+        ],
+        '1',
+        _t('游客实时轮询'),
+        _t('仅控制游客端 live_version 轮询；管理员不受此项影响。')
+    );
+    $form->addInput($visitorLivePollingEnabled);
+
+    $anonymousPageCacheEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'anonymousPageCacheEnabled',
+        [
+            '1' => _t('开启'),
+            '0' => _t('关闭'),
+        ],
+        '0',
+        _t('整页缓存（匿名 GET）'),
+        _t('仅对未登录用户的 GET 页面启用短时整页缓存。')
+    );
+    $form->addInput($anonymousPageCacheEnabled);
+
+    $highLoadDegradeEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'highLoadDegradeEnabled',
+        [
+            '1' => _t('开启'),
+            '0' => _t('关闭'),
+        ],
+        '0',
+        _t('高负载降级模式'),
+        _t('开启后会关闭/降级高开销功能（如游客实时轮询、部分动态计算）。')
+    );
+    $form->addInput($highLoadDegradeEnabled);
+
     $preferMinAssets = new \Typecho\Widget\Helper\Form\Element\Radio(
         'preferMinAssets',
         [
@@ -290,6 +331,436 @@ function themeConfig($form)
         _t('开启后优先加载 .min.css / .min.js（不存在则自动回退源文件）。')
     );
     $form->addInput($preferMinAssets);
+}
+
+function hansjackOptionEnabled($raw, bool $default = true): bool
+{
+    $text = trim(strtolower((string) $raw));
+    if ($text === '') {
+        return $default;
+    }
+
+    return !($text === '0' || $text === 'false' || $text === 'off' || $text === 'no');
+}
+
+function hansjackVisitorLivePollingEnabled(Options $options): bool
+{
+    $raw = '';
+    try {
+        $raw = (string) ($options->visitorLivePollingEnabled ?? '1');
+    } catch (\Throwable $e) {
+        $raw = '1';
+    }
+
+    return hansjackOptionEnabled($raw, true);
+}
+
+function hansjackAnonymousPageCacheEnabled(Options $options): bool
+{
+    $raw = '';
+    try {
+        $raw = (string) ($options->anonymousPageCacheEnabled ?? '0');
+    } catch (\Throwable $e) {
+        $raw = '0';
+    }
+
+    return hansjackOptionEnabled($raw, false);
+}
+
+function hansjackHighLoadDegradeEnabled(Options $options): bool
+{
+    $raw = '';
+    try {
+        $raw = (string) ($options->highLoadDegradeEnabled ?? '0');
+    } catch (\Throwable $e) {
+        $raw = '0';
+    }
+
+    return hansjackOptionEnabled($raw, false);
+}
+
+function hansjackAnonymousPageCacheTtl(Options $options): int
+{
+    if (hansjackHighLoadDegradeEnabled($options)) {
+        return 120;
+    }
+
+    return 45;
+}
+
+function hansjackCurrentUserHasLogin(): bool
+{
+    try {
+        $user = \Typecho\Widget::widget('Widget_User');
+        if (!$user) {
+            return false;
+        }
+
+        return (bool) $user->hasLogin();
+    } catch (\Throwable $e) {
+        return false;
+    }
+}
+
+function hansjackAnonymousPageCacheDir(): string
+{
+    return __DIR__
+        . DIRECTORY_SEPARATOR . 'cache'
+        . DIRECTORY_SEPARATOR . 'page-cache';
+}
+
+function hansjackEnsureDir(string $dir): bool
+{
+    if ($dir === '') {
+        return false;
+    }
+
+    if (is_dir($dir)) {
+        return true;
+    }
+
+    return @mkdir($dir, 0755, true);
+}
+
+function hansjackWriteFileAtomic(string $path, string $content): bool
+{
+    $dir = dirname($path);
+    if (!hansjackEnsureDir($dir)) {
+        return false;
+    }
+
+    $tmp = $path . '.' . uniqid('tmp_', true);
+    $ok = @file_put_contents($tmp, $content, LOCK_EX);
+    if (!is_int($ok) || $ok < 0) {
+        @unlink($tmp);
+        return false;
+    }
+
+    if (!@rename($tmp, $path)) {
+        @unlink($tmp);
+        return false;
+    }
+
+    @chmod($path, 0644);
+    return true;
+}
+
+function hansjackShouldUseAnonymousPageCache(Archive $archive, Options $options): bool
+{
+    if (!hansjackAnonymousPageCacheEnabled($options)) {
+        return false;
+    }
+
+    if (hansjackCurrentUserHasLogin()) {
+        return false;
+    }
+
+    $method = strtoupper(trim((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')));
+    if ($method !== 'GET') {
+        return false;
+    }
+
+    $xhr = strtolower(trim((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')));
+    if ($xhr === 'xmlhttprequest') {
+        return false;
+    }
+
+    $qs = strtolower(trim((string) ($_SERVER['QUERY_STRING'] ?? '')));
+    if ($qs !== '') {
+        $blockedKeys = [
+            'live_version=',
+            'comment_upload=',
+            'comment_edit=',
+            'memory_reaction=',
+            'github_oauth=',
+            'qq_oauth=',
+        ];
+        foreach ($blockedKeys as $blockedKey) {
+            if (strpos($qs, $blockedKey) !== false) {
+                return false;
+            }
+        }
+    }
+
+    try {
+        if ($archive->is('feed')) {
+            return false;
+        }
+    } catch (\Throwable $e) {
+        // Ignore.
+    }
+
+    $requestUri = trim((string) ($_SERVER['REQUEST_URI'] ?? '/'));
+    $path = strtolower((string) (parse_url($requestUri, PHP_URL_PATH) ?? '/'));
+    if ($path === '') {
+        $path = '/';
+    }
+    if (
+        substr($path, -4) === '.xml' ||
+        substr($path, -5) === '.json' ||
+        substr($path, -4) === '.txt' ||
+        strpos($path, '/feed') !== false
+    ) {
+        return false;
+    }
+
+    $accept = strtolower(trim((string) ($_SERVER['HTTP_ACCEPT'] ?? '')));
+    if ($accept !== '' && strpos($accept, 'text/html') === false && strpos($accept, '*/*') === false) {
+        return false;
+    }
+
+    return true;
+}
+
+function hansjackAnonymousPageCacheFilePath(): string
+{
+    $scheme = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') ? 'https' : 'http';
+    $host = strtolower(trim((string) ($_SERVER['HTTP_HOST'] ?? 'localhost')));
+    $uri = trim((string) ($_SERVER['REQUEST_URI'] ?? '/'));
+    if ($uri === '') {
+        $uri = '/';
+    }
+
+    $key = sha1($scheme . '|' . $host . '|' . $uri);
+    return hansjackAnonymousPageCacheDir()
+        . DIRECTORY_SEPARATOR . $key . '.html';
+}
+
+function hansjackStoreAnonymousPageCache(string $cachePath, string $buffer): void
+{
+    if ($buffer === '') {
+        return;
+    }
+
+    $status = 200;
+    if (function_exists('http_response_code')) {
+        $status = (int) http_response_code();
+    }
+    if ($status >= 400) {
+        return;
+    }
+
+    $contentType = '';
+    $headers = headers_list();
+    foreach ($headers as $headerLine) {
+        $headerText = trim((string) $headerLine);
+        if ($headerText === '') {
+            continue;
+        }
+
+        if (stripos($headerText, 'Set-Cookie:') === 0) {
+            return;
+        }
+
+        if (stripos($headerText, 'Content-Type:') === 0) {
+            $contentType = trim(substr($headerText, strlen('Content-Type:')));
+        }
+    }
+
+    if ($contentType !== '' && stripos($contentType, 'text/html') === false) {
+        return;
+    }
+
+    hansjackWriteFileAtomic($cachePath, $buffer);
+}
+
+function hansjackStartAnonymousPageCache(Archive $archive): void
+{
+    $options = Options::alloc();
+    if (!hansjackShouldUseAnonymousPageCache($archive, $options)) {
+        return;
+    }
+
+    $cachePath = hansjackAnonymousPageCacheFilePath();
+    $ttl = hansjackAnonymousPageCacheTtl($options);
+
+    if ($ttl > 0 && is_file($cachePath) && is_readable($cachePath)) {
+        $mtime = (int) @filemtime($cachePath);
+        if ($mtime > 0 && (time() - $mtime) <= $ttl) {
+            if (!headers_sent()) {
+                header('Content-Type: text/html; charset=UTF-8');
+                header('X-HansJack-Page-Cache: HIT');
+            }
+            @readfile($cachePath);
+            exit;
+        }
+    }
+
+    if (!headers_sent()) {
+        header('X-HansJack-Page-Cache: MISS');
+    }
+
+    $finalFlag = defined('PHP_OUTPUT_HANDLER_FINAL') ? (int) constant('PHP_OUTPUT_HANDLER_FINAL') : 8;
+    ob_start(
+        function ($buffer, $phase) use ($cachePath, $finalFlag) {
+            if ((($phase ?? 0) & $finalFlag) === $finalFlag) {
+                hansjackStoreAnonymousPageCache($cachePath, (string) $buffer);
+            }
+
+            return $buffer;
+        },
+        0,
+        PHP_OUTPUT_HANDLER_STDFLAGS
+    );
+}
+
+function hansjackPostGuessCacheTtl(): int
+{
+    return 30 * 24 * 60 * 60;
+}
+
+function hansjackPostGuessCacheFilePath(int $cid): string
+{
+    $safeCid = max(0, $cid);
+    return __DIR__
+        . DIRECTORY_SEPARATOR . 'cache'
+        . DIRECTORY_SEPARATOR . 'post-guess'
+        . DIRECTORY_SEPARATOR . 'cid-' . $safeCid . '.json';
+}
+
+function hansjackNormalizePostGuessItems($items): array
+{
+    if (!is_array($items)) {
+        return [];
+    }
+
+    $result = [];
+    foreach ($items as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+
+        $title = trim((string) ($row['title'] ?? ''));
+        if ($title === '') {
+            $title = _t('无标题');
+        }
+
+        $url = trim((string) ($row['url'] ?? ''));
+        if ($url === '') {
+            continue;
+        }
+
+        $created = (int) ($row['created'] ?? 0);
+        $modified = (int) ($row['modified'] ?? 0);
+
+        $excerpt = trim((string) ($row['excerpt'] ?? ''));
+        if ($excerpt !== '') {
+            $excerpt = trim((string) preg_replace('/\s+/u', ' ', $excerpt));
+        }
+
+        $tags = [];
+        $rawTags = $row['tags'] ?? [];
+        if (is_array($rawTags)) {
+            foreach ($rawTags as $tag) {
+                if (!is_array($tag)) {
+                    continue;
+                }
+                $tagName = trim((string) ($tag['name'] ?? ''));
+                $tagUrl = trim((string) ($tag['url'] ?? ''));
+                if ($tagName === '' || $tagUrl === '') {
+                    continue;
+                }
+                $tags[] = [
+                    'name' => $tagName,
+                    'url' => $tagUrl,
+                ];
+                if (count($tags) >= 3) {
+                    break;
+                }
+            }
+        }
+
+        $result[] = [
+            'title' => $title,
+            'url' => $url,
+            'created' => max(0, $created),
+            'modified' => max(0, $modified),
+            'dateTime' => $created > 0 ? date('c', $created) : '',
+            'dateLabel' => $created > 0 ? date('Y/m/d-H:i:s', $created) : '',
+            'excerpt' => $excerpt,
+            'tags' => $tags,
+            'originalIndex' => count($result),
+        ];
+
+        if (count($result) >= 3) {
+            break;
+        }
+    }
+
+    return $result;
+}
+
+function hansjackLoadPostGuessCache(int $cid): array
+{
+    if ($cid <= 0) {
+        return ['updated' => 0, 'items' => []];
+    }
+
+    $path = hansjackPostGuessCacheFilePath($cid);
+    if (!is_file($path) || !is_readable($path)) {
+        return ['updated' => 0, 'items' => []];
+    }
+
+    $fp = @fopen($path, 'rb');
+    if (!is_resource($fp)) {
+        return ['updated' => 0, 'items' => []];
+    }
+
+    $raw = '';
+    if (@flock($fp, LOCK_SH)) {
+        $content = stream_get_contents($fp);
+        if (is_string($content)) {
+            $raw = $content;
+        }
+        @flock($fp, LOCK_UN);
+    } else {
+        $content = stream_get_contents($fp);
+        if (is_string($content)) {
+            $raw = $content;
+        }
+    }
+    @fclose($fp);
+
+    if ($raw === '') {
+        return ['updated' => 0, 'items' => []];
+    }
+
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        return ['updated' => 0, 'items' => []];
+    }
+
+    $updated = (int) ($decoded['updated'] ?? 0);
+    $items = hansjackNormalizePostGuessItems($decoded['items'] ?? []);
+
+    return [
+        'updated' => max(0, $updated),
+        'items' => $items,
+    ];
+}
+
+function hansjackSavePostGuessCache(int $cid, array $items): bool
+{
+    if ($cid <= 0) {
+        return false;
+    }
+
+    $normalizedItems = hansjackNormalizePostGuessItems($items);
+    $now = time();
+    $payload = [
+        'version' => 1,
+        'updated' => $now,
+        'expires' => $now + hansjackPostGuessCacheTtl(),
+        'items' => $normalizedItems,
+    ];
+
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($json) || $json === '') {
+        return false;
+    }
+
+    $path = hansjackPostGuessCacheFilePath($cid);
+    return hansjackWriteFileAtomic($path, $json);
 }
 
 /**
@@ -304,7 +775,9 @@ function themeInit(Archive $archive)
     handleMemoryReactionRequest($archive);
     handleGithubOauthRequest($archive);
     handleQqOauthRequest($archive);
+    handleThemeCacheManageRequest($archive);
     enableFeedStylesheet($archive);
+    hansjackStartAnonymousPageCache($archive);
 
     if ($archive->is('category', 'posts') || $archive->is('category', 'notes')) {
         $archive->parameter->pageSize = 15;
@@ -354,6 +827,18 @@ function handleLiveVersionRequest(Archive $archive): void
     }
     if ($flag === '' || $flag === '0' || strtolower($flag) === 'false') {
         return;
+    }
+
+    $options = Options::alloc();
+    if (!currentUserIsAdmin()) {
+        $visitorPollingEnabled = hansjackVisitorLivePollingEnabled($options);
+        $highLoadMode = hansjackHighLoadDegradeEnabled($options);
+        if (!$visitorPollingEnabled || $highLoadMode) {
+            emitJson([
+                'ok' => false,
+                'message' => _t('实时轮询已关闭'),
+            ], 403);
+        }
     }
 
     if ($archive->request->isPost()) {
@@ -570,16 +1055,10 @@ function handleCommentUploadRequest(Archive $archive): void
     }
 
     $token = '';
-    $referer = '';
     try {
         $token = trim((string) $archive->request->get('_', ''));
     } catch (\Throwable $e) {
         $token = '';
-    }
-    try {
-        $referer = trim((string) $archive->request->getReferer());
-    } catch (\Throwable $e) {
-        $referer = '';
     }
 
     $security = null;
@@ -590,9 +1069,9 @@ function handleCommentUploadRequest(Archive $archive): void
     }
 
     $expectedToken = '';
-    if ($security && method_exists($security, 'getToken') && $referer !== '') {
+    if ($security && method_exists($security, 'getToken') && $returnUrl !== '') {
         try {
-            $expectedToken = (string) $security->getToken($referer);
+            $expectedToken = (string) $security->getToken($returnUrl);
         } catch (\Throwable $e) {
             $expectedToken = '';
         }
@@ -1892,6 +2371,304 @@ function qqBindingPanelHtml(Options $options): string
 
     $html .= '</div>';
     return $html;
+}
+
+function hansjackBuildUrlWithQuery(string $baseUrl, array $params): string
+{
+    $baseUrl = trim($baseUrl);
+    if ($baseUrl === '') {
+        return '';
+    }
+
+    $query = [];
+    foreach ($params as $key => $value) {
+        $name = trim((string) $key);
+        if ($name === '') {
+            continue;
+        }
+
+        if ($value === null) {
+            continue;
+        }
+
+        $text = trim((string) $value);
+        if ($text === '') {
+            continue;
+        }
+
+        $query[$name] = $text;
+    }
+
+    if (empty($query)) {
+        return $baseUrl;
+    }
+
+    $qs = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+    if ($qs === '') {
+        return $baseUrl;
+    }
+
+    $sep = (strpos($baseUrl, '?') === false) ? '?' : '&';
+    return $baseUrl . $sep . $qs;
+}
+
+function hansjackThemeCacheActionUrl(string $action, array $params = []): string
+{
+    $options = Options::alloc();
+    $base = (string) $options->index;
+
+    $query = ['theme_cache_action' => trim($action)];
+    foreach ($params as $key => $value) {
+        $name = trim((string) $key);
+        if ($name === '') {
+            continue;
+        }
+        if ($value === null) {
+            continue;
+        }
+
+        $text = trim((string) $value);
+        if ($text === '') {
+            continue;
+        }
+        $query[$name] = $text;
+    }
+
+    $qs = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+    if ($qs === '') {
+        return $base;
+    }
+
+    $sep = (strpos($base, '?') === false) ? '?' : '&';
+    return $base . $sep . $qs;
+}
+
+function hansjackThemeCacheAdminReturnUrl(Options $options): string
+{
+    $base = Common::url('options-theme.php', (string) $options->adminUrl);
+    $theme = trim((string) ($options->theme ?? ''));
+    if ($theme === '') {
+        return $base;
+    }
+
+    return hansjackBuildUrlWithQuery($base, ['theme' => $theme]);
+}
+
+function hansjackThemeCacheTargetPaths(): array
+{
+    return [
+        __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'page-cache',
+        __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'post-guess',
+        __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'internal-link-meta.json',
+    ];
+}
+
+function hansjackDeletePathRecursive(string $path, array &$stats): void
+{
+    if ($path === '') {
+        return;
+    }
+
+    if (is_file($path) || is_link($path)) {
+        if (@unlink($path)) {
+            $stats['files'] += 1;
+            $stats['removed'] += 1;
+        }
+        return;
+    }
+
+    if (!is_dir($path)) {
+        return;
+    }
+
+    $items = @scandir($path);
+    if (is_array($items)) {
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            hansjackDeletePathRecursive($path . DIRECTORY_SEPARATOR . $item, $stats);
+        }
+    }
+
+    if (@rmdir($path)) {
+        $stats['dirs'] += 1;
+        $stats['removed'] += 1;
+    }
+}
+
+function hansjackClearThemeCaches(): array
+{
+    $stats = [
+        'removed' => 0,
+        'files' => 0,
+        'dirs' => 0,
+    ];
+
+    $targets = hansjackThemeCacheTargetPaths();
+    foreach ($targets as $targetPath) {
+        $path = trim((string) $targetPath);
+        if ($path === '') {
+            continue;
+        }
+        hansjackDeletePathRecursive($path, $stats);
+    }
+
+    return $stats;
+}
+
+function hansjackThemeCacheRedirect(string $returnUrl, array $params = []): void
+{
+    $url = hansjackBuildUrlWithQuery($returnUrl, $params);
+    if ($url === '') {
+        $url = $returnUrl;
+    }
+
+    if (!headers_sent()) {
+        header('Location: ' . $url, true, 302);
+    } else {
+        echo '<script>location.href=' . json_encode($url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ';</script>';
+    }
+    exit;
+}
+
+function hansjackThemeCachePanelHtml(Options $options): string
+{
+    $isAdmin = currentUserIsAdmin();
+    $adminReturn = hansjackThemeCacheAdminReturnUrl($options);
+
+    $security = null;
+    try {
+        $security = \Typecho\Widget::widget('Widget_Security');
+    } catch (\Throwable $e) {
+        $security = null;
+    }
+
+    $token = '';
+    if ($security && method_exists($security, 'getToken') && $adminReturn !== '') {
+        try {
+            $token = (string) $security->getToken($adminReturn);
+        } catch (\Throwable $e) {
+            $token = '';
+        }
+    }
+
+    $clearUrl = hansjackThemeCacheActionUrl('clear', [
+        'return' => $adminReturn,
+        '_' => $token,
+    ]);
+
+    $status = trim((string) ($_GET['hansjack_cache_status'] ?? ''));
+    $removed = (int) ($_GET['hansjack_cache_removed'] ?? 0);
+
+    $message = '';
+    $messageColor = '#1a7f37';
+    if ($status === 'cleared') {
+        $message = _t('缓存清理完成，已移除 %d 项。', max(0, $removed));
+    } elseif ($status === 'denied') {
+        $message = _t('清理失败：仅管理员可执行。');
+        $messageColor = '#b42318';
+    } elseif ($status === 'token') {
+        $message = _t('清理失败：安全校验未通过，请刷新后台重试。');
+        $messageColor = '#b42318';
+    } elseif ($status === 'invalid') {
+        $message = _t('清理失败：无效的缓存操作。');
+        $messageColor = '#b42318';
+    }
+
+    $html = '<div class="hansjack-cache-panel">';
+    $html .= '<div>' . _t('目标缓存：page-cache、post-guess、internal-link-meta。') . '</div>';
+
+    if ($message !== '') {
+        $html .= '<div style="margin-top:6px;color:' . escape($messageColor) . ';">' . escape($message) . '</div>';
+    }
+
+    if (!$isAdmin) {
+        $html .= '<div style="margin-top:6px;color:#b46a00;">' . _t('请使用管理员账号执行缓存清理。') . '</div>';
+    } else {
+        $html .= '<div style="margin-top:8px;">';
+        $html .= '<a href="' . escape($clearUrl) . '" onclick="return window.confirm(\'确认清空主题缓存？\');">' . _t('一键清空主题缓存') . '</a>';
+        $html .= '</div>';
+    }
+
+    $html .= '</div>';
+    return $html;
+}
+
+function handleThemeCacheManageRequest(Archive $archive): void
+{
+    $exists = false;
+    $action = '';
+    try {
+        $action = strtolower(trim((string) $archive->request->get('theme_cache_action', '', $exists)));
+    } catch (\Throwable $e) {
+        $exists = false;
+        $action = '';
+    }
+
+    if (!$exists || $action === '') {
+        return;
+    }
+
+    $options = Options::alloc();
+    $defaultReturn = hansjackThemeCacheAdminReturnUrl($options);
+    $returnUrlRaw = '';
+    try {
+        $returnUrlRaw = trim((string) $archive->request->get('return', $defaultReturn));
+    } catch (\Throwable $e) {
+        $returnUrlRaw = $defaultReturn;
+    }
+    $returnUrl = githubNormalizeReturnUrl($returnUrlRaw, $options);
+    if ($returnUrl === '') {
+        $returnUrl = $defaultReturn;
+    }
+
+    if (!currentUserIsAdmin()) {
+        hansjackThemeCacheRedirect($returnUrl, ['hansjack_cache_status' => 'denied']);
+    }
+
+    $token = '';
+    $referer = '';
+    try {
+        $token = trim((string) $archive->request->get('_', ''));
+    } catch (\Throwable $e) {
+        $token = '';
+    }
+    try {
+        $referer = trim((string) $archive->request->getReferer());
+    } catch (\Throwable $e) {
+        $referer = '';
+    }
+
+    $security = null;
+    try {
+        $security = \Typecho\Widget::widget('Widget_Security');
+    } catch (\Throwable $e) {
+        $security = null;
+    }
+
+    $expectedToken = '';
+    if ($security && method_exists($security, 'getToken') && $referer !== '') {
+        try {
+            $expectedToken = (string) $security->getToken($referer);
+        } catch (\Throwable $e) {
+            $expectedToken = '';
+        }
+    }
+
+    if ($token === '' || $expectedToken === '' || !hash_equals($expectedToken, $token)) {
+        hansjackThemeCacheRedirect($returnUrl, ['hansjack_cache_status' => 'token']);
+    }
+
+    if ($action !== 'clear') {
+        hansjackThemeCacheRedirect($returnUrl, ['hansjack_cache_status' => 'invalid']);
+    }
+
+    $stats = hansjackClearThemeCaches();
+    hansjackThemeCacheRedirect($returnUrl, [
+        'hansjack_cache_status' => 'cleared',
+        'hansjack_cache_removed' => (int) ($stats['removed'] ?? 0),
+    ]);
 }
 
 function githubOauthEnabled(Options $options): bool

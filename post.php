@@ -119,6 +119,25 @@ $this->need('header.php');
             }
 
             $guessPosts = [];
+            $currentCid = (int) ($this->cid ?? 0);
+            $guessCachePayload = hansjackLoadPostGuessCache($currentCid);
+            $guessCacheUpdated = (int) ($guessCachePayload['updated'] ?? 0);
+            $guessPosts = hansjackNormalizePostGuessItems($guessCachePayload['items'] ?? []);
+            $guessCacheFresh = (
+                $guessCacheUpdated > 0 &&
+                (time() - $guessCacheUpdated) <= hansjackPostGuessCacheTtl()
+            );
+            $guessCanRefreshByAdmin = currentUserIsAdmin() && !hansjackHighLoadDegradeEnabled($this->options);
+            $guessRefreshRequested = false;
+            if ($guessCanRefreshByAdmin) {
+                try {
+                    $guessRefreshRequested = trim((string) $this->request->get('refresh_guess_cache', '')) === '1';
+                } catch (\Throwable $e) {
+                    $guessRefreshRequested = false;
+                }
+            }
+            $guessShouldRebuild = $guessCanRefreshByAdmin && (!$guessCacheFresh || empty($guessPosts) || $guessRefreshRequested);
+            $guessRebuilt = false;
             $normalizeKey = static function ($value): string {
                 $text = trim((string) $value);
                 if ($text === '') {
@@ -192,36 +211,38 @@ $this->need('header.php');
                 }
             }
 
-            if (!empty($currentCategoryKeys) && !empty($currentTagKeys)) {
+            if ($guessShouldRebuild && !empty($currentCategoryKeys) && !empty($currentTagKeys)) {
                 $guessSource = null;
                 try {
-                    $this->widget('Widget_Contents_Post_Recent@post_guess', 'pageSize=9999', null, false)->to($guessSource);
+                    $this->widget('Widget_Contents_Post_Recent@post_guess', 'pageSize=400', null, false)->to($guessSource);
                 } catch (\Throwable $e) {
                     $guessSource = null;
                 }
 
-                if ($guessSource && $guessSource->have()) {
-                    $currentCid = (int) ($this->cid ?? 0);
+                if ($guessSource) {
+                    $guessBuiltPosts = [];
+                    $guessRebuilt = true;
 
-                    while ($guessSource->next()) {
-                        if (count($guessPosts) >= 3) {
-                            break;
-                        }
+                    if ($guessSource->have()) {
+                        while ($guessSource->next()) {
+                            if (count($guessBuiltPosts) >= 3) {
+                                break;
+                            }
 
-                        $guessCid = (int) ($guessSource->cid ?? 0);
-                        if ($guessCid <= 0 || ($currentCid > 0 && $guessCid === $currentCid)) {
-                            continue;
-                        }
+                            $guessCid = (int) ($guessSource->cid ?? 0);
+                            if ($guessCid <= 0 || ($currentCid > 0 && $guessCid === $currentCid)) {
+                                continue;
+                            }
 
-                        $guessCategories = [];
-                        try {
-                            $guessCategories = is_array($guessSource->categories) ? $guessSource->categories : [];
-                        } catch (\Throwable $e) {
                             $guessCategories = [];
-                        }
+                            try {
+                                $guessCategories = is_array($guessSource->categories) ? $guessSource->categories : [];
+                            } catch (\Throwable $e) {
+                                $guessCategories = [];
+                            }
 
-                        $guessCategoryMatched = false;
-                        foreach ($guessCategories as $cat) {
+                            $guessCategoryMatched = false;
+                            foreach ($guessCategories as $cat) {
                             $catMid = (int) ($cat['mid'] ?? 0);
                             $catSlug = (string) ($cat['slug'] ?? '');
                             if ($catMid > 0 && isset($categoryByMid[$catMid])) {
@@ -238,114 +259,120 @@ $this->need('header.php');
                                 $catSlugKey === 'posts' ||
                                 $catSlugKey === 'notes'
                             );
-                            if ($catIsRoot && !$guessUseRootCategoryFallback) {
+                                if ($catIsRoot && !$guessUseRootCategoryFallback) {
+                                    continue;
+                                }
+
+                                if (
+                                    ($catMid > 0 && isset($currentCategoryKeys['mid:' . $catMid])) ||
+                                    ($catSlugKey !== '' && isset($currentCategoryKeys['slug:' . $catSlugKey]))
+                                ) {
+                                    $guessCategoryMatched = true;
+                                    break;
+                                }
+                            }
+
+                            if (!$guessCategoryMatched) {
                                 continue;
                             }
 
-                            if (
-                                ($catMid > 0 && isset($currentCategoryKeys['mid:' . $catMid])) ||
-                                ($catSlugKey !== '' && isset($currentCategoryKeys['slug:' . $catSlugKey]))
-                            ) {
-                                $guessCategoryMatched = true;
-                                break;
-                            }
-                        }
-
-                        if (!$guessCategoryMatched) {
-                            continue;
-                        }
-
-                        $guessTags = [];
-                        try {
-                            $guessTags = is_array($guessSource->tags) ? $guessSource->tags : [];
-                        } catch (\Throwable $e) {
                             $guessTags = [];
-                        }
+                            try {
+                                $guessTags = is_array($guessSource->tags) ? $guessSource->tags : [];
+                            } catch (\Throwable $e) {
+                                $guessTags = [];
+                            }
 
-                        $guessTagMatched = false;
-                        foreach ($guessTags as $tag) {
+                            $guessTagMatched = false;
+                            foreach ($guessTags as $tag) {
                             $tagMid = (int) ($tag['mid'] ?? 0);
                             $tagSlugKey = $normalizeKey((string) ($tag['slug'] ?? ''));
                             $tagNameKey = $normalizeKey((string) ($tag['name'] ?? ''));
-                            if (
-                                ($tagMid > 0 && isset($currentTagKeys['mid:' . $tagMid])) ||
-                                ($tagSlugKey !== '' && isset($currentTagKeys['slug:' . $tagSlugKey])) ||
-                                ($tagNameKey !== '' && isset($currentTagKeys['name:' . $tagNameKey]))
-                            ) {
-                                $guessTagMatched = true;
-                                break;
-                            }
-                        }
-
-                        if (!$guessTagMatched) {
-                            continue;
-                        }
-
-                        $guessTitle = trim((string) ($guessSource->title ?? ''));
-                        if ($guessTitle === '') {
-                            $guessTitle = _t('无标题');
-                        }
-
-                        $guessUrl = trim((string) ($guessSource->permalink ?? ''));
-                        if ($guessUrl === '') {
-                            continue;
-                        }
-
-                        $guessExcerpt = '';
-                        ob_start();
-                        try {
-                            $guessSource->excerpt(100, '...');
-                        } catch (\Throwable $e) {
-                            // Ignore.
-                        }
-                        $guessExcerpt = (string) ob_get_clean();
-                        $guessExcerpt = trim((string) preg_replace('/\\s+/u', ' ', $guessExcerpt));
-
-                        $guessRenderTags = [];
-                        $guessTagSeen = [];
-                        foreach ($guessTags as $tag) {
-                            if (count($guessRenderTags) >= 3) {
-                                break;
+                                if (
+                                    ($tagMid > 0 && isset($currentTagKeys['mid:' . $tagMid])) ||
+                                    ($tagSlugKey !== '' && isset($currentTagKeys['slug:' . $tagSlugKey])) ||
+                                    ($tagNameKey !== '' && isset($currentTagKeys['name:' . $tagNameKey]))
+                                ) {
+                                    $guessTagMatched = true;
+                                    break;
+                                }
                             }
 
-                            $tagName = trim((string) ($tag['name'] ?? ''));
-                            $tagUrl = trim((string) ($tag['permalink'] ?? ''));
-                            if ($tagName === '' || $tagUrl === '') {
+                            if (!$guessTagMatched) {
                                 continue;
                             }
 
-                            $tagKey = $normalizeKey((string) ($tag['slug'] ?? ''));
-                            if ($tagKey === '') {
-                                $tagKey = $normalizeKey($tagName);
+                            $guessTitle = trim((string) ($guessSource->title ?? ''));
+                            if ($guessTitle === '') {
+                                $guessTitle = _t('无标题');
                             }
-                            if ($tagKey !== '' && isset($guessTagSeen[$tagKey])) {
+
+                            $guessUrl = trim((string) ($guessSource->permalink ?? ''));
+                            if ($guessUrl === '') {
                                 continue;
                             }
 
-                            if ($tagKey !== '') {
-                                $guessTagSeen[$tagKey] = true;
+                            $guessExcerpt = '';
+                            ob_start();
+                            try {
+                                $guessSource->excerpt(100, '...');
+                            } catch (\Throwable $e) {
+                                // Ignore.
                             }
-                            $guessRenderTags[] = [
-                                'name' => $tagName,
-                                'url' => $tagUrl,
+                            $guessExcerpt = (string) ob_get_clean();
+                            $guessExcerpt = trim((string) preg_replace('/\\s+/u', ' ', $guessExcerpt));
+
+                            $guessRenderTags = [];
+                            $guessTagSeen = [];
+                            foreach ($guessTags as $tag) {
+                                if (count($guessRenderTags) >= 3) {
+                                    break;
+                                }
+
+                                $tagName = trim((string) ($tag['name'] ?? ''));
+                                $tagUrl = trim((string) ($tag['permalink'] ?? ''));
+                                if ($tagName === '' || $tagUrl === '') {
+                                    continue;
+                                }
+
+                                $tagKey = $normalizeKey((string) ($tag['slug'] ?? ''));
+                                if ($tagKey === '') {
+                                    $tagKey = $normalizeKey($tagName);
+                                }
+                                if ($tagKey !== '' && isset($guessTagSeen[$tagKey])) {
+                                    continue;
+                                }
+
+                                if ($tagKey !== '') {
+                                    $guessTagSeen[$tagKey] = true;
+                                }
+                                $guessRenderTags[] = [
+                                    'name' => $tagName,
+                                    'url' => $tagUrl,
+                                ];
+                            }
+
+                            $guessCreated = (int) ($guessSource->created ?? 0);
+                            $guessModified = (int) ($guessSource->modified ?? 0);
+                            $guessBuiltPosts[] = [
+                                'title' => $guessTitle,
+                                'url' => $guessUrl,
+                                'created' => $guessCreated,
+                                'modified' => $guessModified,
+                                'dateTime' => $guessCreated > 0 ? date('c', $guessCreated) : '',
+                                'dateLabel' => $guessCreated > 0 ? date('Y/m/d-H:i:s', $guessCreated) : '',
+                                'excerpt' => $guessExcerpt,
+                                'tags' => $guessRenderTags,
+                                'originalIndex' => count($guessBuiltPosts),
                             ];
                         }
-
-                        $guessCreated = (int) ($guessSource->created ?? 0);
-                        $guessModified = (int) ($guessSource->modified ?? 0);
-                        $guessPosts[] = [
-                            'title' => $guessTitle,
-                            'url' => $guessUrl,
-                            'created' => $guessCreated,
-                            'modified' => $guessModified,
-                            'dateTime' => $guessCreated > 0 ? date('c', $guessCreated) : '',
-                            'dateLabel' => $guessCreated > 0 ? date('Y/m/d-H:i:s', $guessCreated) : '',
-                            'excerpt' => $guessExcerpt,
-                            'tags' => $guessRenderTags,
-                            'originalIndex' => count($guessPosts),
-                        ];
                     }
+
+                    $guessPosts = $guessBuiltPosts;
                 }
+            }
+            if ($guessRebuilt && $currentCid > 0) {
+                hansjackSavePostGuessCache($currentCid, $guessPosts);
             }
             ?>
             <p class="article-meta">

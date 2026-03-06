@@ -14,8 +14,16 @@ if ($customJavaScript !== '') {
     $customJavaScript = str_ireplace('</script>', '<\/script>', $customJavaScript);
 }
 
+$isAdminViewer = currentUserIsAdmin();
+$highLoadDegradeEnabled = hansjackHighLoadDegradeEnabled($this->options);
+$visitorLivePollingEnabled = hansjackVisitorLivePollingEnabled($this->options);
+$liveReloadEnabledForCurrent = $isAdminViewer
+    ? true
+    : ($visitorLivePollingEnabled && !$highLoadDegradeEnabled);
+
 $internalLinkMetaJson = '{}';
-if ($this->is('post') || $this->is('page')) {
+$allowInternalLinkMeta = !$highLoadDegradeEnabled || $isAdminViewer;
+if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
     $internalLinkMeta = [];
     $normalizePath = static function (string $path): string {
         $path = trim($path);
@@ -1040,6 +1048,8 @@ if ($this->is('post') || $this->is('page')) {
 
 <script>
 window.__hansjackInternalLinkMeta = <?php echo $internalLinkMetaJson; ?>;
+window.__hansjackLiveReloadEnabled = <?php echo $liveReloadEnabledForCurrent ? 'true' : 'false'; ?>;
+window.__hansjackHighLoadDegradeEnabled = <?php echo $highLoadDegradeEnabled ? 'true' : 'false'; ?>;
 </script>
 <script src="<?php echo escape(assetUrlSmart($this->options, 'assets/js/footer-global-tail.js')); ?>"></script>
 <script src="<?php echo escape(assetUrlSmart($this->options, 'assets/js/pjax-lite.js')); ?>"></script>

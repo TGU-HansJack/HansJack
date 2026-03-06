@@ -1094,6 +1094,11 @@
         if (!body || !window.fetch || typeof window.URL !== "function") {
             return;
         }
+        try {
+            if (window.__hansjackLiveReloadEnabled === false) {
+                return;
+            }
+        } catch (e) {}
 
         var isPostPage = !!(body.classList && body.classList.contains("page-post"));
         var isListPage = !isPostPage && !!document.querySelector(".posts-list");
