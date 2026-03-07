@@ -154,6 +154,9 @@ try {
                         </div>
                     </div>
                 </div>
+                <?php if ($commentToken !== ''): ?>
+                    <input type="hidden" name="_" value="<?php echo escape($commentToken); ?>">
+                <?php endif; ?>
             </form>
         </div>
 

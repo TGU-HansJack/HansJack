@@ -5080,6 +5080,9 @@
                 var formData = new FormData();
                 formData.append("file", file);
                 formData.append("_", token);
+                try {
+                    formData.append("referer", String(window.location.href || "").replace(/#.*$/, ""));
+                } catch (e) {}
 
                 setAttachBusy(true);
 

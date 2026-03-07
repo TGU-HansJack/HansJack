@@ -1475,34 +1475,24 @@ function handleCommentUploadRequest(Archive $archive): void
         ], 405);
     }
 
-    $user = null;
-    try {
-        $user = \Typecho\Widget::widget('Widget_User');
-    } catch (\Throwable $e) {
-        $user = null;
-    }
-
-    $isAdmin = false;
-    if ($user) {
-        try {
-            $isAdmin = $user->hasLogin() && $user->pass('administrator', true);
-        } catch (\Throwable $e) {
-            $isAdmin = false;
-        }
-    }
-
-    if (!$isAdmin) {
-        commentUploadJson([
-            'ok' => false,
-            'message' => _t('仅管理员可以上传附件'),
-        ], 403);
-    }
-
     $token = '';
+    $referer = '';
     try {
         $token = trim((string) $archive->request->get('_', ''));
     } catch (\Throwable $e) {
         $token = '';
+    }
+    try {
+        $referer = trim((string) $archive->request->get('referer', ''));
+    } catch (\Throwable $e) {
+        $referer = '';
+    }
+    if ($referer === '') {
+        try {
+            $referer = trim((string) $archive->request->getReferer());
+        } catch (\Throwable $e) {
+            $referer = '';
+        }
     }
 
     $security = null;
@@ -1513,9 +1503,9 @@ function handleCommentUploadRequest(Archive $archive): void
     }
 
     $expectedToken = '';
-    if ($security && method_exists($security, 'getToken') && $returnUrl !== '') {
+    if ($security && method_exists($security, 'getToken') && $referer !== '') {
         try {
-            $expectedToken = (string) $security->getToken($returnUrl);
+            $expectedToken = (string) $security->getToken($referer);
         } catch (\Throwable $e) {
             $expectedToken = '';
         }
