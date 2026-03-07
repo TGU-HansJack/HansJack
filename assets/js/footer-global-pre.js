@@ -3930,11 +3930,42 @@
         var commentsUserLogged = comments.getAttribute("data-user-logged") === "1";
         var commentsRequireMail = comments.getAttribute("data-comments-require-mail") === "1";
         var commentsRequireUrl = comments.getAttribute("data-comments-require-url") === "1";
+        var commentsUploadEnabled = comments.getAttribute("data-comment-upload-enabled") === "1";
+        var commentsUploadAccept = String(comments.getAttribute("data-comment-upload-accept") || "").trim();
+        var commentsUploadHint = String(comments.getAttribute("data-comment-upload-hint") || "").trim();
+        var commentsUploadMaxBytes = parseInt(comments.getAttribute("data-comment-upload-max-bytes") || "0", 10);
+        if (!isFinite(commentsUploadMaxBytes) || commentsUploadMaxBytes < 0) {
+            commentsUploadMaxBytes = 0;
+        }
+        var commentsUploadExts = String(comments.getAttribute("data-comment-upload-extensions") || "")
+            .split(",")
+            .map(function (item) {
+                return String(item || "").trim().toLowerCase();
+            })
+            .filter(function (item) {
+                return !!item;
+            });
         var commentEditBusy = false;
         var isMemoryComments = comments.classList.contains("memory-comments-shell");
         var topCommentForm = comments.querySelector("[data-comment-form][data-comment-role=\"top\"]");
         var topCommentFormHomeParent = topCommentForm ? topCommentForm.parentNode : null;
         var topCommentFormHomeNext = topCommentForm ? topCommentForm.nextSibling : null;
+
+        function formatCommentUploadBytes(bytes) {
+            if (!isFinite(bytes) || bytes <= 0) {
+                return "0B";
+            }
+            if (bytes >= 1073741824) {
+                return (Math.round(bytes / 10737418.24) / 100).toString().replace(/\.0+$/, "").replace(/(\.\d*[1-9])0+$/, "$1") + "GB";
+            }
+            if (bytes >= 1048576) {
+                return (Math.round(bytes / 10485.76) / 100).toString().replace(/\.0+$/, "").replace(/(\.\d*[1-9])0+$/, "$1") + "MB";
+            }
+            if (bytes >= 1024) {
+                return (Math.round(bytes / 10.24) / 100).toString().replace(/\.0+$/, "").replace(/(\.\d*[1-9])0+$/, "$1") + "KB";
+            }
+            return String(Math.max(0, Math.round(bytes))) + "B";
+        }
 
         function getCommentEditForm() {
             var reply = comments.querySelector("[data-comment-form][data-comment-role=\"reply\"]");
@@ -4810,52 +4841,7 @@
 
             var attachInput = null;
             var attachPreview = null;
-            var attachSnippet = "";
-            var attachUploading = false;
-
-            function getCommentUploadEndpoint() {
-                var raw = "";
-                try {
-                    raw = (window && window.location && window.location.href) ? String(window.location.href) : "";
-                } catch (e) {
-                    raw = "";
-                }
-
-                if (!raw) {
-                    return "?comment_upload=1";
-                }
-
-                try {
-                    var u = new URL(raw);
-                    u.searchParams.set("comment_upload", "1");
-                    return u.toString();
-                } catch (e) {
-                    var clean = raw;
-                    var hashPos = clean.indexOf("#");
-                    if (hashPos >= 0) {
-                        clean = clean.slice(0, hashPos);
-                    }
-                    return clean + (clean.indexOf("?") === -1 ? "?" : "&") + "comment_upload=1";
-                }
-            }
-
-            function getCommentUploadToken() {
-                var tokenInput = form.querySelector("input[name=\"_\"]");
-                if (!tokenInput && comments && comments.querySelector) {
-                    tokenInput = comments.querySelector("input[name=\"_\"]");
-                }
-                var token = tokenInput && tokenInput.value ? String(tokenInput.value).trim() : "";
-                return token;
-            }
-
-            function setAttachBusy(isBusy) {
-                attachUploading = !!isBusy;
-                if (!attachBtn) {
-                    return;
-                }
-                attachBtn.disabled = attachUploading;
-                attachBtn.setAttribute("aria-busy", attachUploading ? "true" : "false");
-            }
+            var attachObjectUrl = "";
 
             function normalizeAttachmentName(name) {
                 var safe = String(name || "附件")
@@ -4866,102 +4852,62 @@
                 return safe || "附件";
             }
 
-            function buildAttachmentSnippet(data) {
-                var url = data && data.url ? String(data.url).trim() : "";
-                if (!url) {
-                    return "";
-                }
-                var name = normalizeAttachmentName(data && data.name ? data.name : "附件");
-                return data && data.isImage ? ("![" + name + "](" + url + ")") : ("[" + name + "](" + url + ")");
+            function getSelectedAttachmentFile() {
+                return attachInput && attachInput.files && attachInput.files[0] ? attachInput.files[0] : null;
             }
 
-            function insertAttachmentSnippet(snippet) {
-                if (!snippet) {
-                    return "";
-                }
-
-                var value = textarea.value || "";
-                var start;
-                var end;
-                try {
-                    start = typeof textarea.selectionStart === "number" ? textarea.selectionStart : value.length;
-                    end = typeof textarea.selectionEnd === "number" ? textarea.selectionEnd : value.length;
-                } catch (e) {
-                    start = value.length;
-                    end = value.length;
-                }
-
-                var beforeChar = start > 0 ? value.charAt(start - 1) : "";
-                var afterChar = end < value.length ? value.charAt(end) : "";
-                var insertText = snippet;
-                if (beforeChar && beforeChar !== "\n") {
-                    insertText = "\n" + insertText;
-                }
-                if (afterChar && afterChar !== "\n") {
-                    insertText += "\n";
-                }
-
-                try {
-                    textarea.focus();
-                } catch (e) {}
-
-                try {
-                    if (typeof textarea.setRangeText === "function" && typeof start === "number" && typeof end === "number") {
-                        textarea.setRangeText(insertText, start, end, "end");
-                    } else {
-                        var before = value.slice(0, start);
-                        var after = value.slice(end);
-                        textarea.value = before + insertText + after;
-                        var pos = before.length + insertText.length;
-                        textarea.selectionStart = pos;
-                        textarea.selectionEnd = pos;
-                    }
-                } catch (e) {
-                    textarea.value = value + insertText;
-                }
-
-                autoGrowTextarea();
-                saveDraft();
-                return insertText;
-            }
-
-            function removeAttachmentSnippetIfAny() {
-                if (!attachSnippet) {
+            function revokeAttachmentObjectUrl() {
+                if (!attachObjectUrl) {
                     return;
                 }
 
-                var value = textarea.value || "";
-                var target = attachSnippet;
-                var idx = value.lastIndexOf(target);
-
-                if (idx === -1) {
-                    var trimmed = target.replace(/^\n+|\n+$/g, "");
-                    if (trimmed) {
-                        idx = value.lastIndexOf(trimmed);
-                        target = trimmed;
+                try {
+                    if (window.URL && typeof window.URL.revokeObjectURL === "function") {
+                        window.URL.revokeObjectURL(attachObjectUrl);
                     }
-                }
-
-                if (idx !== -1) {
-                    textarea.value = value.slice(0, idx) + value.slice(idx + target.length);
-                    textarea.value = (textarea.value || "").replace(/\n{3,}/g, "\n\n");
-                    autoGrowTextarea();
-                    saveDraft();
-                }
-
-                attachSnippet = "";
+                } catch (e) {}
+                attachObjectUrl = "";
             }
 
-            function clearAttachmentPreview(removeSnippet) {
-                if (removeSnippet) {
-                    removeAttachmentSnippetIfAny();
+            function getAttachmentExtension(name) {
+                var fileName = String(name || "").trim();
+                var match = fileName.match(/\.([A-Za-z0-9]{1,16})$/);
+                return match && match[1] ? String(match[1]).toLowerCase() : "";
+            }
+
+            function getAttachmentValidationMessage(file) {
+                if (!commentsUploadEnabled) {
+                    return commentsUploadHint || "当前不支持附件上传";
                 }
+                if (!file) {
+                    return "请选择要上传的文件";
+                }
+                if (commentsUploadMaxBytes > 0 && file.size > commentsUploadMaxBytes) {
+                    return "附件不能超过 " + formatCommentUploadBytes(commentsUploadMaxBytes);
+                }
+
+                var ext = getAttachmentExtension(file.name);
+                if (commentsUploadExts.length > 0 && (!ext || commentsUploadExts.indexOf(ext) === -1)) {
+                    return commentsUploadHint || "该文件类型不支持上传";
+                }
+
+                return "";
+            }
+
+            function clearAttachmentPreview(clearSelection) {
+                revokeAttachmentObjectUrl();
 
                 if (attachPreview && attachPreview.parentNode) {
                     attachPreview.parentNode.removeChild(attachPreview);
                 }
                 attachPreview = null;
                 box.classList.remove("has-attachment-preview");
+
+                if (clearSelection && attachInput) {
+                    try {
+                        attachInput.value = "";
+                    } catch (e) {}
+                }
             }
 
             function getAttachmentFileLabel(data) {
@@ -4974,9 +4920,7 @@
             }
 
             function renderAttachmentPreview(data) {
-                clearAttachmentPreview(false);
-
-                if (!document || !box || !data || !data.url) {
+                if (!document || !box || !data) {
                     return;
                 }
 
@@ -4986,7 +4930,7 @@
 
                 var link = document.createElement("a");
                 link.className = "comment-attachment-preview-link";
-                link.href = String(data.url);
+                link.href = data && data.url ? String(data.url) : "#";
                 link.target = "_blank";
                 link.rel = "noopener noreferrer";
                 link.setAttribute("aria-label", normalizeAttachmentName(data.name || "附件"));
@@ -5038,89 +4982,51 @@
 
                 var input = document.createElement("input");
                 input.type = "file";
+                input.name = "comment_attachment";
                 input.hidden = true;
                 input.tabIndex = -1;
                 input.setAttribute("aria-hidden", "true");
-                input.accept = "image/*,.pdf,.txt,.md,.zip,.rar,.7z,.tar,.gz,.mp3,.wav,.ogg,.mp4,.webm,.mov";
+                input.accept = commentsUploadAccept || "";
                 input.addEventListener("change", function () {
                     var file = input.files && input.files[0] ? input.files[0] : null;
                     if (!file) {
+                        clearAttachmentPreview(true);
                         return;
                     }
-                    uploadAttachment(file);
+
+                    var errorMessage = getAttachmentValidationMessage(file);
+                    if (errorMessage) {
+                        clearAttachmentPreview(true);
+                        try {
+                            window.alert(errorMessage);
+                        } catch (e) {}
+                        return;
+                    }
+
+                    clearAttachmentPreview(false);
+
+                    var ext = getAttachmentExtension(file.name);
+                    var isImage = /^image\//i.test(String(file.type || ""))
+                        || ["jpg", "jpeg", "png", "gif", "webp", "avif", "bmp", "svg"].indexOf(ext) !== -1;
+
+                    try {
+                        if (window.URL && typeof window.URL.createObjectURL === "function") {
+                            attachObjectUrl = window.URL.createObjectURL(file);
+                        }
+                    } catch (e) {
+                        attachObjectUrl = "";
+                    }
+
+                    renderAttachmentPreview({
+                        url: attachObjectUrl,
+                        name: file.name || "附件",
+                        isImage: isImage
+                    });
                 });
 
                 form.appendChild(input);
                 attachInput = input;
                 return attachInput;
-            }
-
-            function parseUploadJson(text) {
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    return null;
-                }
-            }
-
-            function uploadAttachment(file) {
-                if (!file || attachUploading || !window.fetch || !window.FormData) {
-                    return;
-                }
-
-                var token = getCommentUploadToken();
-                if (!token) {
-                    try {
-                        window.alert("安全令牌缺失，请刷新页面后再试");
-                    } catch (e) {}
-                    return;
-                }
-
-                var endpoint = getCommentUploadEndpoint();
-                var formData = new FormData();
-                formData.append("file", file);
-                formData.append("_", token);
-                try {
-                    formData.append("referer", String(window.location.href || "").replace(/#.*$/, ""));
-                } catch (e) {}
-
-                setAttachBusy(true);
-
-                window.fetch(endpoint, {
-                    method: "POST",
-                    body: formData,
-                    credentials: "same-origin",
-                    headers: {
-                        "X-Requested-With": "XMLHttpRequest"
-                    }
-                }).then(function (response) {
-                    return response.text().then(function (text) {
-                        var payload = parseUploadJson(text);
-                        if (!response.ok || !payload || !payload.ok) {
-                            var errMsg = payload && payload.message ? String(payload.message) : "附件上传失败，请重试";
-                            throw new Error(errMsg);
-                        }
-                        return payload;
-                    });
-                }).then(function (payload) {
-                    clearAttachmentPreview(true);
-                    var snippet = buildAttachmentSnippet(payload);
-                    if (!snippet) {
-                        throw new Error("附件地址无效");
-                    }
-                    attachSnippet = insertAttachmentSnippet(snippet);
-                    renderAttachmentPreview(payload);
-                }).catch(function (err) {
-                    var msg = err && err.message ? String(err.message) : "附件上传失败，请重试";
-                    try {
-                        window.alert(msg);
-                    } catch (e) {}
-                }).finally(function () {
-                    if (attachInput) {
-                        attachInput.value = "";
-                    }
-                    setAttachBusy(false);
-                });
             }
 
             function onEmojiDocMouseDown(e) {
@@ -5218,7 +5124,13 @@
                     if (e && e.preventDefault) {
                         e.preventDefault();
                     }
-                    if (!window.fetch || !window.FormData) {
+                    if (!commentsUploadEnabled) {
+                        try {
+                            window.alert(commentsUploadHint || "当前不支持附件上传");
+                        } catch (err) {}
+                        return;
+                    }
+                    if (!window.File || !document || !document.createElement) {
                         try {
                             window.alert("当前浏览器不支持附件上传");
                         } catch (err) {}
@@ -5328,6 +5240,20 @@
                     var trimmed = value.replace(/^\s+/, "");
                     if (trimmed.indexOf(privateMarker) !== 0) {
                         textarea.value = privateMarker + "\n" + value;
+                    }
+                }
+
+                var attachFile = getSelectedAttachmentFile();
+                if (attachFile) {
+                    var attachError = getAttachmentValidationMessage(attachFile);
+                    if (attachError) {
+                        if (e && e.preventDefault) {
+                            e.preventDefault();
+                        }
+                        try {
+                            window.alert(attachError);
+                        } catch (err) {}
+                        return;
                     }
                 }
 

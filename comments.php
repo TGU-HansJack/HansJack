@@ -33,13 +33,45 @@ try {
 } catch (\Throwable $e) {
     $requireUrl = false;
 }
+
+$commentUploadPolicy = [
+    'enabled' => false,
+    'allowedExts' => [],
+    'accept' => '',
+    'maxBytes' => 0,
+    'hint' => '',
+];
+try {
+    if (function_exists('hansjackCommentUploadPolicy')) {
+        $commentUploadPolicy = hansjackCommentUploadPolicy($this->options, $userLoggedIn);
+    }
+} catch (\Throwable $e) {
+    $commentUploadPolicy = [
+        'enabled' => false,
+        'allowedExts' => [],
+        'accept' => '',
+        'maxBytes' => 0,
+        'hint' => '',
+    ];
+}
+
+$commentUploadEnabled = !empty($commentUploadPolicy['enabled']);
+$commentUploadAccept = trim((string) ($commentUploadPolicy['accept'] ?? ''));
+$commentUploadExts = implode(',', (array) ($commentUploadPolicy['allowedExts'] ?? []));
+$commentUploadMaxBytes = (int) ($commentUploadPolicy['maxBytes'] ?? 0);
+$commentUploadHint = trim((string) ($commentUploadPolicy['hint'] ?? ''));
 ?>
 
 <section id="comments" class="comments" aria-label="<?php _e('评论'); ?>"
          data-comments-order="<?php echo escape($commentsOrder); ?>"
          data-user-logged="<?php echo $userLoggedIn ? '1' : '0'; ?>"
          data-comments-require-mail="<?php echo $requireMail ? '1' : '0'; ?>"
-         data-comments-require-url="<?php echo $requireUrl ? '1' : '0'; ?>">
+         data-comments-require-url="<?php echo $requireUrl ? '1' : '0'; ?>"
+         data-comment-upload-enabled="<?php echo $commentUploadEnabled ? '1' : '0'; ?>"
+         data-comment-upload-accept="<?php echo escape($commentUploadAccept); ?>"
+         data-comment-upload-extensions="<?php echo escape($commentUploadExts); ?>"
+         data-comment-upload-max-bytes="<?php echo $commentUploadMaxBytes; ?>"
+         data-comment-upload-hint="<?php echo escape($commentUploadHint); ?>">
     <?php $this->comments()->to($comments); ?>
 
     <?php if ($this->allow('comment')): ?>
@@ -82,7 +114,7 @@ try {
             $qqLoginUrl = '';
         }
         ?>
-        <form method="post" action="<?php $this->commentUrl(); ?>" id="comment-form-top" class="comment-form comment-composer-form" role="form"
+        <form method="post" action="<?php $this->commentUrl(); ?>" id="comment-form-top" class="comment-form comment-composer-form" role="form" enctype="multipart/form-data"
               data-comment-form data-comment-role="top" data-user-logged="<?php echo $userLoggedIn ? '1' : '0'; ?>">
             <div class="comment-box" data-comment-box>
                 <textarea rows="6" cols="50" name="text" id="comment-textarea-top" class="comment-textarea" required></textarea>
@@ -94,7 +126,7 @@ try {
                         <button class="comment-icon-btn comment-emoji" type="button" aria-label="<?php _e('表情'); ?>">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-smile-icon lucide-smile" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
                         </button>
-                        <button class="comment-icon-btn comment-attach" type="button" aria-label="<?php _e('附件'); ?>">
+                        <button class="comment-icon-btn comment-attach" type="button" aria-label="<?php _e('附件'); ?>" title="<?php echo escape($commentUploadHint); ?>"<?php echo $commentUploadEnabled ? '' : ' disabled'; ?>>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip" aria-hidden="true"><path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"/></svg>
                         </button>
                         <button class="comment-icon-btn comment-private" type="button" aria-label="<?php _e('私信'); ?>" aria-pressed="false" data-comment-private-toggle>
@@ -121,7 +153,7 @@ try {
         </form>
 
         <div id="<?php $this->respondId(); ?>" class="respond respond" data-comment-respond data-user-logged="<?php echo $userLoggedIn ? '1' : '0'; ?>">
-            <form method="post" action="<?php $this->commentUrl(); ?>" id="comment-form" class="comment-form comment-composer-form" role="form"
+            <form method="post" action="<?php $this->commentUrl(); ?>" id="comment-form" class="comment-form comment-composer-form" role="form" enctype="multipart/form-data"
                   data-comment-form data-comment-role="reply" data-user-logged="<?php echo $userLoggedIn ? '1' : '0'; ?>">
                 <div class="comment-box" data-comment-box>
                     <textarea rows="6" cols="50" name="text" id="comment-textarea-reply" class="comment-textarea" required></textarea>
@@ -133,7 +165,7 @@ try {
                             <button class="comment-icon-btn comment-emoji" type="button" aria-label="<?php _e('表情'); ?>">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-smile-icon lucide-smile" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
                             </button>
-                            <button class="comment-icon-btn comment-attach" type="button" aria-label="<?php _e('附件'); ?>">
+                            <button class="comment-icon-btn comment-attach" type="button" aria-label="<?php _e('附件'); ?>" title="<?php echo escape($commentUploadHint); ?>"<?php echo $commentUploadEnabled ? '' : ' disabled'; ?>>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip-icon lucide-paperclip" aria-hidden="true"><path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"/></svg>
                             </button>
                             <button class="comment-icon-btn comment-private" type="button" aria-label="<?php _e('私信'); ?>" aria-pressed="false" data-comment-private-toggle>
