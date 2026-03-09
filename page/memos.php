@@ -535,38 +535,7 @@ if ($pagePermalink === '') {
                 </section>
             </div>
 
-            <aside class="posts-aside memory-aside" aria-label="<?php _e('筛选与统计'); ?>">
-                <div class="posts-block" aria-label="<?php _e('时间表'); ?>">
-                    <h2 class="posts-block-title"><?php _e('时间表'); ?></h2>
-                    <div class="posts-links" data-memory-month-panel>
-                        <a class="posts-link memory-aside-link is-active" href="#comments" data-memory-month="">
-                            <?php _e('全部'); ?>
-                            <span class="memory-filter-count"><?php echo (int) $totalComments; ?></span>
-                        </a>
-                        <?php foreach ($monthRows as $row): ?>
-                            <a class="posts-link memory-aside-link" href="#comments" data-memory-month="<?php echo escape((string) ($row['value'] ?? '')); ?>">
-                                <?php echo escape((string) ($row['label'] ?? '')); ?>
-                                <span class="memory-filter-count"><?php echo (int) ($row['count'] ?? 0); ?></span>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-
-                <div class="posts-block" aria-label="<?php _e('标签表'); ?>">
-                    <h2 class="posts-block-title"><?php _e('标签表'); ?></h2>
-                    <div class="posts-tags" data-memory-tag-panel>
-                        <a class="posts-tag-pill memory-aside-tag is-active" href="#comments" data-memory-tag-filter="">
-                            <?php _e('全部'); ?>
-                            <span class="memory-filter-count"><?php echo (int) $totalComments; ?></span>
-                        </a>
-                        <?php foreach ($tagRows as $tag): ?>
-                            <a class="posts-tag-pill memory-aside-tag" href="#comments" data-memory-tag-filter="<?php echo escape((string) ($tag['key'] ?? '')); ?>">
-                                #<?php echo escape((string) ($tag['name'] ?? '')); ?>
-                                <span class="memory-filter-count"><?php echo (int) ($tag['count'] ?? 0); ?></span>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
+            <aside class="posts-aside memory-aside" aria-label="<?php _e('统计'); ?>">
 
                 <div class="posts-block" aria-label="<?php _e('统计'); ?>">
                     <h2 class="posts-block-title"><?php _e('统计'); ?></h2>
