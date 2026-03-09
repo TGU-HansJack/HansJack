@@ -6797,13 +6797,36 @@ html.theme-dark .fab-reward-backdrop {
 }
 
 .comment-box.has-attachment-preview .comment-textarea {
-    padding-bottom: 5.35rem;
+    padding-bottom: 5.55rem;
+}
+
+.comment-attachment-preview-list {
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(34px + 0.48rem);
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.1rem;
+    z-index: 42;
+    pointer-events: auto;
+    scrollbar-width: thin;
+}
+
+.comment-attachment-preview-list::-webkit-scrollbar {
+    height: 6px;
+}
+
+.comment-attachment-preview-list::-webkit-scrollbar-thumb {
+    background: var(--line-day);
 }
 
 .comment-attachment-preview {
-    position: absolute;
-    left: 0.75rem;
-    bottom: calc(34px + 0.48rem);
+    position: relative;
+    flex: 0 0 64px;
     width: 64px;
     height: 64px;
     border: 1px solid var(--line-day);

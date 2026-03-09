@@ -556,7 +556,7 @@ function hansjackCommentUploadPolicy(Options $options, bool $isUserLogged): arra
     $enabled = true;
     $allowedExts = $globalAllowedExts;
     $maxBytes = $globalMaxBytes;
-    $hint = _t('附件会在评论提交时一并上传，单个文件最大 %s。', hansjackFormatBytesHuman($maxBytes));
+    $hint = _t('附件会在评论提交时一并上传，可选择多个文件，单个文件最大 %s。', hansjackFormatBytesHuman($maxBytes));
 
     if (!$isUserLogged) {
         $enabled = hansjackCommentGuestUploadEnabled($options);
@@ -568,7 +568,7 @@ function hansjackCommentUploadPolicy(Options $options, bool $isUserLogged): arra
         }
 
         $hint = $enabled
-            ? _t('游客仅支持图片/文本附件，且单个文件不能超过 %s。', hansjackFormatBytesHuman($maxBytes))
+            ? _t('游客仅支持图片/文本附件，可选择多个文件，且单个文件不能超过 %s。', hansjackFormatBytesHuman($maxBytes))
             : _t('当前未开启游客附件上传。');
     }
 
@@ -794,33 +794,74 @@ function hansjackBuildCommentAttachmentSnippet(array $upload): string
     return $isImage ? ('![' . $name . '](' . $url . ')') : ('[' . $name . '](' . $url . ')');
 }
 
+function hansjackNormalizeCommentUploadFiles($rawFile): array
+{
+    if (!is_array($rawFile)) {
+        return [];
+    }
+
+    $name = $rawFile['name'] ?? null;
+    if (is_array($name)) {
+        $normalized = [];
+        $count = count($name);
+        for ($i = 0; $i < $count; $i++) {
+            $normalized[] = [
+                'name' => (string) ($rawFile['name'][$i] ?? ''),
+                'type' => (string) ($rawFile['type'][$i] ?? ''),
+                'tmp_name' => (string) ($rawFile['tmp_name'][$i] ?? ''),
+                'error' => (int) ($rawFile['error'][$i] ?? UPLOAD_ERR_NO_FILE),
+                'size' => (int) ($rawFile['size'][$i] ?? 0),
+            ];
+        }
+        return $normalized;
+    }
+
+    return [[
+        'name' => (string) ($rawFile['name'] ?? ''),
+        'type' => (string) ($rawFile['type'] ?? ''),
+        'tmp_name' => (string) ($rawFile['tmp_name'] ?? ''),
+        'error' => (int) ($rawFile['error'] ?? UPLOAD_ERR_NO_FILE),
+        'size' => (int) ($rawFile['size'] ?? 0),
+    ]];
+}
+
 function hansjackFilterCommentAttachment(array $comment, $content): array
 {
-    $file = $_FILES['comment_attachment'] ?? null;
-    if (!is_array($file)) {
+    $files = hansjackNormalizeCommentUploadFiles($_FILES['comment_attachment'] ?? null);
+    if ($files === []) {
         return $comment;
     }
 
-    $errorCode = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if ($errorCode === UPLOAD_ERR_NO_FILE) {
-        return $comment;
+    $options = Options::alloc();
+    $isUserLogged = hansjackCurrentUserHasLogin();
+    $snippets = [];
+
+    foreach ($files as $file) {
+        $errorCode = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+        if ($errorCode === UPLOAD_ERR_NO_FILE) {
+            continue;
+        }
+
+        try {
+            $upload = hansjackPrepareCommentUpload($file, $options, $isUserLogged);
+            $upload = hansjackStoreCommentUpload($upload);
+        } catch (\RuntimeException $e) {
+            throw new \Typecho\Widget\Exception($e->getMessage(), 400);
+        }
+
+        $snippet = hansjackBuildCommentAttachmentSnippet($upload);
+        if ($snippet !== '') {
+            $snippets[] = $snippet;
+        }
     }
 
-    try {
-        $options = Options::alloc();
-        $upload = hansjackPrepareCommentUpload($file, $options, hansjackCurrentUserHasLogin());
-        $upload = hansjackStoreCommentUpload($upload);
-    } catch (\RuntimeException $e) {
-        throw new \Typecho\Widget\Exception($e->getMessage(), 400);
-    }
-
-    $snippet = hansjackBuildCommentAttachmentSnippet($upload);
-    if ($snippet === '') {
+    if ($snippets === []) {
         return $comment;
     }
 
     $text = trim((string) ($comment['text'] ?? ''));
-    $comment['text'] = ($text === '') ? $snippet : ($text . "\n" . $snippet);
+    $attachmentsText = implode("\n", $snippets);
+    $comment['text'] = ($text === '') ? $attachmentsText : ($text . "\n" . $attachmentsText);
     return $comment;
 }
 

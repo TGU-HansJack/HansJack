@@ -4653,6 +4653,7 @@
             var loginBtn = form.querySelector("[data-open-login]");
             var emojiBtn = form.querySelector(".comment-emoji");
             var attachBtn = form.querySelector(".comment-attach");
+            var fallbackUploadBusy = false;
 
             // Auto-grow the composer textarea with content (no manual resize).
             // Reply form is initially hidden; compute min height lazily on first focus.
@@ -4840,8 +4841,9 @@
             }
 
             var attachInput = null;
-            var attachPreview = null;
-            var attachObjectUrl = "";
+            var attachPreviewList = null;
+            var attachPreviewObjectUrls = [];
+            var attachFiles = [];
 
             function normalizeAttachmentName(name) {
                 var safe = String(name || "附件")
@@ -4852,27 +4854,137 @@
                 return safe || "附件";
             }
 
-            function getSelectedAttachmentFile() {
-                return attachInput && attachInput.files && attachInput.files[0] ? attachInput.files[0] : null;
-            }
-
-            function revokeAttachmentObjectUrl() {
-                if (!attachObjectUrl) {
-                    return;
+            function getAttachmentDisplayName(file) {
+                if (!file) {
+                    return "附件";
                 }
-
-                try {
-                    if (window.URL && typeof window.URL.revokeObjectURL === "function") {
-                        window.URL.revokeObjectURL(attachObjectUrl);
-                    }
-                } catch (e) {}
-                attachObjectUrl = "";
+                var raw = String(file.name || file.__hansjackAssignedName || "").trim();
+                return normalizeAttachmentName(raw || "附件");
             }
 
             function getAttachmentExtension(name) {
                 var fileName = String(name || "").trim();
                 var match = fileName.match(/\.([A-Za-z0-9]{1,16})$/);
                 return match && match[1] ? String(match[1]).toLowerCase() : "";
+            }
+
+            function getAttachmentExtensionByMime(mime) {
+                var cleanMime = String(mime || "").toLowerCase().trim();
+                if (!cleanMime) {
+                    return "";
+                }
+                var known = {
+                    "image/jpeg": "jpg",
+                    "image/png": "png",
+                    "image/gif": "gif",
+                    "image/webp": "webp",
+                    "image/avif": "avif",
+                    "image/bmp": "bmp",
+                    "image/svg+xml": "svg",
+                    "text/plain": "txt",
+                    "application/json": "json",
+                    "application/pdf": "pdf"
+                };
+                if (known[cleanMime]) {
+                    return known[cleanMime];
+                }
+                var match = cleanMime.match(/^[a-z0-9.+-]+\/([a-z0-9.+-]+)$/i);
+                if (!match || !match[1]) {
+                    return "";
+                }
+                var ext = String(match[1]).toLowerCase().replace(/^x-/, "").replace(/\+xml$/, "");
+                return /^[a-z0-9]{1,16}$/.test(ext) ? ext : "";
+            }
+
+            function getAttachmentExtensionForFile(file) {
+                var ext = getAttachmentExtension(getAttachmentDisplayName(file));
+                if (ext) {
+                    return ext;
+                }
+                return getAttachmentExtensionByMime(file && file.type ? file.type : "");
+            }
+
+            function isImageAttachmentFile(file) {
+                var mime = String(file && file.type ? file.type : "");
+                if (/^image\//i.test(mime)) {
+                    return true;
+                }
+                var ext = getAttachmentExtensionForFile(file);
+                return ["jpg", "jpeg", "png", "gif", "webp", "avif", "bmp", "svg"].indexOf(ext) !== -1;
+            }
+
+            function ensureAttachmentFile(file, index, source) {
+                if (!file) {
+                    return null;
+                }
+                var ext = getAttachmentExtensionForFile(file);
+                var nextName = String(file.name || "").trim();
+                if (!nextName) {
+                    var ts = Date.now();
+                    var seq = (index || 0) + 1;
+                    var prefix = source === "paste" ? "paste" : "attachment";
+                    nextName = ext ? (prefix + "-" + ts + "-" + seq + "." + ext) : (prefix + "-" + ts + "-" + seq);
+                }
+                nextName = normalizeAttachmentName(nextName);
+
+                if (typeof File === "function") {
+                    try {
+                        return new File([file], nextName, {
+                            type: String(file.type || "application/octet-stream"),
+                            lastModified: Number(file.lastModified || Date.now())
+                        });
+                    } catch (e) {}
+                }
+
+                file.__hansjackAssignedName = nextName;
+                return file;
+            }
+
+            function filesLikeToArray(filesLike, source) {
+                var list = [];
+                if (!filesLike || typeof filesLike.length !== "number") {
+                    return list;
+                }
+                for (var i = 0; i < filesLike.length; i++) {
+                    var file = filesLike[i];
+                    var normalizedFile = ensureAttachmentFile(file, i, source);
+                    if (normalizedFile) {
+                        list.push(normalizedFile);
+                    }
+                }
+                return list;
+            }
+
+            function getAttachmentIdentity(file) {
+                return [
+                    getAttachmentDisplayName(file),
+                    String(file && typeof file.size === "number" ? file.size : 0),
+                    String(file && typeof file.lastModified === "number" ? file.lastModified : 0),
+                    String(file && file.type ? file.type : "")
+                ].join("::");
+            }
+
+            function mergeAttachmentFiles(baseFiles, incomingFiles) {
+                var merged = [];
+                var seen = Object.create(null);
+                function pushIfNeeded(file) {
+                    if (!file) {
+                        return;
+                    }
+                    var key = getAttachmentIdentity(file);
+                    if (seen[key]) {
+                        return;
+                    }
+                    seen[key] = true;
+                    merged.push(file);
+                }
+                (baseFiles || []).forEach(pushIfNeeded);
+                (incomingFiles || []).forEach(pushIfNeeded);
+                return merged;
+            }
+
+            function getSelectedAttachmentFiles() {
+                return attachFiles.slice();
             }
 
             function getAttachmentValidationMessage(file) {
@@ -4886,7 +4998,7 @@
                     return "附件不能超过 " + formatCommentUploadBytes(commentsUploadMaxBytes);
                 }
 
-                var ext = getAttachmentExtension(file.name);
+                var ext = getAttachmentExtensionForFile(file);
                 if (commentsUploadExts.length > 0 && (!ext || commentsUploadExts.indexOf(ext) === -1)) {
                     return commentsUploadHint || "该文件类型不支持上传";
                 }
@@ -4894,82 +5006,377 @@
                 return "";
             }
 
-            function clearAttachmentPreview(clearSelection) {
-                revokeAttachmentObjectUrl();
-
-                if (attachPreview && attachPreview.parentNode) {
-                    attachPreview.parentNode.removeChild(attachPreview);
+            function validateAttachmentFiles(files) {
+                var list = files || [];
+                for (var i = 0; i < list.length; i++) {
+                    var error = getAttachmentValidationMessage(list[i]);
+                    if (error) {
+                        return error;
+                    }
                 }
-                attachPreview = null;
-                box.classList.remove("has-attachment-preview");
+                return "";
+            }
 
-                if (clearSelection && attachInput) {
+            function revokeAttachmentObjectUrls() {
+                if (!attachPreviewObjectUrls.length) {
+                    return;
+                }
+                for (var i = 0; i < attachPreviewObjectUrls.length; i++) {
+                    try {
+                        if (window.URL && typeof window.URL.revokeObjectURL === "function") {
+                            window.URL.revokeObjectURL(attachPreviewObjectUrls[i]);
+                        }
+                    } catch (e) {}
+                }
+                attachPreviewObjectUrls = [];
+            }
+
+            function ensureAttachPreviewList() {
+                if (attachPreviewList) {
+                    return attachPreviewList;
+                }
+                if (!document || !box) {
+                    return null;
+                }
+                var list = document.createElement("div");
+                list.className = "comment-attachment-preview-list";
+                list.setAttribute("data-comment-attachment-list", "");
+                list.hidden = true;
+                box.appendChild(list);
+                attachPreviewList = list;
+                return attachPreviewList;
+            }
+
+            function getAttachmentFileLabel(file) {
+                var ext = getAttachmentExtensionForFile(file);
+                if (ext) {
+                    return ext.slice(0, 8).toUpperCase();
+                }
+                return isImageAttachmentFile(file) ? "IMG" : "FILE";
+            }
+
+            function syncAttachInputFiles() {
+                if (!attachInput) {
+                    return true;
+                }
+                if (attachFiles.length === 0) {
                     try {
                         attachInput.value = "";
                     } catch (e) {}
+                    return true;
+                }
+                if (!window.DataTransfer || typeof window.DataTransfer !== "function") {
+                    return false;
+                }
+
+                try {
+                    var transfer = new window.DataTransfer();
+                    for (var i = 0; i < attachFiles.length; i++) {
+                        transfer.items.add(attachFiles[i]);
+                    }
+                    attachInput.files = transfer.files;
+                    return true;
+                } catch (e) {
+                    return false;
                 }
             }
 
-            function getAttachmentFileLabel(data) {
-                var name = data && data.name ? String(data.name) : "";
-                var m = name.match(/\.([A-Za-z0-9]{1,8})$/);
-                if (m && m[1]) {
-                    return m[1].toUpperCase();
-                }
-                return data && data.isImage ? "IMG" : "FILE";
-            }
+            function renderAttachmentPreviews() {
+                revokeAttachmentObjectUrls();
 
-            function renderAttachmentPreview(data) {
-                if (!document || !box || !data) {
+                var list = ensureAttachPreviewList();
+                if (!list) {
+                    return;
+                }
+                list.textContent = "";
+
+                if (!attachFiles.length) {
+                    list.hidden = true;
+                    box.classList.remove("has-attachment-preview");
                     return;
                 }
 
-                var preview = document.createElement("div");
-                preview.className = "comment-attachment-preview";
-                preview.setAttribute("data-comment-attachment-preview", "");
+                for (var i = 0; i < attachFiles.length; i++) {
+                    (function (index) {
+                        var file = attachFiles[index];
+                        var isImage = isImageAttachmentFile(file);
+                        var preview = document.createElement("div");
+                        preview.className = "comment-attachment-preview";
+                        preview.setAttribute("data-comment-attachment-preview", "");
 
-                var link = document.createElement("a");
-                link.className = "comment-attachment-preview-link";
-                link.href = data && data.url ? String(data.url) : "#";
-                link.target = "_blank";
-                link.rel = "noopener noreferrer";
-                link.setAttribute("aria-label", normalizeAttachmentName(data.name || "附件"));
+                        var link = document.createElement("a");
+                        link.className = "comment-attachment-preview-link";
+                        link.href = "#";
+                        link.target = "_blank";
+                        link.rel = "noopener noreferrer";
+                        link.setAttribute("aria-label", getAttachmentDisplayName(file));
 
-                if (data.isImage) {
-                    var img = document.createElement("img");
-                    img.className = "comment-attachment-preview-img";
-                    img.src = String(data.url);
-                    img.alt = normalizeAttachmentName(data.name || "附件");
-                    img.loading = "lazy";
-                    link.appendChild(img);
-                } else {
-                    var fileTag = document.createElement("span");
-                    fileTag.className = "comment-attachment-preview-file";
-                    fileTag.textContent = getAttachmentFileLabel(data);
-                    link.appendChild(fileTag);
+                        if (isImage) {
+                            var objectUrl = "";
+                            try {
+                                if (window.URL && typeof window.URL.createObjectURL === "function") {
+                                    objectUrl = window.URL.createObjectURL(file);
+                                }
+                            } catch (e) {
+                                objectUrl = "";
+                            }
+                            if (objectUrl) {
+                                attachPreviewObjectUrls.push(objectUrl);
+                                link.href = objectUrl;
+                            }
+
+                            var img = document.createElement("img");
+                            img.className = "comment-attachment-preview-img";
+                            img.src = objectUrl || "";
+                            img.alt = getAttachmentDisplayName(file);
+                            img.loading = "lazy";
+                            link.appendChild(img);
+                        } else {
+                            var fileTag = document.createElement("span");
+                            fileTag.className = "comment-attachment-preview-file";
+                            fileTag.textContent = getAttachmentFileLabel(file);
+                            link.appendChild(fileTag);
+                        }
+
+                        var removeBtn = document.createElement("button");
+                        removeBtn.type = "button";
+                        removeBtn.className = "comment-attachment-preview-remove";
+                        removeBtn.setAttribute("aria-label", "删除附件");
+                        removeBtn.textContent = "×";
+                        removeBtn.addEventListener("click", function (e) {
+                            if (e && e.preventDefault) {
+                                e.preventDefault();
+                            }
+                            if (e && e.stopPropagation) {
+                                e.stopPropagation();
+                            }
+                            attachFiles.splice(index, 1);
+                            syncAttachInputFiles();
+                            renderAttachmentPreviews();
+                        });
+
+                        preview.appendChild(link);
+                        preview.appendChild(removeBtn);
+                        list.appendChild(preview);
+                    })(i);
                 }
 
-                var removeBtn = document.createElement("button");
-                removeBtn.type = "button";
-                removeBtn.className = "comment-attachment-preview-remove";
-                removeBtn.setAttribute("aria-label", "删除附件");
-                removeBtn.textContent = "×";
-                removeBtn.addEventListener("click", function (e) {
-                    if (e && e.preventDefault) {
-                        e.preventDefault();
-                    }
-                    if (e && e.stopPropagation) {
-                        e.stopPropagation();
-                    }
-                    clearAttachmentPreview(true);
-                });
-
-                preview.appendChild(link);
-                preview.appendChild(removeBtn);
-                box.appendChild(preview);
-
-                attachPreview = preview;
+                list.hidden = false;
                 box.classList.add("has-attachment-preview");
+            }
+
+            function clearAttachmentPreview(clearSelection) {
+                if (clearSelection) {
+                    attachFiles = [];
+                    syncAttachInputFiles();
+                }
+                renderAttachmentPreviews();
+            }
+
+            function pushAttachmentFiles(files, source) {
+                var normalizedFiles = filesLikeToArray(files, source);
+                if (!normalizedFiles.length) {
+                    return;
+                }
+
+                var mergedFiles = mergeAttachmentFiles(attachFiles, normalizedFiles);
+                var validationError = validateAttachmentFiles(mergedFiles);
+                if (validationError) {
+                    try {
+                        window.alert(validationError);
+                    } catch (e) {}
+                    return;
+                }
+
+                attachFiles = mergedFiles;
+                if (!attachInput) {
+                    ensureAttachInput();
+                }
+                if (!syncAttachInputFiles()) {
+                    if (normalizedFiles.length > 1) {
+                        try {
+                            window.alert("当前浏览器不支持管理多个附件，请一次性选择后直接提交");
+                        } catch (e) {}
+                    }
+                }
+                renderAttachmentPreviews();
+            }
+
+            function collectClipboardFiles(e) {
+                var clipboard = e && e.clipboardData ? e.clipboardData : null;
+                if (!clipboard) {
+                    return [];
+                }
+                var files = [];
+                if (clipboard.items && clipboard.items.length) {
+                    for (var i = 0; i < clipboard.items.length; i++) {
+                        var item = clipboard.items[i];
+                        if (!item || item.kind !== "file") {
+                            continue;
+                        }
+                        var blob = item.getAsFile ? item.getAsFile() : null;
+                        if (blob) {
+                            files.push(blob);
+                        }
+                    }
+                    if (files.length) {
+                        return files;
+                    }
+                }
+                if (clipboard.files && clipboard.files.length) {
+                    return filesLikeToArray(clipboard.files, "paste");
+                }
+                return [];
+            }
+
+            function normalizeAttachmentSnippetName(name) {
+                var safe = String(name || "附件")
+                    .replace(/[\r\n]+/g, " ")
+                    .replace(/[\[\]\(\)]+/g, " ")
+                    .replace(/\s+/g, " ")
+                    .trim();
+                return safe || "附件";
+            }
+
+            function buildCommentUploadEndpoint() {
+                var raw = "";
+                try {
+                    raw = (window && window.location && window.location.href) ? String(window.location.href) : "";
+                } catch (e) {
+                    raw = "";
+                }
+                if (!raw) {
+                    return "?comment_upload=1";
+                }
+                try {
+                    var u = new URL(raw);
+                    u.searchParams.set("comment_upload", "1");
+                    return u.toString();
+                } catch (e) {
+                    var clean = raw;
+                    var hashPos = clean.indexOf("#");
+                    if (hashPos >= 0) {
+                        clean = clean.slice(0, hashPos);
+                    }
+                    return clean + (clean.indexOf("?") === -1 ? "?" : "&") + "comment_upload=1";
+                }
+            }
+
+            function getCommentUploadToken() {
+                var tokenInput = form ? form.querySelector("input[name=\"_\"]") : null;
+                if (!tokenInput && comments && comments.querySelector) {
+                    tokenInput = comments.querySelector("input[name=\"_\"]");
+                }
+                return tokenInput && tokenInput.value ? String(tokenInput.value).trim() : "";
+            }
+
+            function buildAttachmentSnippetFromUploadPayload(payload) {
+                if (!payload || typeof payload !== "object") {
+                    return "";
+                }
+                var url = payload.url ? String(payload.url).trim() : "";
+                if (!url) {
+                    return "";
+                }
+                var name = normalizeAttachmentSnippetName(payload.name || "附件");
+                var isImage = !!payload.isImage;
+                return isImage ? ("![" + name + "](" + url + ")") : ("[" + name + "](" + url + ")");
+            }
+
+            function appendAttachmentSnippetToText(rawText, snippet) {
+                var text = String(snippet || "").trim();
+                var value = String(rawText || "");
+                if (!text) {
+                    return value;
+                }
+                if (value) {
+                    var hasTrailingBreak = /\n\s*$/.test(value);
+                    value = hasTrailingBreak ? value : (value + "\n");
+                }
+                return value + text;
+            }
+
+            function appendAttachmentSnippetToTextarea(snippet) {
+                textarea.value = appendAttachmentSnippetToText(textarea.value || "", snippet);
+                autoGrowTextarea();
+                saveDraft();
+            }
+
+            function uploadFileByCommentApi(file) {
+                if (!file || !window.fetch || !window.FormData) {
+                    return Promise.reject(new Error("当前浏览器不支持粘贴附件上传"));
+                }
+                var endpoint = buildCommentUploadEndpoint();
+                var token = getCommentUploadToken();
+                if (!token) {
+                    return Promise.reject(new Error("安全校验失败，请刷新页面后重试"));
+                }
+                var referer = "";
+                try {
+                    referer = window && window.location ? String(window.location.href || "") : "";
+                } catch (e) {
+                    referer = "";
+                }
+                if (referer) {
+                    var hashPos = referer.indexOf("#");
+                    if (hashPos >= 0) {
+                        referer = referer.slice(0, hashPos);
+                    }
+                }
+
+                var formData = new FormData();
+                formData.append("_", token);
+                if (referer) {
+                    formData.append("referer", referer);
+                }
+                formData.append("file", file, getAttachmentDisplayName(file));
+
+                return window.fetch(endpoint, {
+                    method: "POST",
+                    body: formData,
+                    credentials: "same-origin",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                }).then(function (response) {
+                    return response.text().then(function (raw) {
+                        var payload = null;
+                        try {
+                            payload = JSON.parse(String(raw || ""));
+                        } catch (e) {
+                            payload = null;
+                        }
+                        if (!response.ok || !payload || !payload.ok) {
+                            var message = payload && payload.message ? String(payload.message) : "附件上传失败，请稍后重试";
+                            throw new Error(message);
+                        }
+                        var snippet = buildAttachmentSnippetFromUploadPayload(payload);
+                        if (!snippet) {
+                            throw new Error("附件上传成功，但未返回可插入链接");
+                        }
+                        return snippet;
+                    });
+                });
+            }
+
+            function uploadPastedFilesByCommentApi(files) {
+                var list = filesLikeToArray(files, "paste");
+                if (!list.length) {
+                    return Promise.resolve([]);
+                }
+
+                var chain = Promise.resolve();
+                var snippets = [];
+                list.forEach(function (file) {
+                    chain = chain.then(function () {
+                        return uploadFileByCommentApi(file).then(function (snippet) {
+                            snippets.push(snippet);
+                        });
+                    });
+                });
+                return chain.then(function () {
+                    return snippets;
+                });
             }
 
             function ensureAttachInput() {
@@ -4982,46 +5389,17 @@
 
                 var input = document.createElement("input");
                 input.type = "file";
-                input.name = "comment_attachment";
+                input.name = "comment_attachment[]";
+                input.multiple = true;
                 input.hidden = true;
                 input.tabIndex = -1;
                 input.setAttribute("aria-hidden", "true");
                 input.accept = commentsUploadAccept || "";
                 input.addEventListener("change", function () {
-                    var file = input.files && input.files[0] ? input.files[0] : null;
-                    if (!file) {
-                        clearAttachmentPreview(true);
+                    if (!input.files || input.files.length === 0) {
                         return;
                     }
-
-                    var errorMessage = getAttachmentValidationMessage(file);
-                    if (errorMessage) {
-                        clearAttachmentPreview(true);
-                        try {
-                            window.alert(errorMessage);
-                        } catch (e) {}
-                        return;
-                    }
-
-                    clearAttachmentPreview(false);
-
-                    var ext = getAttachmentExtension(file.name);
-                    var isImage = /^image\//i.test(String(file.type || ""))
-                        || ["jpg", "jpeg", "png", "gif", "webp", "avif", "bmp", "svg"].indexOf(ext) !== -1;
-
-                    try {
-                        if (window.URL && typeof window.URL.createObjectURL === "function") {
-                            attachObjectUrl = window.URL.createObjectURL(file);
-                        }
-                    } catch (e) {
-                        attachObjectUrl = "";
-                    }
-
-                    renderAttachmentPreview({
-                        url: attachObjectUrl,
-                        name: file.name || "附件",
-                        isImage: isImage
-                    });
+                    pushAttachmentFiles(input.files, "picker");
                 });
 
                 form.appendChild(input);
@@ -5201,6 +5579,38 @@
                 saveDraft();
             });
 
+            textarea.addEventListener("paste", function (e) {
+                if (!commentsUploadEnabled) {
+                    return;
+                }
+                var pastedFiles = collectClipboardFiles(e);
+                if (!pastedFiles || !pastedFiles.length) {
+                    return;
+                }
+                var supportsDataTransfer = !!(window.DataTransfer && typeof window.DataTransfer === "function");
+                if (supportsDataTransfer) {
+                    pushAttachmentFiles(pastedFiles, "paste");
+                    return;
+                }
+
+                if (e && e.preventDefault) {
+                    e.preventDefault();
+                }
+                uploadPastedFilesByCommentApi(pastedFiles).then(function (snippets) {
+                    if (!snippets || !snippets.length) {
+                        return;
+                    }
+                    snippets.forEach(function (snippet) {
+                        appendAttachmentSnippetToTextarea(snippet);
+                    });
+                }).catch(function (err) {
+                    var message = err && err.message ? String(err.message) : "粘贴上传失败，请稍后重试";
+                    try {
+                        window.alert(message);
+                    } catch (alertErr) {}
+                });
+            });
+
             autoGrowTextarea();
 
             form.addEventListener("submit", function (e) {
@@ -5217,6 +5627,41 @@
                             editText = privateMarker + "\n" + editText;
                         }
                     }
+                    var editAttachFiles = getSelectedAttachmentFiles();
+                    if (editAttachFiles.length > 0) {
+                        var editAttachError = validateAttachmentFiles(editAttachFiles);
+                        if (editAttachError) {
+                            try {
+                                window.alert(editAttachError);
+                            } catch (err) {}
+                            return;
+                        }
+                        if (fallbackUploadBusy) {
+                            return;
+                        }
+                        fallbackUploadBusy = true;
+                        uploadPastedFilesByCommentApi(editAttachFiles).then(function (snippets) {
+                            if (!snippets || !snippets.length) {
+                                throw new Error("附件上传失败，请稍后重试");
+                            }
+                            var nextEditText = editText;
+                            snippets.forEach(function (snippet) {
+                                nextEditText = appendAttachmentSnippetToText(nextEditText, snippet);
+                            });
+                            clearAttachmentPreview(true);
+                            clearDraft();
+                            submitCommentEdit(form, editCoid, nextEditText);
+                        }).catch(function (err) {
+                            var message = err && err.message ? String(err.message) : "附件上传失败，请稍后重试";
+                            try {
+                                window.alert(message);
+                            } catch (alertErr) {}
+                        }).finally(function () {
+                            fallbackUploadBusy = false;
+                        });
+                        return;
+                    }
+
                     clearDraft();
                     submitCommentEdit(form, editCoid, editText);
                     return;
@@ -5243,9 +5688,9 @@
                     }
                 }
 
-                var attachFile = getSelectedAttachmentFile();
-                if (attachFile) {
-                    var attachError = getAttachmentValidationMessage(attachFile);
+                var selectedAttachFiles = getSelectedAttachmentFiles();
+                if (selectedAttachFiles.length > 0) {
+                    var attachError = validateAttachmentFiles(selectedAttachFiles);
                     if (attachError) {
                         if (e && e.preventDefault) {
                             e.preventDefault();
@@ -5253,6 +5698,45 @@
                         try {
                             window.alert(attachError);
                         } catch (err) {}
+                        return;
+                    }
+
+                    var attachInputFileCount = 0;
+                    if (attachInput && attachInput.files && typeof attachInput.files.length === "number") {
+                        attachInputFileCount = attachInput.files.length;
+                    }
+
+                    if (!attachInput || attachInputFileCount !== selectedAttachFiles.length) {
+                        if (e && e.preventDefault) {
+                            e.preventDefault();
+                        }
+                        if (fallbackUploadBusy) {
+                            return;
+                        }
+                        fallbackUploadBusy = true;
+
+                        uploadPastedFilesByCommentApi(selectedAttachFiles).then(function (snippets) {
+                            if (!snippets || !snippets.length) {
+                                throw new Error("附件上传失败，请稍后重试");
+                            }
+                            snippets.forEach(function (snippet) {
+                                appendAttachmentSnippetToTextarea(snippet);
+                            });
+                            clearAttachmentPreview(true);
+                            clearDraft();
+                            try {
+                                form.submit();
+                            } catch (submitErr) {
+                                throw submitErr;
+                            }
+                        }).catch(function (err) {
+                            var message = err && err.message ? String(err.message) : "附件上传失败，请稍后重试";
+                            try {
+                                window.alert(message);
+                            } catch (alertErr) {}
+                        }).finally(function () {
+                            fallbackUploadBusy = false;
+                        });
                         return;
                     }
                 }
