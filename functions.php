@@ -6183,6 +6183,143 @@ function extractCommentEmbedHtmlFromPage(string $pageHtml, int $commentId): stri
     return trim($html);
 }
 
+function stripCommentEmbedActionButtons(string $commentHtml): string
+{
+    $commentHtml = trim($commentHtml);
+    if ($commentHtml === '' || !class_exists('DOMDocument')) {
+        return $commentHtml;
+    }
+
+    $dom = new \DOMDocument('1.0', 'UTF-8');
+    $flags = 0;
+    if (defined('LIBXML_HTML_NODEFDTD')) {
+        $flags |= LIBXML_HTML_NODEFDTD;
+    }
+    if (defined('LIBXML_HTML_NOIMPLIED')) {
+        $flags |= LIBXML_HTML_NOIMPLIED;
+    }
+    if (defined('LIBXML_NOERROR')) {
+        $flags |= LIBXML_NOERROR;
+    }
+    if (defined('LIBXML_NOWARNING')) {
+        $flags |= LIBXML_NOWARNING;
+    }
+
+    $wrapped = '<div id="comment-embed-strip-root">' . $commentHtml . '</div>';
+    $useErrors = libxml_use_internal_errors(true);
+    $loaded = $flags > 0
+        ? $dom->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped, $flags)
+        : $dom->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped);
+    libxml_clear_errors();
+    libxml_use_internal_errors($useErrors);
+    if (!$loaded) {
+        return $commentHtml;
+    }
+
+    $xpath = new \DOMXPath($dom);
+
+    $replyRows = $xpath->query('//div[contains(concat(" ", normalize-space(@class), " "), " comment-reply ")]');
+    if ($replyRows instanceof \DOMNodeList) {
+        foreach ($replyRows as $replyRow) {
+            if (!$replyRow instanceof \DOMElement) {
+                continue;
+            }
+
+            $links = $xpath->query('./a', $replyRow);
+            if ($links instanceof \DOMNodeList) {
+                $toRemove = [];
+                foreach ($links as $link) {
+                    if (!$link instanceof \DOMElement) {
+                        continue;
+                    }
+                    $onclick = (string) $link->getAttribute('onclick');
+                    $href = (string) $link->getAttribute('href');
+                    $classAttr = ' ' . trim((string) $link->getAttribute('class')) . ' ';
+                    $isReplyLink = stripos($onclick, 'TypechoComment.reply(') !== false
+                        || stripos($href, 'replyTo=') !== false
+                        || strpos($classAttr, ' comment-reply-link ') !== false;
+                    if ($isReplyLink) {
+                        $toRemove[] = $link;
+                    }
+                }
+                foreach ($toRemove as $node) {
+                    if ($node instanceof \DOMNode && $node->parentNode instanceof \DOMNode) {
+                        $node->parentNode->removeChild($node);
+                    }
+                }
+            }
+
+            $toggleButtons = $xpath->query(
+                './button[@data-comment-children-toggle or contains(concat(" ", normalize-space(@class), " "), " comment-children-toggle ")]',
+                $replyRow
+            );
+            if ($toggleButtons instanceof \DOMNodeList) {
+                $toRemove = [];
+                foreach ($toggleButtons as $btn) {
+                    if ($btn instanceof \DOMElement) {
+                        $toRemove[] = $btn;
+                    }
+                }
+                foreach ($toRemove as $node) {
+                    if ($node instanceof \DOMNode && $node->parentNode instanceof \DOMNode) {
+                        $node->parentNode->removeChild($node);
+                    }
+                }
+            }
+        }
+    }
+
+    $childrenWraps = $xpath->query('//div[contains(concat(" ", normalize-space(@class), " "), " comment-children ")]');
+    if ($childrenWraps instanceof \DOMNodeList) {
+        $toRemove = [];
+        foreach ($childrenWraps as $childrenWrap) {
+            if ($childrenWrap instanceof \DOMElement) {
+                $toRemove[] = $childrenWrap;
+            }
+        }
+        foreach ($toRemove as $node) {
+            if ($node instanceof \DOMNode && $node->parentNode instanceof \DOMNode) {
+                $node->parentNode->removeChild($node);
+            }
+        }
+    }
+
+    $commentRows = $xpath->query('//li[contains(concat(" ", normalize-space(@class), " "), " comment-body ")]');
+    if ($commentRows instanceof \DOMNodeList) {
+        foreach ($commentRows as $row) {
+            if (!$row instanceof \DOMElement) {
+                continue;
+            }
+            $classAttr = trim((string) $row->getAttribute('class'));
+            if ($classAttr === '') {
+                continue;
+            }
+            $classAttr = preg_replace('/\bcomment-has-children\b/u', '', $classAttr);
+            $classAttr = preg_replace('/\bcomment-children-collapsed\b/u', '', $classAttr);
+            $classAttr = preg_replace('/\s{2,}/u', ' ', (string) $classAttr);
+            $row->setAttribute('class', trim((string) $classAttr));
+        }
+    }
+
+    $rootNodes = $xpath->query('//div[@id="comment-embed-strip-root"]');
+    if (!$rootNodes instanceof \DOMNodeList || $rootNodes->length === 0) {
+        return $commentHtml;
+    }
+
+    $root = $rootNodes->item(0);
+    if (!$root instanceof \DOMElement) {
+        return $commentHtml;
+    }
+
+    $html = '';
+    foreach ($root->childNodes as $child) {
+        $html .= (string) $dom->saveHTML($child);
+    }
+
+    $html = trim($html);
+    return $html !== '' ? $html : $commentHtml;
+}
+
 function renderCommentEmbedShortcode(string $args): string
 {
     static $cache = [];
@@ -6221,6 +6358,11 @@ function renderCommentEmbedShortcode(string $args): string
     }
 
     $commentHtml = extractCommentEmbedHtmlFromPage($pageHtml, $commentId);
+    if ($commentHtml === '') {
+        $cache[$url] = '';
+        return '';
+    }
+    $commentHtml = stripCommentEmbedActionButtons($commentHtml);
     if ($commentHtml === '') {
         $cache[$url] = '';
         return '';

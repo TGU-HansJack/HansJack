@@ -955,6 +955,9 @@
                 if (!a || !a.getAttribute || !a.classList) {
                     continue;
                 }
+                if (a.closest && a.closest(".comment-embed-shortcode")) {
+                    continue;
+                }
                 // Keep embedded comment author-home links in their original comment style.
                 if (a.classList.contains("comment-author-home")) {
                     continue;
