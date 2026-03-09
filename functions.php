@@ -5923,6 +5923,489 @@ function applyInlineSyntaxToHtml(string $html): string
     return $output !== '' ? $output : $html;
 }
 
+function containsEmbedSyntaxMarker(string $text): bool
+{
+    return strpos($text, '{%') !== false && strpos($text, '%}') !== false;
+}
+
+function isEmbedSyntaxBlockedNode(\DOMNode $node, \DOMElement $root): bool
+{
+    $blockedTags = ['code', 'pre', 'script', 'style', 'textarea', 'option'];
+
+    $parent = $node->parentNode;
+    while ($parent instanceof \DOMElement && $parent !== $root) {
+        $tag = strtolower((string) $parent->tagName);
+        if (in_array($tag, $blockedTags, true)) {
+            return true;
+        }
+        $parent = $parent->parentNode;
+    }
+
+    return false;
+}
+
+function extractEmbedShortcodePayload(string $raw): ?array
+{
+    $raw = trim($raw);
+    if ($raw === '') {
+        return null;
+    }
+
+    $parts = preg_split('/\s+/u', $raw, 2) ?: [];
+    $name = strtolower(trim((string) ($parts[0] ?? '')));
+    $args = trim((string) ($parts[1] ?? ''));
+    if ($name === '' || $args === '') {
+        return null;
+    }
+
+    return [
+        'name' => $name,
+        'args' => $args,
+    ];
+}
+
+function extractFirstUrlFromEmbedArgs(string $args): string
+{
+    $decoded = trim(html_entity_decode($args, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    if ($decoded === '') {
+        return '';
+    }
+
+    if (preg_match('/\bhref\s*=\s*(["\'])(https?:\/\/[^\s"\']+)\1/iu', $decoded, $hrefMatch) === 1) {
+        return trim((string) ($hrefMatch[2] ?? ''));
+    }
+
+    $plain = trim(strip_tags($decoded));
+    if ($plain === '') {
+        return '';
+    }
+
+    if (preg_match('/https?:\/\/[^\s<>"\']+/iu', $plain, $urlMatch) === 1) {
+        return trim((string) ($urlMatch[0] ?? ''));
+    }
+
+    $plain = trim($plain, "<> \t\n\r\0\x0B");
+    if (preg_match('/^https?:\/\/[^\s]+$/iu', $plain) === 1) {
+        return $plain;
+    }
+
+    return '';
+}
+
+function applyEmbedShortcodesOnMarkup(string $markup): string
+{
+    if ($markup === '' || !containsEmbedSyntaxMarker($markup)) {
+        return $markup;
+    }
+
+    $pattern = '/\{\%\s*([A-Za-z][A-Za-z0-9_-]*)\s+([\s\S]*?)\s*\%\}/u';
+    $result = preg_replace_callback($pattern, static function (array $matches): string {
+        $name = strtolower(trim((string) ($matches[1] ?? '')));
+        $args = (string) ($matches[2] ?? '');
+        if ($name === '' || trim($args) === '') {
+            return (string) ($matches[0] ?? '');
+        }
+
+        $rendered = renderEmbedShortcode($name . ' ' . $args);
+        return $rendered !== '' ? $rendered : (string) ($matches[0] ?? '');
+    }, $markup);
+
+    return is_string($result) ? $result : $markup;
+}
+
+function embedHttpGet(string $url, int $timeoutSeconds = 8): string
+{
+    $url = trim($url);
+    if ($url === '' || preg_match('/^https?:\/\//i', $url) !== 1) {
+        return '';
+    }
+
+    $timeoutSeconds = max(2, min(20, (int) $timeoutSeconds));
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        if ($ch !== false) {
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min(6, $timeoutSeconds));
+            curl_setopt($ch, CURLOPT_TIMEOUT, $timeoutSeconds);
+            curl_setopt($ch, CURLOPT_ENCODING, '');
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Accept: text/html,application/json;q=0.9,*/*;q=0.8',
+                'User-Agent: HansJack-Embed/1.0',
+            ]);
+            $resp = curl_exec($ch);
+            $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+            curl_close($ch);
+
+            if ($status >= 200 && $status < 300 && is_string($resp)) {
+                return $resp;
+            }
+            return '';
+        }
+    }
+
+    $ctx = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => "Accept: text/html,application/json;q=0.9,*/*;q=0.8\r\nUser-Agent: HansJack-Embed/1.0\r\n",
+            'timeout' => $timeoutSeconds,
+            'ignore_errors' => true,
+        ],
+    ]);
+
+    $resp = @file_get_contents($url, false, $ctx);
+    $status = 0;
+    if (!empty($http_response_header[0]) && preg_match('/\s(\d{3})\s/', (string) $http_response_header[0], $match)) {
+        $status = (int) $match[1];
+    }
+
+    if ($status >= 200 && $status < 300 && is_string($resp)) {
+        return $resp;
+    }
+    return '';
+}
+
+function extractCommentEmbedHtmlFromPage(string $pageHtml, int $commentId): string
+{
+    if ($pageHtml === '' || $commentId <= 0 || !class_exists('DOMDocument')) {
+        return '';
+    }
+
+    $dom = new \DOMDocument('1.0', 'UTF-8');
+    $flags = 0;
+    if (defined('LIBXML_HTML_NODEFDTD')) {
+        $flags |= LIBXML_HTML_NODEFDTD;
+    }
+    if (defined('LIBXML_NOERROR')) {
+        $flags |= LIBXML_NOERROR;
+    }
+    if (defined('LIBXML_NOWARNING')) {
+        $flags |= LIBXML_NOWARNING;
+    }
+
+    $useErrors = libxml_use_internal_errors(true);
+    $loaded = $flags > 0
+        ? $dom->loadHTML('<?xml encoding="utf-8" ?>' . $pageHtml, $flags)
+        : $dom->loadHTML('<?xml encoding="utf-8" ?>' . $pageHtml);
+    libxml_clear_errors();
+    libxml_use_internal_errors($useErrors);
+    if (!$loaded) {
+        return '';
+    }
+
+    $xpath = new \DOMXPath($dom);
+    $nodes = $xpath->query('//li[@id="comment-' . (int) $commentId . '"]');
+    if (!$nodes instanceof \DOMNodeList || $nodes->length === 0) {
+        return '';
+    }
+
+    $node = $nodes->item(0);
+    if (!$node instanceof \DOMElement) {
+        return '';
+    }
+
+    $html = (string) $dom->saveHTML($node);
+    return trim($html);
+}
+
+function renderCommentEmbedShortcode(string $args): string
+{
+    static $cache = [];
+
+    $url = extractFirstUrlFromEmbedArgs($args);
+    if ($url === '') {
+        return '';
+    }
+
+    if (array_key_exists($url, $cache)) {
+        return (string) $cache[$url];
+    }
+
+    $fragment = (string) parse_url($url, PHP_URL_FRAGMENT);
+    if (preg_match('/\bcomment-(\d+)\b/i', $fragment, $match) !== 1) {
+        $cache[$url] = '';
+        return '';
+    }
+
+    $commentId = (int) ($match[1] ?? 0);
+    if ($commentId <= 0) {
+        $cache[$url] = '';
+        return '';
+    }
+
+    $pageUrl = (string) preg_replace('/#.*$/', '', $url);
+    if ($pageUrl === '') {
+        $cache[$url] = '';
+        return '';
+    }
+
+    $pageHtml = embedHttpGet($pageUrl, 10);
+    if ($pageHtml === '') {
+        $cache[$url] = '';
+        return '';
+    }
+
+    $commentHtml = extractCommentEmbedHtmlFromPage($pageHtml, $commentId);
+    if ($commentHtml === '') {
+        $cache[$url] = '';
+        return '';
+    }
+
+    $cache[$url] = '<section class="comment-embed-shortcode comments" data-embed-type="comment" data-embed-source="' . escape($url) . '" style="margin:1rem 0; padding-top:0;">'
+        . '<ol class="comment-list" style="margin:0;padding:0;list-style:none;">'
+        . $commentHtml
+        . '</ol>'
+        . '</section>';
+
+    return (string) $cache[$url];
+}
+
+function extractBilibiliBvid(string $args): string
+{
+    $raw = trim(strip_tags(html_entity_decode($args, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+    if ($raw === '') {
+        return '';
+    }
+
+    if (preg_match('/\b(BV[0-9A-Za-z]{10,})\b/u', $raw, $match) === 1) {
+        return (string) ($match[1] ?? '');
+    }
+
+    return '';
+}
+
+function fetchBilibiliEmbedMeta(string $bvid): array
+{
+    static $cache = [];
+
+    $bvid = trim($bvid);
+    if ($bvid === '') {
+        return ['aid' => 0, 'cid' => 0];
+    }
+
+    if (isset($cache[$bvid]) && is_array($cache[$bvid])) {
+        return $cache[$bvid];
+    }
+
+    $apiUrl = 'https://api.bilibili.com/x/web-interface/view?bvid=' . rawurlencode($bvid);
+    $body = embedHttpGet($apiUrl, 8);
+    if ($body === '') {
+        $cache[$bvid] = ['aid' => 0, 'cid' => 0];
+        return $cache[$bvid];
+    }
+
+    $json = json_decode($body, true);
+    if (!is_array($json) || (int) ($json['code'] ?? -1) !== 0) {
+        $cache[$bvid] = ['aid' => 0, 'cid' => 0];
+        return $cache[$bvid];
+    }
+
+    $data = is_array($json['data'] ?? null) ? $json['data'] : [];
+    $aid = (int) ($data['aid'] ?? 0);
+    $cid = 0;
+    $pages = is_array($data['pages'] ?? null) ? $data['pages'] : [];
+    if (!empty($pages) && is_array($pages[0] ?? null)) {
+        $cid = (int) ($pages[0]['cid'] ?? 0);
+    }
+
+    $cache[$bvid] = [
+        'aid' => max(0, $aid),
+        'cid' => max(0, $cid),
+    ];
+
+    return $cache[$bvid];
+}
+
+function renderBilibiliEmbedShortcode(string $args): string
+{
+    $bvid = extractBilibiliBvid($args);
+    if ($bvid === '') {
+        return '';
+    }
+
+    $meta = fetchBilibiliEmbedMeta($bvid);
+
+    $query = ['isOutside' => 'true'];
+    if (!empty($meta['aid'])) {
+        $query['aid'] = (int) $meta['aid'];
+    }
+    $query['bvid'] = $bvid;
+    if (!empty($meta['cid'])) {
+        $query['cid'] = (int) $meta['cid'];
+    }
+    $query['p'] = 1;
+
+    $src = '//player.bilibili.com/player.html?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+
+    return '<div class="bilibili-embed-shortcode" data-embed-type="bilibili" data-bvid="' . escape($bvid) . '" style="position:relative;width:100%;margin:1rem 0;padding-top:56.25%;">'
+        . '<iframe src="' . escape($src) . '" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" loading="lazy" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;border:0;"></iframe>'
+        . '</div>';
+}
+
+function renderEmbedShortcode(string $rawPayload): string
+{
+    $payload = extractEmbedShortcodePayload($rawPayload);
+    if (!is_array($payload)) {
+        return '';
+    }
+
+    $name = (string) ($payload['name'] ?? '');
+    $args = (string) ($payload['args'] ?? '');
+    if ($name === '' || $args === '') {
+        return '';
+    }
+
+    if ($name === 'comment') {
+        return renderCommentEmbedShortcode($args);
+    }
+
+    if ($name === 'bilibili') {
+        return renderBilibiliEmbedShortcode($args);
+    }
+
+    return '';
+}
+
+function appendHtmlSnippetToFragment(\DOMDocument $dom, \DOMDocumentFragment $fragment, string $snippetHtml): bool
+{
+    $snippetHtml = trim($snippetHtml);
+    if ($snippetHtml === '') {
+        return false;
+    }
+
+    $tmpDom = new \DOMDocument('1.0', 'UTF-8');
+    $flags = 0;
+    if (defined('LIBXML_HTML_NODEFDTD')) {
+        $flags |= LIBXML_HTML_NODEFDTD;
+    }
+    if (defined('LIBXML_HTML_NOIMPLIED')) {
+        $flags |= LIBXML_HTML_NOIMPLIED;
+    }
+    if (defined('LIBXML_NOERROR')) {
+        $flags |= LIBXML_NOERROR;
+    }
+    if (defined('LIBXML_NOWARNING')) {
+        $flags |= LIBXML_NOWARNING;
+    }
+
+    $wrapped = '<div id="embed-fragment-root">' . $snippetHtml . '</div>';
+    $useErrors = libxml_use_internal_errors(true);
+    $loaded = $flags > 0
+        ? $tmpDom->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped, $flags)
+        : $tmpDom->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped);
+    libxml_clear_errors();
+    libxml_use_internal_errors($useErrors);
+    if (!$loaded) {
+        return false;
+    }
+
+    $xpath = new \DOMXPath($tmpDom);
+    $rootNodes = $xpath->query('//div[@id="embed-fragment-root"]');
+    if (!$rootNodes instanceof \DOMNodeList || $rootNodes->length === 0) {
+        return false;
+    }
+
+    $root = $rootNodes->item(0);
+    if (!$root instanceof \DOMElement) {
+        return false;
+    }
+
+    $children = [];
+    foreach ($root->childNodes as $child) {
+        $children[] = $child;
+    }
+    if (empty($children)) {
+        return false;
+    }
+
+    foreach ($children as $child) {
+        try {
+            $imported = $dom->importNode($child, true);
+            if ($imported) {
+                $fragment->appendChild($imported);
+            }
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function buildEmbedSyntaxFragment(\DOMDocument $dom, string $text): ?\DOMDocumentFragment
+{
+    if ($text === '' || !containsEmbedSyntaxMarker($text)) {
+        return null;
+    }
+
+    $fragment = $dom->createDocumentFragment();
+    $length = strlen($text);
+    $pos = 0;
+    $hasChange = false;
+
+    while ($pos < $length) {
+        $openPos = strpos($text, '{%', $pos);
+        if ($openPos === false) {
+            $fragment->appendChild($dom->createTextNode((string) substr($text, $pos)));
+            break;
+        }
+
+        if ($openPos > $pos) {
+            $fragment->appendChild($dom->createTextNode((string) substr($text, $pos, $openPos - $pos)));
+        }
+
+        $closePos = strpos($text, '%}', $openPos + 2);
+        if ($closePos === false) {
+            $fragment->appendChild($dom->createTextNode((string) substr($text, $openPos)));
+            break;
+        }
+
+        $rawToken = (string) substr($text, $openPos, ($closePos + 2) - $openPos);
+        $payload = (string) substr($text, $openPos + 2, $closePos - ($openPos + 2));
+        $embedHtml = renderEmbedShortcode($payload);
+        if ($embedHtml !== '' && appendHtmlSnippetToFragment($dom, $fragment, $embedHtml)) {
+            $hasChange = true;
+        } else {
+            $fragment->appendChild($dom->createTextNode($rawToken));
+        }
+
+        $pos = $closePos + 2;
+    }
+
+    return $hasChange ? $fragment : null;
+}
+
+function applyEmbedSyntaxToHtml(string $html): string
+{
+    if ($html === '' || !containsEmbedSyntaxMarker($html)) {
+        return $html;
+    }
+
+    $protected = [];
+    $placeholderPrefix = '__HANSJACK_EMBED_BLOCK_' . md5((string) microtime(true) . (string) mt_rand()) . '_';
+    $protectedHtml = preg_replace_callback(
+        '/<(pre|code|script|style|textarea)\b[^>]*>[\s\S]*?<\/\1>/iu',
+        static function (array $matches) use (&$protected, $placeholderPrefix): string {
+            $key = $placeholderPrefix . count($protected) . '__';
+            $protected[$key] = (string) ($matches[0] ?? '');
+            return $key;
+        },
+        $html
+    );
+    if (!is_string($protectedHtml)) {
+        return $html;
+    }
+
+    $replaced = applyEmbedShortcodesOnMarkup($protectedHtml);
+    if (!empty($protected)) {
+        $replaced = strtr($replaced, $protected);
+    }
+
+    return $replaced;
+}
+
 function renderArchiveContent($archive): string
 {
     if (!is_object($archive) || !method_exists($archive, 'content')) {
@@ -5942,6 +6425,7 @@ function renderArchiveContent($archive): string
     $html = applyImagePerformanceAttrsToHtml($html, true);
     $html = applyTaskListSyntaxToHtml($html);
     $html = applyInlineSyntaxToHtml($html);
+    $html = applyEmbedSyntaxToHtml($html);
     return $html;
 }
 

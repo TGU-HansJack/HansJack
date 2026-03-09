@@ -955,6 +955,10 @@
                 if (!a || !a.getAttribute || !a.classList) {
                     continue;
                 }
+                // Keep embedded comment author-home links in their original comment style.
+                if (a.classList.contains("comment-author-home")) {
+                    continue;
+                }
                 var tip = String(a.getAttribute("title") || "").trim();
                 if (!tip) {
                     continue;

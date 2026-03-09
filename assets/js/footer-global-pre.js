@@ -2980,7 +2980,9 @@
 /* block 10 */
 (function () { 
         function initCommentsSection() {
-            var comments = document.querySelector(".comments"); 
+            var comments = document.querySelector("#comments.comments")
+                || document.querySelector(".comments[data-comments-order]")
+                || document.querySelector(".comments"); 
             if (!comments) { 
                 return; 
             } 

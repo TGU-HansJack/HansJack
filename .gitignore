@@ -2,3 +2,6 @@ cache/memory-reactions.json
 node_modules/
 /cache/page-cache
 cache/series/
+/cache/series
+cache/series/cid-200.json
+/cache
