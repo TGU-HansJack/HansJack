@@ -2432,7 +2432,9 @@ function memoryReactionIsMemoryComment(int $coid): bool
         $type = trim((string) ($row->type ?? ''));
     }
 
-    $ok = (strtolower($slug) === 'memos' && strtolower($type) === 'page');
+    $typeLower = strtolower($type);
+    $slugLower = strtolower($slug);
+    $ok = ($typeLower === 'post') || ($typeLower === 'page' && $slugLower === 'memos');
     $cache[$coid] = $ok;
     return $ok;
 }
@@ -6013,11 +6015,82 @@ function applyEmbedShortcodesOnMarkup(string $markup): string
     return is_string($result) ? $result : $markup;
 }
 
-function embedHttpGet(string $url, int $timeoutSeconds = 8): string
+function isEmbedFetchRequest(): bool
+{
+    $raw = '';
+    try {
+        $raw = isset($_GET['embed_fetch']) ? (string) $_GET['embed_fetch'] : '';
+    } catch (\Throwable $e) {
+        $raw = '';
+    }
+
+    $flag = strtolower(trim($raw));
+    return $flag !== '' && $flag !== '0' && $flag !== 'false' && $flag !== 'off';
+}
+
+function appendEmbedFetchFlagToUrl(string $url): string
+{
+    $url = trim($url);
+    if ($url === '') {
+        return '';
+    }
+
+    try {
+        $parsed = parse_url($url);
+        if (!is_array($parsed)) {
+            return $url;
+        }
+
+        $query = [];
+        $rawQuery = isset($parsed['query']) ? (string) $parsed['query'] : '';
+        if ($rawQuery !== '') {
+            parse_str($rawQuery, $query);
+            if (!is_array($query)) {
+                $query = [];
+            }
+        }
+        $query['embed_fetch'] = '1';
+        $nextQuery = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+
+        $rebuilt = '';
+        if (!empty($parsed['scheme'])) {
+            $rebuilt .= $parsed['scheme'] . '://';
+        }
+        if (!empty($parsed['user'])) {
+            $rebuilt .= $parsed['user'];
+            if (!empty($parsed['pass'])) {
+                $rebuilt .= ':' . $parsed['pass'];
+            }
+            $rebuilt .= '@';
+        }
+        if (!empty($parsed['host'])) {
+            $rebuilt .= $parsed['host'];
+        }
+        if (!empty($parsed['port'])) {
+            $rebuilt .= ':' . (int) $parsed['port'];
+        }
+        $rebuilt .= isset($parsed['path']) ? (string) $parsed['path'] : '';
+        if ($nextQuery !== '') {
+            $rebuilt .= '?' . $nextQuery;
+        }
+        if (array_key_exists('fragment', $parsed) && $parsed['fragment'] !== '') {
+            $rebuilt .= '#' . (string) $parsed['fragment'];
+        }
+
+        return $rebuilt !== '' ? $rebuilt : $url;
+    } catch (\Throwable $e) {
+        return $url;
+    }
+}
+
+function embedHttpGet(string $url, int $timeoutSeconds = 8, bool $withEmbedFetchFlag = false): string
 {
     $url = trim($url);
     if ($url === '' || preg_match('/^https?:\/\//i', $url) !== 1) {
         return '';
+    }
+    if ($withEmbedFetchFlag) {
+        $url = appendEmbedFetchFlagToUrl($url);
     }
 
     $timeoutSeconds = max(2, min(20, (int) $timeoutSeconds));
@@ -6141,7 +6214,7 @@ function renderCommentEmbedShortcode(string $args): string
         return '';
     }
 
-    $pageHtml = embedHttpGet($pageUrl, 10);
+    $pageHtml = embedHttpGet($pageUrl, 10, true);
     if ($pageHtml === '') {
         $cache[$url] = '';
         return '';
@@ -6425,7 +6498,9 @@ function renderArchiveContent($archive): string
     $html = applyImagePerformanceAttrsToHtml($html, true);
     $html = applyTaskListSyntaxToHtml($html);
     $html = applyInlineSyntaxToHtml($html);
-    $html = applyEmbedSyntaxToHtml($html);
+    if (!isEmbedFetchRequest()) {
+        $html = applyEmbedSyntaxToHtml($html);
+    }
     return $html;
 }
 
@@ -7085,6 +7160,9 @@ function threadedComments($comments, $singleCommentOptions): void
                 . $avatarBase . '?s=' . ($avatarSize * 3) . $avatarQuery . ' 3x';
         }
     }
+
+    $memoryReactionEnabled = ($commentCoid > 0 && memoryReactionIsMemoryComment($commentCoid));
+    $memoryReactionEmojis = $memoryReactionEnabled ? memoryReactionAllowedEmojis() : [];
     ?>
     <li itemscope itemtype="http://schema.org/UserComments" id="<?php $comments->theId(); ?>" class="comment-body<?php 
     if ($commentLevel > 0) { 
@@ -7148,8 +7226,22 @@ function threadedComments($comments, $singleCommentOptions): void
                 <?php echoCommentContent($comments); ?>
             <?php endif; ?>
         </div> 
-        <div class="comment-reply"> 
+        <div class="comment-reply<?php echo $memoryReactionEnabled ? ' memory-comment-reply' : ''; ?>"<?php if ($memoryReactionEnabled): ?> data-memory-action-row data-memory-coid="<?php echo (int) $commentCoid; ?>"<?php endif; ?>> 
             <?php $comments->reply($singleCommentOptions->replyWord); ?> 
+            <?php if ($memoryReactionEnabled): ?>
+                <span class="memory-reaction-wrap" data-memory-reactor data-memory-coid="<?php echo (int) $commentCoid; ?>">
+                    <button class="comment-memory-react-btn" type="button" aria-label="<?php _e('互动'); ?>" title="<?php _e('互动'); ?>" data-memory-react-toggle aria-haspopup="dialog" aria-expanded="false">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-smile-icon lucide-smile" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
+                    </button>
+                    <div class="emoji-picker memory-emoji-picker" role="dialog" aria-label="<?php _e('互动表情'); ?>" data-memory-emoji-picker hidden>
+                        <div class="emoji-picker-grid memory-emoji-picker-grid" role="listbox" aria-label="<?php _e('互动表情列表'); ?>">
+                            <?php foreach ($memoryReactionEmojis as $emoji): ?>
+                                <button type="button" class="emoji-picker-btn memory-emoji-btn" data-memory-emoji="<?php echo escape((string) $emoji); ?>" aria-label="<?php echo escape((string) $emoji); ?>"><?php echo escape((string) $emoji); ?></button>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </span>
+            <?php endif; ?>
             <button class="comment-share-btn" type="button" aria-label="<?php _e('分享'); ?>" title="<?php _e('分享'); ?>" data-comment-share="<?php $comments->permalink(); ?>"> 
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-share2-icon lucide-share-2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg> 
             </button> 
@@ -7183,6 +7275,9 @@ function threadedComments($comments, $singleCommentOptions): void
                     </span>
                     <span class="comment-children-toggle-count" aria-hidden="true">(<?php echo (int) $childCommentsCount; ?>)</span>
                 </button>
+            <?php endif; ?>
+            <?php if ($memoryReactionEnabled): ?>
+                <span class="memory-reaction-list" data-memory-reactions hidden></span>
             <?php endif; ?>
         </div> 
         <?php if ($comments->children) { ?>

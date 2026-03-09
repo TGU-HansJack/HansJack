@@ -5752,8 +5752,457 @@
         });
         }
 
-        window.__hansjackInitCommentsSection = initCommentsSection;
-        initCommentsSection();
+        function initCommentEmbedShortcodes() {
+            var embedScopes = Array.prototype.slice.call(document.querySelectorAll(".comment-embed-shortcode[data-embed-type=\"comment\"]"));
+            var commentScopes = Array.prototype.slice.call(document.querySelectorAll(".comments"));
+            if ((!embedScopes || embedScopes.length === 0) && (!commentScopes || commentScopes.length === 0)) {
+                return;
+            }
+
+            function copyText(text) {
+                if (!text) {
+                    return Promise.reject(new Error("no text"));
+                }
+
+                if (navigator && navigator.clipboard && window && window.isSecureContext) {
+                    return navigator.clipboard.writeText(text);
+                }
+
+                return new Promise(function (resolve, reject) {
+                    try {
+                        var ta = document.createElement("textarea");
+                        ta.value = text;
+                        ta.setAttribute("readonly", "");
+                        ta.style.position = "fixed";
+                        ta.style.top = "-9999px";
+                        ta.style.left = "-9999px";
+                        document.body.appendChild(ta);
+                        ta.focus();
+                        ta.select();
+                        ta.setSelectionRange(0, ta.value.length);
+                        var ok = false;
+                        try {
+                            ok = document.execCommand("copy");
+                        } catch (e) {}
+                        document.body.removeChild(ta);
+                        if (ok) {
+                            resolve();
+                        } else {
+                            reject(new Error("copy failed"));
+                        }
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            }
+
+            function setupShare(scope) {
+                var buttons = Array.prototype.slice.call(scope.querySelectorAll("[data-comment-share]"));
+                if (!buttons || buttons.length === 0) {
+                    return;
+                }
+
+                buttons.forEach(function (btn) {
+                    if (!btn || btn.getAttribute("data-comment-share-bound") === "1") {
+                        return;
+                    }
+                    btn.setAttribute("data-comment-share-bound", "1");
+
+                    btn.addEventListener("click", function (e) {
+                        if (e && e.preventDefault) {
+                            e.preventDefault();
+                        }
+
+                        var url = btn.getAttribute("data-comment-share") || "";
+                        if (!url) {
+                            return;
+                        }
+
+                        if (navigator && typeof navigator.share === "function") {
+                            navigator.share({ url: url }).catch(function () {});
+                            return;
+                        }
+
+                        copyText(url).then(function () {
+                            var prevTitle = btn.getAttribute("title") || "";
+                            btn.setAttribute("title", "已复制");
+                            window.setTimeout(function () {
+                                btn.setAttribute("title", prevTitle || "分享");
+                            }, 1200);
+                        }).catch(function () {
+                            try {
+                                window.prompt("复制链接", url);
+                            } catch (err) {}
+                        });
+                    });
+                });
+            }
+
+            function parseJSON(text) {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function buildMemoryReactionEndpoint(extraQuery) {
+                var raw = "";
+                try {
+                    raw = String(window.location.href || "");
+                } catch (e) {
+                    raw = "";
+                }
+
+                try {
+                    var url = new URL(raw);
+                    url.hash = "";
+                    url.searchParams.set("memory_reaction", "1");
+                    if (extraQuery && typeof extraQuery === "object") {
+                        Object.keys(extraQuery).forEach(function (key) {
+                            var value = String(extraQuery[key] || "").trim();
+                            if (!value) {
+                                return;
+                            }
+                            url.searchParams.set(key, value);
+                        });
+                    }
+                    return url.toString();
+                } catch (e) {
+                    var clean = raw ? raw.split("#")[0] : "";
+                    if (!clean) {
+                        clean = "?";
+                    }
+                    var sep = clean.indexOf("?") === -1 ? "?" : "&";
+                    var built = clean + sep + "memory_reaction=1";
+                    if (extraQuery && typeof extraQuery === "object") {
+                        Object.keys(extraQuery).forEach(function (key) {
+                            var value = String(extraQuery[key] || "").trim();
+                            if (!value) {
+                                return;
+                            }
+                            built += "&" + encodeURIComponent(key) + "=" + encodeURIComponent(value);
+                        });
+                    }
+                    return built;
+                }
+            }
+
+            function setupMemoryReaction(scope) {
+                if (!scope || scope.getAttribute("data-memory-reaction-init") === "1") {
+                    return;
+                }
+                if (!window.fetch || !window.FormData) {
+                    return;
+                }
+
+                var reactors = Array.prototype.slice.call(scope.querySelectorAll("[data-memory-reactor][data-memory-coid]"));
+                if (!reactors || reactors.length === 0) {
+                    return;
+                }
+
+                var entries = {};
+                reactors.forEach(function (reactor) {
+                    var coid = parseInt(reactor.getAttribute("data-memory-coid") || "0", 10);
+                    if (!isFinite(coid) || coid <= 0) {
+                        return;
+                    }
+
+                    var row = reactor.closest ? reactor.closest("[data-memory-action-row]") : null;
+                    var entry = {
+                        coid: coid,
+                        reactor: reactor,
+                        row: row,
+                        summary: row ? row.querySelector("[data-memory-reactions]") : null,
+                        toggle: reactor.querySelector("[data-memory-react-toggle]"),
+                        picker: reactor.querySelector("[data-memory-emoji-picker]"),
+                        busy: false
+                    };
+                    entries[String(coid)] = entry;
+                });
+
+                var coids = Object.keys(entries);
+                if (!coids.length) {
+                    return;
+                }
+
+                var emojiOrder = [];
+                coids.forEach(function (coidKey) {
+                    var entry = entries[coidKey];
+                    if (!entry || !entry.picker) {
+                        return;
+                    }
+                    var buttons = Array.prototype.slice.call(entry.picker.querySelectorAll("[data-memory-emoji]"));
+                    buttons.forEach(function (btn) {
+                        var emoji = (btn.getAttribute("data-memory-emoji") || "").trim();
+                        if (!emoji) {
+                            return;
+                        }
+                        if (emojiOrder.indexOf(emoji) === -1) {
+                            emojiOrder.push(emoji);
+                        }
+                    });
+                });
+                if (!emojiOrder.length) {
+                    emojiOrder = ["👍", "❤️", "😂", "😮", "😢", "😡", "🎉", "👏", "🔥", "🤔", "👀", "🙏", "💯", "🚀"];
+                }
+
+                var openEntry = null;
+
+                function setPickerOpen(entry, isOpen) {
+                    if (!entry || !entry.picker || !entry.toggle) {
+                        return;
+                    }
+
+                    if (isOpen && openEntry && openEntry !== entry) {
+                        setPickerOpen(openEntry, false);
+                    }
+
+                    entry.reactor.classList.toggle("is-open", !!isOpen);
+                    entry.picker.hidden = !isOpen;
+                    entry.toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+
+                    if (isOpen) {
+                        openEntry = entry;
+                    } else if (openEntry === entry) {
+                        openEntry = null;
+                    }
+                }
+
+                function closeOpenPicker() {
+                    if (!openEntry) {
+                        return;
+                    }
+                    setPickerOpen(openEntry, false);
+                }
+
+                function renderEntry(entry, payload) {
+                    if (!entry) {
+                        return;
+                    }
+
+                    var selected = payload && typeof payload.selected === "string" ? payload.selected : "";
+                    var counts = payload && payload.counts && typeof payload.counts === "object" ? payload.counts : {};
+
+                    if (entry.toggle) {
+                        entry.toggle.classList.toggle("is-reacted", !!selected);
+                        entry.toggle.setAttribute("title", selected ? ("已选择 " + selected) : "互动");
+                    }
+
+                    if (!entry.summary) {
+                        return;
+                    }
+
+                    while (entry.summary.firstChild) {
+                        entry.summary.removeChild(entry.summary.firstChild);
+                    }
+
+                    var hasAny = false;
+                    emojiOrder.forEach(function (emoji) {
+                        var count = Number(counts[emoji] || 0);
+                        if (!isFinite(count) || count <= 0) {
+                            return;
+                        }
+                        hasAny = true;
+
+                        var chip = document.createElement("span");
+                        chip.className = "memory-reaction-chip";
+                        if (selected === emoji) {
+                            chip.classList.add("is-active");
+                        }
+
+                        var emojiNode = document.createElement("span");
+                        emojiNode.className = "memory-reaction-emoji";
+                        emojiNode.textContent = emoji;
+
+                        var countNode = document.createElement("span");
+                        countNode.className = "memory-reaction-count";
+                        countNode.textContent = String(count);
+
+                        chip.appendChild(emojiNode);
+                        chip.appendChild(countNode);
+                        entry.summary.appendChild(chip);
+                    });
+
+                    entry.summary.hidden = !hasAny;
+                }
+
+                function applyPayload(commentsMap) {
+                    var map = commentsMap && typeof commentsMap === "object" ? commentsMap : {};
+                    coids.forEach(function (coidKey) {
+                        renderEntry(entries[coidKey], map[coidKey] || null);
+                    });
+                }
+
+                function requestInitialState() {
+                    var endpoint = buildMemoryReactionEndpoint({ coids: coids.join(",") });
+                    window.fetch(endpoint, {
+                        method: "GET",
+                        credentials: "same-origin",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest"
+                        }
+                    }).then(function (response) {
+                        return response.text().then(function (text) {
+                            var payload = parseJSON(text);
+                            if (!response.ok || !payload || !payload.ok) {
+                                throw new Error("load_failed");
+                            }
+                            return payload;
+                        });
+                    }).then(function (payload) {
+                        if (payload && payload.emojis && payload.emojis.length) {
+                            var nextOrder = [];
+                            payload.emojis.forEach(function (emoji) {
+                                var e = String(emoji || "").trim();
+                                if (!e || nextOrder.indexOf(e) !== -1) {
+                                    return;
+                                }
+                                nextOrder.push(e);
+                            });
+                            if (nextOrder.length) {
+                                emojiOrder = nextOrder;
+                            }
+                        }
+                        applyPayload(payload.comments || {});
+                    }).catch(function () {
+                        applyPayload({});
+                    });
+                }
+
+                function submitReaction(entry, emoji) {
+                    if (!entry || !emoji || entry.busy) {
+                        return;
+                    }
+
+                    entry.busy = true;
+                    entry.reactor.classList.add("is-busy");
+
+                    var formData = new FormData();
+                    formData.append("action", "set");
+                    formData.append("coid", String(entry.coid));
+                    formData.append("emoji", emoji);
+
+                    window.fetch(buildMemoryReactionEndpoint(), {
+                        method: "POST",
+                        body: formData,
+                        credentials: "same-origin",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest"
+                        }
+                    }).then(function (response) {
+                        return response.text().then(function (text) {
+                            var payload = parseJSON(text);
+                            if (!response.ok || !payload || !payload.ok) {
+                                var message = payload && payload.message ? String(payload.message) : "互动失败，请稍后重试";
+                                throw new Error(message);
+                            }
+                            return payload;
+                        });
+                    }).then(function (payload) {
+                        applyPayload(payload.comments || {});
+                    }).catch(function (err) {
+                        var msg = err && err.message ? String(err.message) : "互动失败，请稍后重试";
+                        try {
+                            window.alert(msg);
+                        } catch (e) {}
+                    }).finally(function () {
+                        entry.busy = false;
+                        entry.reactor.classList.remove("is-busy");
+                        setPickerOpen(entry, false);
+                    });
+                }
+
+                coids.forEach(function (coidKey) {
+                    var entry = entries[coidKey];
+                    if (!entry || !entry.toggle || !entry.picker) {
+                        return;
+                    }
+
+                    entry.toggle.addEventListener("click", function (event) {
+                        if (event && event.preventDefault) {
+                            event.preventDefault();
+                        }
+                        var isOpen = entry.reactor.classList.contains("is-open");
+                        setPickerOpen(entry, !isOpen);
+                    });
+
+                    entry.picker.addEventListener("click", function (event) {
+                        var target = event && event.target && event.target.closest
+                            ? event.target.closest("[data-memory-emoji]")
+                            : null;
+                        if (!target) {
+                            return;
+                        }
+                        if (event && event.preventDefault) {
+                            event.preventDefault();
+                        }
+                        var emoji = (target.getAttribute("data-memory-emoji") || "").trim();
+                        if (!emoji) {
+                            return;
+                        }
+                        submitReaction(entry, emoji);
+                    });
+                });
+
+                document.addEventListener("mousedown", function (event) {
+                    if (!openEntry || !openEntry.reactor) {
+                        return;
+                    }
+                    var target = event && event.target ? event.target : null;
+                    if (!target) {
+                        return;
+                    }
+                    if (openEntry.reactor.contains(target)) {
+                        return;
+                    }
+                    closeOpenPicker();
+                }, true);
+
+                window.addEventListener("keydown", function (event) {
+                    var key = event && (event.key || event.code);
+                    if (key === "Escape" || key === "Esc") {
+                        closeOpenPicker();
+                    }
+                }, true);
+
+                applyPayload({});
+                requestInitialState();
+                scope.setAttribute("data-memory-reaction-init", "1");
+            }
+
+            embedScopes.forEach(function (scope) {
+                if (!scope || !scope.querySelector) {
+                    return;
+                }
+                if (scope.closest && scope.closest("[data-memory-root]")) {
+                    return;
+                }
+                setupShare(scope);
+                setupMemoryReaction(scope);
+            });
+
+            commentScopes.forEach(function (scope) {
+                if (!scope || !scope.querySelector) {
+                    return;
+                }
+                if (scope.classList && scope.classList.contains("memory-comments-shell")) {
+                    return;
+                }
+                if (scope.closest && scope.closest("[data-memory-root]")) {
+                    return;
+                }
+                setupMemoryReaction(scope);
+            });
+        }
+
+        function bootstrapCommentsFeatures() {
+            initCommentsSection();
+            initCommentEmbedShortcodes();
+        }
+
+        window.__hansjackInitCommentsSection = bootstrapCommentsFeatures;
+        bootstrapCommentsFeatures();
     })();
 
 /* block 11 */
