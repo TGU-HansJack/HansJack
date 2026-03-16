@@ -359,6 +359,41 @@ function themeConfig($form)
     );
     $form->addInput($commentUploadStorageLimitMb);
 
+    $sitemapSize = new \Typecho\Widget\Helper\Form\Element\Text(
+        'sitemapSize',
+        null,
+        '1000',
+        _t('设置站点地图大小'),
+        _t('单个 sitemap 最多包含的 URL 数量，范围 1 - 50000；超过后会自动拆分为 `sitemap.xml` 索引和 `sitemap-*.xml` 分片。')
+    );
+    $form->addInput($sitemapSize);
+
+    $sitemapChangefreq = new \Typecho\Widget\Helper\Form\Element\Select(
+        'sitemapChangefreq',
+        [
+            'always' => _t('always'),
+            'hourly' => _t('hourly'),
+            'daily' => _t('daily'),
+            'weekly' => _t('weekly'),
+            'monthly' => _t('monthly'),
+            'yearly' => _t('yearly'),
+            'never' => _t('never'),
+        ],
+        'daily',
+        _t('站点地图更新频率'),
+        _t('输出到 sitemap 的 `<changefreq>`，默认 `daily`。')
+    );
+    $form->addInput($sitemapChangefreq);
+
+    $sitemapPriority = new \Typecho\Widget\Helper\Form\Element\Text(
+        'sitemapPriority',
+        null,
+        '0.7',
+        _t('站点地图优先级'),
+        _t('输出到 sitemap 的 `<priority>`，范围 0.0 - 1.0，默认 `0.7`。')
+    );
+    $form->addInput($sitemapPriority);
+
     $preferMinAssets = new \Typecho\Widget\Helper\Form\Element\Radio(
         'preferMinAssets',
         [
@@ -370,6 +405,57 @@ function themeConfig($form)
         _t('开启后优先加载 .min.css / .min.js（不存在则自动回退源文件）。')
     );
     $form->addInput($preferMinAssets);
+}
+
+function themeConfigHandle(array $settings, bool $isInit): void
+{
+    $options = Options::alloc();
+    themeOptionSave($options, $settings);
+    hansjackEnsureSitemapRoute();
+}
+
+function hansjackEnsureSitemapRoute(): bool
+{
+    static $done = false;
+    if ($done) {
+        return true;
+    }
+
+    $done = true;
+
+    $options = Options::alloc();
+    $routeName = 'hansjack_sitemap';
+    $routeUrl = '/sitemap.xml';
+    $routeWidget = 'Widget_Archive';
+
+    $routingTable = [];
+    try {
+        $routingTable = is_array($options->routingTable ?? null) ? $options->routingTable : [];
+    } catch (\Throwable $e) {
+        $routingTable = [];
+    }
+
+    $current = $routingTable[$routeName] ?? null;
+    if (is_array($current)) {
+        $currentUrl = trim((string) ($current['url'] ?? ''));
+        $currentWidget = trim((string) ($current['widget'] ?? ''));
+        if ($currentUrl === $routeUrl && $currentWidget === $routeWidget) {
+            return true;
+        }
+    }
+
+    try {
+        \Utils\Helper::removeRoute($routeName);
+    } catch (\Throwable $e) {
+        // Ignore and retry add.
+    }
+
+    try {
+        \Utils\Helper::addRoute($routeName, $routeUrl, $routeWidget, null, null);
+        return true;
+    } catch (\Throwable $e) {
+        return false;
+    }
 }
 
 function hansjackOptionEnabled($raw, bool $default = true): bool
@@ -901,6 +987,53 @@ function hansjackHighLoadDegradeEnabled(Options $options): bool
     }
 
     return hansjackOptionEnabled($raw, false);
+}
+
+function hansjackSitemapSize(Options $options): int
+{
+    $raw = '';
+    try {
+        $raw = (string) ($options->sitemapSize ?? '1000');
+    } catch (\Throwable $e) {
+        $raw = '1000';
+    }
+
+    return hansjackParsePositiveInt($raw, 1000, 1, 50000);
+}
+
+function hansjackSitemapChangefreq(Options $options): string
+{
+    $raw = '';
+    try {
+        $raw = strtolower(trim((string) ($options->sitemapChangefreq ?? 'daily')));
+    } catch (\Throwable $e) {
+        $raw = 'daily';
+    }
+
+    $allowed = ['always', 'hourly', 'daily', 'weekly', 'monthly', 'yearly', 'never'];
+    return in_array($raw, $allowed, true) ? $raw : 'daily';
+}
+
+function hansjackSitemapPriority(Options $options): string
+{
+    $raw = '';
+    try {
+        $raw = trim((string) ($options->sitemapPriority ?? '0.7'));
+    } catch (\Throwable $e) {
+        $raw = '0.7';
+    }
+
+    if (!preg_match('/^(?:0(?:\.\d+)?|1(?:\.0+)?)$/', $raw)) {
+        $raw = '0.7';
+    }
+
+    $number = max(0.0, min(1.0, (float) $raw));
+    $text = rtrim(rtrim(number_format($number, 3, '.', ''), '0'), '.');
+    if (strpos($text, '.') === false) {
+        $text .= '.0';
+    }
+
+    return $text;
 }
 
 function hansjackAnonymousPageCacheTtl(Options $options): int
@@ -1736,6 +1869,7 @@ function handleSeriesListRequest(Archive $archive): void
  */
 function themeInit(Archive $archive)
 {
+    hansjackEnsureSitemapRoute();
     handleLiveVersionRequest($archive);
     handleSeriesListRequest($archive);
     handleCommentUploadRequest($archive);
@@ -1744,6 +1878,7 @@ function themeInit(Archive $archive)
     handleGithubOauthRequest($archive);
     handleQqOauthRequest($archive);
     handleThemeCacheManageRequest($archive);
+    handleSitemapRequest($archive);
     enableFeedStylesheet($archive);
     hansjackStartAnonymousPageCache($archive);
 
@@ -3098,6 +3233,439 @@ function renderFeedHtmlFromXml(string $xml): string
         . '</p></footer></div></section></main></div><script>function showCopyTip(message){var btn=document.querySelector(".copy-btn");if(!btn){return;}btn.setAttribute("data-copy-tip",message||"已复制");btn.classList.add("is-tip");var timer=Number(btn.getAttribute("data-copy-tip-timer")||"0");if(timer){window.clearTimeout(timer);}var next=window.setTimeout(function(){btn.classList.remove("is-tip");btn.setAttribute("data-copy-tip","");btn.removeAttribute("data-copy-tip-timer");},1400);btn.setAttribute("data-copy-tip-timer",String(next));}function fallbackCopyText(text){var ok=false;var el=document.createElement("textarea");el.value=text;el.setAttribute("readonly","readonly");el.style.position="fixed";el.style.opacity="0";el.style.pointerEvents="none";document.body.appendChild(el);el.focus();el.select();try{ok=document.execCommand("copy");}catch(e){ok=false;}document.body.removeChild(el);return ok;}function copyFeedUrl(){var node=document.getElementById("feed-url");var text=node?(node.textContent||""):"";if(!text){showCopyTip("未获取到订阅地址");return;}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){showCopyTip("已复制");}).catch(function(){showCopyTip(fallbackCopyText(text)?"已复制":"复制失败");});return;}showCopyTip(fallbackCopyText(text)?"已复制":"复制失败");}</script></body></html>';
 }
 
+function handleSitemapRequest(Archive $archive): void
+{
+    $request = hansjackParseSitemapRequestPath();
+    if (empty($request['matched'])) {
+        return;
+    }
+
+    $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+    if ($method !== 'GET' && $method !== 'HEAD') {
+        if (!headers_sent()) {
+            header('Allow: GET, HEAD');
+            header('Content-Type: text/plain; charset=UTF-8');
+        }
+        if (function_exists('http_response_code')) {
+            http_response_code(405);
+        }
+        if ($method !== 'HEAD') {
+            echo 'Method Not Allowed';
+        }
+        exit;
+    }
+
+    $options = Options::alloc();
+    $items = hansjackBuildSitemapItems($options);
+    $pageSize = hansjackSitemapSize($options);
+    $chunks = array_chunk($items, max(1, $pageSize));
+    $chunkNumber = (int) ($request['chunk'] ?? 0);
+
+    if ($chunkNumber > 0) {
+        $chunkIndex = $chunkNumber - 1;
+        if (!isset($chunks[$chunkIndex])) {
+            hansjackOutputXmlResponse(hansjackRenderSitemapUrlset([]), 404, $method === 'HEAD');
+        }
+        hansjackOutputXmlResponse(hansjackRenderSitemapUrlset($chunks[$chunkIndex]), 200, $method === 'HEAD');
+    }
+
+    if (count($chunks) > 1) {
+        hansjackOutputXmlResponse(hansjackRenderSitemapIndex($chunks, $options), 200, $method === 'HEAD');
+    }
+
+    hansjackOutputXmlResponse(hansjackRenderSitemapUrlset($chunks[0] ?? []), 200, $method === 'HEAD');
+}
+
+function hansjackParseSitemapRequestPath(): array
+{
+    $requestUri = trim((string) ($_SERVER['REQUEST_URI'] ?? '/'));
+    $path = (string) (parse_url($requestUri, PHP_URL_PATH) ?? '/');
+    $path = normalizePath($path);
+
+    if (!preg_match('#^/sitemap(?:-([1-9]\d*))?\.xml$#i', $path, $matches)) {
+        return [
+            'matched' => false,
+            'chunk' => 0,
+        ];
+    }
+
+    $chunk = isset($matches[1]) ? (int) $matches[1] : 0;
+    if ($chunk < 0) {
+        $chunk = 0;
+    }
+
+    return [
+        'matched' => true,
+        'chunk' => $chunk,
+    ];
+}
+
+function hansjackOutputXmlResponse(string $xml, int $status = 200, bool $headOnly = false): void
+{
+    if (!headers_sent()) {
+        header('Content-Type: application/xml; charset=UTF-8');
+        header('Cache-Control: public, max-age=900');
+    }
+
+    if (function_exists('http_response_code')) {
+        http_response_code($status);
+    }
+
+    if (!$headOnly) {
+        echo $xml;
+    }
+    exit;
+}
+
+function hansjackBuildSitemapItems(Options $options): array
+{
+    static $cached = null;
+    if (is_array($cached)) {
+        return $cached;
+    }
+
+    $pageGroups = hansjackBuildSitemapPageGroups();
+    $specialPages = is_array($pageGroups['specialPages'] ?? null) ? $pageGroups['specialPages'] : [];
+    $otherPages = is_array($pageGroups['otherPages'] ?? null) ? $pageGroups['otherPages'] : [];
+
+    $postItems = hansjackBuildSitemapCategoryItems($options, 'posts');
+    $noteItems = hansjackBuildSitemapCategoryItems($options, 'notes');
+
+    $memoryItems = [];
+    $memosPage = $specialPages['memos'] ?? null;
+    if (is_array($memosPage)) {
+        $memoryItems = hansjackBuildSitemapMemoryCommentItems($memosPage);
+    }
+
+    $postLastmod = hansjackSitemapMaxLastmod($postItems);
+    $noteLastmod = hansjackSitemapMaxLastmod($noteItems);
+    $memoryLastmod = hansjackSitemapMaxLastmod($memoryItems);
+    $pageLastmod = hansjackSitemapMaxLastmod($otherPages);
+
+    if (is_array($specialPages['posts'] ?? null)) {
+        $specialPages['posts']['lastmod'] = max((int) ($specialPages['posts']['lastmod'] ?? 0), $postLastmod);
+    }
+    if (is_array($specialPages['notes'] ?? null)) {
+        $specialPages['notes']['lastmod'] = max((int) ($specialPages['notes']['lastmod'] ?? 0), $noteLastmod);
+    }
+    if (is_array($specialPages['memos'] ?? null)) {
+        $specialPages['memos']['lastmod'] = max((int) ($specialPages['memos']['lastmod'] ?? 0), $memoryLastmod);
+    }
+
+    $items = [];
+    $seen = [];
+
+    $homeUrl = trim((string) ($options->siteUrl ?? ''));
+    $homeLastmod = max(
+        $postLastmod,
+        $noteLastmod,
+        $memoryLastmod,
+        $pageLastmod,
+        (int) (($specialPages['posts']['lastmod'] ?? 0)),
+        (int) (($specialPages['notes']['lastmod'] ?? 0)),
+        (int) (($specialPages['memos']['lastmod'] ?? 0))
+    );
+    hansjackSitemapPushItem($items, $seen, $homeUrl, $homeLastmod);
+
+    foreach (['posts', 'notes', 'memos'] as $specialSlug) {
+        $specialItem = $specialPages[$specialSlug] ?? null;
+        if (!is_array($specialItem)) {
+            continue;
+        }
+        hansjackSitemapPushItem(
+            $items,
+            $seen,
+            (string) ($specialItem['loc'] ?? ''),
+            (int) ($specialItem['lastmod'] ?? 0)
+        );
+    }
+
+    foreach ($postItems as $item) {
+        hansjackSitemapPushItem($items, $seen, (string) ($item['loc'] ?? ''), (int) ($item['lastmod'] ?? 0));
+    }
+    foreach ($noteItems as $item) {
+        hansjackSitemapPushItem($items, $seen, (string) ($item['loc'] ?? ''), (int) ($item['lastmod'] ?? 0));
+    }
+    foreach ($memoryItems as $item) {
+        hansjackSitemapPushItem($items, $seen, (string) ($item['loc'] ?? ''), (int) ($item['lastmod'] ?? 0));
+    }
+    foreach ($otherPages as $item) {
+        hansjackSitemapPushItem($items, $seen, (string) ($item['loc'] ?? ''), (int) ($item['lastmod'] ?? 0));
+    }
+
+    $cached = $items;
+    return $cached;
+}
+
+function hansjackBuildSitemapPageGroups(): array
+{
+    $specialPages = [
+        'posts' => null,
+        'notes' => null,
+        'memos' => null,
+    ];
+    $otherPages = [];
+
+    $pages = null;
+    try {
+        \Typecho\Widget::widget('Widget_Contents_Page_List@hansjack_sitemap_pages', null, null, false)->to($pages);
+    } catch (\Throwable $e) {
+        $pages = null;
+    }
+
+    if (!$pages || !$pages->have()) {
+        return [
+            'specialPages' => $specialPages,
+            'otherPages' => $otherPages,
+        ];
+    }
+
+    while ($pages->next()) {
+        $url = trim((string) ($pages->permalink ?? ''));
+        if ($url === '') {
+            continue;
+        }
+
+        $slug = strtolower(trim((string) ($pages->slug ?? '')));
+        $item = [
+            'loc' => $url,
+            'lastmod' => max(0, (int) ($pages->created ?? 0), (int) ($pages->modified ?? 0)),
+            'cid' => (int) ($pages->cid ?? 0),
+            'slug' => $slug,
+        ];
+
+        if (array_key_exists($slug, $specialPages)) {
+            $specialPages[$slug] = $item;
+            continue;
+        }
+
+        $otherPages[] = $item;
+    }
+
+    return [
+        'specialPages' => $specialPages,
+        'otherPages' => $otherPages,
+    ];
+}
+
+function hansjackBuildSitemapCategoryItems(Options $options, string $categorySlug): array
+{
+    $items = [];
+    $seen = [];
+    $pageSize = max(100, min(1000, hansjackSitemapSize($options)));
+    $safeSlug = preg_replace('/[^a-z0-9_]+/i', '_', $categorySlug);
+    if (!is_string($safeSlug) || $safeSlug === '') {
+        $safeSlug = 'category';
+    }
+
+    for ($page = 1; $page <= 2000; $page++) {
+        $posts = null;
+        $widgetName = 'Widget_Archive@hansjack_sitemap_' . $safeSlug . '_' . $page;
+        $widgetParams = 'pageSize=' . $pageSize . '&type=category';
+        $widgetRequest = 'slug=' . urlencode($categorySlug) . '&page=' . $page;
+
+        try {
+            \Typecho\Widget::widget($widgetName, $widgetParams, $widgetRequest, false)->to($posts);
+        } catch (\Throwable $e) {
+            $posts = null;
+        }
+
+        if (!$posts || !$posts->have()) {
+            break;
+        }
+
+        $count = 0;
+        while ($posts->next()) {
+            $count++;
+            $url = trim((string) ($posts->permalink ?? ''));
+            if ($url === '') {
+                continue;
+            }
+            $lastmod = max(0, (int) ($posts->created ?? 0), (int) ($posts->modified ?? 0));
+            hansjackSitemapPushItem($items, $seen, $url, $lastmod);
+        }
+
+        if ($count < $pageSize) {
+            break;
+        }
+    }
+
+    return $items;
+}
+
+function hansjackBuildSitemapMemoryCommentItems(array $memosPage): array
+{
+    $pageCid = (int) ($memosPage['cid'] ?? 0);
+    $pageUrl = trim((string) ($memosPage['loc'] ?? ''));
+    if ($pageCid <= 0 || $pageUrl === '') {
+        return [];
+    }
+
+    $db = githubDb();
+    if (!is_object($db)) {
+        return [];
+    }
+
+    try {
+        $rows = $db->fetchAll(
+            $db->select('coid', 'created', 'text', 'status')
+                ->from('table.comments')
+                ->where('cid = ?', $pageCid)
+                ->where('status = ?', 'approved')
+                ->order('created', Db::SORT_DESC)
+        );
+    } catch (\Throwable $e) {
+        $rows = [];
+    }
+
+    if (!is_array($rows) || $rows === []) {
+        return [];
+    }
+
+    $items = [];
+    $seen = [];
+    foreach ($rows as $row) {
+        $commentId = (int) hansjackSitemapRowValue($row, 'coid', 0);
+        if ($commentId <= 0) {
+            continue;
+        }
+
+        $rawText = (string) hansjackSitemapRowValue($row, 'text', '');
+        if ($rawText !== '' && function_exists('isPrivateCommentText') && isPrivateCommentText($rawText)) {
+            continue;
+        }
+
+        $created = (int) hansjackSitemapRowValue($row, 'created', 0);
+        hansjackSitemapPushItem($items, $seen, $pageUrl . '#comment-' . $commentId, $created);
+    }
+
+    return $items;
+}
+
+function hansjackSitemapPushItem(array &$items, array &$seen, string $url, int $lastmod = 0): void
+{
+    $loc = trim($url);
+    if ($loc === '') {
+        return;
+    }
+
+    $timestamp = max(0, $lastmod);
+    if (isset($seen[$loc])) {
+        $index = (int) $seen[$loc];
+        $items[$index]['lastmod'] = max((int) ($items[$index]['lastmod'] ?? 0), $timestamp);
+        return;
+    }
+
+    $items[] = [
+        'loc' => $loc,
+        'lastmod' => $timestamp,
+    ];
+    $seen[$loc] = count($items) - 1;
+}
+
+function hansjackSitemapRowValue($row, string $key, $default = null)
+{
+    if (is_array($row)) {
+        return $row[$key] ?? $default;
+    }
+    if (is_object($row)) {
+        return $row->$key ?? $default;
+    }
+
+    return $default;
+}
+
+function hansjackSitemapMaxLastmod(array $items): int
+{
+    $maxLastmod = 0;
+    foreach ($items as $item) {
+        $lastmod = (int) ($item['lastmod'] ?? 0);
+        if ($lastmod > $maxLastmod) {
+            $maxLastmod = $lastmod;
+        }
+    }
+
+    return $maxLastmod;
+}
+
+function hansjackSitemapRootUrl(Options $options): string
+{
+    return Common::url('sitemap.xml', (string) $options->index);
+}
+
+function hansjackSitemapChunkUrl(Options $options, int $chunkNumber): string
+{
+    return Common::url('sitemap-' . max(1, $chunkNumber) . '.xml', (string) $options->index);
+}
+
+function hansjackRenderSitemapUrlset(array $items): string
+{
+    $options = Options::alloc();
+    $changefreq = hansjackSitemapChangefreq($options);
+    $priority = hansjackSitemapPriority($options);
+
+    $lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ];
+
+    foreach ($items as $item) {
+        $loc = trim((string) ($item['loc'] ?? ''));
+        if ($loc === '') {
+            continue;
+        }
+
+        $line = '  <url><loc>' . hansjackSitemapEscape($loc) . '</loc>';
+        $lastmod = (int) ($item['lastmod'] ?? 0);
+        if ($lastmod > 0) {
+            $line .= '<lastmod>' . hansjackSitemapEscape(hansjackSitemapFormatLastmod($lastmod)) . '</lastmod>';
+        }
+        if ($changefreq !== '') {
+            $line .= '<changefreq>' . hansjackSitemapEscape($changefreq) . '</changefreq>';
+        }
+        if ($priority !== '') {
+            $line .= '<priority>' . hansjackSitemapEscape($priority) . '</priority>';
+        }
+        $line .= '</url>';
+        $lines[] = $line;
+    }
+
+    $lines[] = '</urlset>';
+    return implode("\n", $lines);
+}
+
+function hansjackRenderSitemapIndex(array $chunks, Options $options): string
+{
+    $lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ];
+
+    foreach (array_values($chunks) as $index => $chunkItems) {
+        $chunkUrl = hansjackSitemapChunkUrl($options, $index + 1);
+        $line = '  <sitemap><loc>' . hansjackSitemapEscape($chunkUrl) . '</loc>';
+        $lastmod = hansjackSitemapMaxLastmod(is_array($chunkItems) ? $chunkItems : []);
+        if ($lastmod > 0) {
+            $line .= '<lastmod>' . hansjackSitemapEscape(hansjackSitemapFormatLastmod($lastmod)) . '</lastmod>';
+        }
+        $line .= '</sitemap>';
+        $lines[] = $line;
+    }
+
+    $lines[] = '</sitemapindex>';
+    return implode("\n", $lines);
+}
+
+function hansjackSitemapEscape(string $value): string
+{
+    return htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8');
+}
+
+function hansjackSitemapFormatLastmod(int $timestamp): string
+{
+    return gmdate('Y-m-d\TH:i:s\Z', max(0, $timestamp));
+}
+
 function githubBindingPanelHtml(Options $options): string
 {
     $enabled = githubOauthEnabled($options);
@@ -3688,12 +4256,12 @@ function githubDb()
 
 function themeOptionStorageName(Options $options): string
 {
-    $theme = trim((string) ($options->theme ?? ''));
+    $theme = trim((string) basename(__DIR__));
     if ($theme === '') {
-        $theme = trim((string) basename(__DIR__));
-        if ($theme === '') {
-            $theme = 'default';
-        }
+        $theme = trim((string) ($options->theme ?? ''));
+    }
+    if ($theme === '') {
+        $theme = 'default';
     }
 
     return 'theme:' . $theme;
