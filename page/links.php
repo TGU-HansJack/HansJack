@@ -800,12 +800,17 @@ $siteCopyDesc = escape($siteDescRaw !== '' ? $siteDescRaw : '欢迎交换友情�
 $siteCopyUrl = $siteUrlRaw !== '' ? escape(rtrim($siteUrlRaw, '/')) : '';
 $siteCopyFeed = $siteFeedRaw !== '' ? escape($siteFeedRaw) : '';
 $siteCopyAvatar = $siteFaviconRaw !== '' ? escape($siteFaviconRaw) : '';
+$pageHeading = trim((string) ($this->title ?? ''));
+if ($pageHeading === '') {
+    $pageHeading = _t('友情链接');
+}
 
 $this->need('header.php');
 ?>
 
 <main class="main" role="main">
     <article class="page links-page" aria-label="<?php _e('友情链接'); ?>">
+        <h1 class="section-title"><?php echo escape($pageHeading); ?></h1>
         <div class="article-content">
             <?php echoArchiveContent($this); ?>
         </div>
@@ -862,7 +867,8 @@ $this->need('header.php');
                                         aria-expanded="false"
                                     >
                                         <?php if ($avatar !== ''): ?>
-                                            <img src="<?php echo $avatar; ?>" alt="" width="42" height="42" loading="lazy" decoding="async">
+                                            <?php $linkAvatarAlt = $trimName !== '' ? ($trimName . '头像') : _t('站点头像'); ?>
+                                            <img src="<?php echo $avatar; ?>" alt="<?php echo escape($linkAvatarAlt); ?>" width="42" height="42" loading="lazy" decoding="async">
                                         <?php else: ?>
                                             <span><?php echo $initial; ?></span>
                                         <?php endif; ?>
@@ -870,7 +876,8 @@ $this->need('header.php');
                                 <?php else: ?>
                                     <div class="links-avatar is-no-feed" data-feed-tip="<?php echo $noFeedTip; ?>" title="<?php echo $noFeedTip; ?>" tabindex="0" aria-label="<?php echo $noFeedTip; ?>">
                                         <?php if ($avatar !== ''): ?>
-                                            <img src="<?php echo $avatar; ?>" alt="" width="42" height="42" loading="lazy" decoding="async">
+                                            <?php $linkAvatarAlt = $trimName !== '' ? ($trimName . '头像') : _t('站点头像'); ?>
+                                            <img src="<?php echo $avatar; ?>" alt="<?php echo escape($linkAvatarAlt); ?>" width="42" height="42" loading="lazy" decoding="async">
                                         <?php else: ?>
                                             <span><?php echo $initial; ?></span>
                                         <?php endif; ?>
@@ -1042,7 +1049,7 @@ $this->need('header.php');
                                     <?php echo $siteCopyAvatar === '' ? 'disabled aria-disabled="true"' : ''; ?>
                                 >
                                     <?php if ($siteFavicon !== ''): ?>
-                                        <img src="<?php echo $siteFavicon; ?>" alt="" width="46" height="46" loading="lazy" decoding="async">
+                                        <img src="<?php echo $siteFavicon; ?>" alt="<?php echo escape($siteTitleText . '头像'); ?>" width="46" height="46" loading="lazy" decoding="async">
                                     <?php else: ?>
                                         <span><?php echo $siteInitial; ?></span>
                                     <?php endif; ?>

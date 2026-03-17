@@ -319,12 +319,17 @@ if ($pagePermalink === '') {
         $pagePermalink = '';
     }
 }
+$pageHeading = trim((string) ($this->title ?? ''));
+if ($pageHeading === '') {
+    $pageHeading = _t('回忆');
+}
 ?>
 
 <main class="main" role="main" data-memory-root>
     <section class="memory" aria-label="<?php _e('回忆'); ?>">
         <div class="posts-layout memory-layout">
             <div class="memory-main">
+                <h1 class="section-title"><?php echo escape($pageHeading); ?></h1>
                 <section id="comments" class="comments memory-comments-shell" aria-label="<?php _e('评论'); ?>"
                          data-comments-order="desc"
                          data-user-logged="<?php echo $userLoggedIn ? '1' : '0'; ?>"
@@ -454,7 +459,13 @@ if ($pagePermalink === '') {
                                     data-tags="<?php echo escape($tagKeysAttr); ?>">
                                     <div class="comment-author" itemprop="creator" itemscope itemtype="http://schema.org/Person">
                                         <span itemprop="image">
-                                            <img class="avatar" src="<?php echo escape((string) ($item['avatar'] ?? '')); ?>" alt="" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+                                            <?php $memoryAvatarAlt = trim((string) ($item['author'] ?? '')); ?>
+                                            <?php if ($memoryAvatarAlt === '') {
+                                                $memoryAvatarAlt = _t('评论者头像');
+                                            } else {
+                                                $memoryAvatarAlt .= _t('的头像');
+                                            } ?>
+                                            <img class="avatar" src="<?php echo escape((string) ($item['avatar'] ?? '')); ?>" alt="<?php echo escape($memoryAvatarAlt); ?>" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer">
                                         </span>
                                         <div class="comment-author-meta">
                                             <cite class="fn" itemprop="name"><?php echo escape((string) ($item['author'] ?? '')); ?></cite>

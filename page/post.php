@@ -64,12 +64,17 @@ $pagerTemplate = [
     'prevClass' => 'prev',
     'nextClass' => 'next',
 ];
+$pageHeading = trim((string) ($this->title ?? ''));
+if ($pageHeading === '') {
+    $pageHeading = _t('博文列表');
+}
 ?>
 
 <main class="main" role="main">
     <section class="posts" aria-label="<?php _e('文章列表'); ?>">
         <div class="posts-layout">
             <div class="posts-main">
+                <h1 class="section-title"><?php echo escape($pageHeading); ?></h1>
                 <ul class="posts-list" aria-label="<?php _e('文章'); ?>">
                     <?php if ($posts && $posts->have()): ?>
                         <?php while ($posts->next()): ?>

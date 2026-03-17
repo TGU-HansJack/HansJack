@@ -19,6 +19,7 @@ $themeConfig = buildThemeConfig($this->options);
 $brandName = '';
 $welcomeText = '';
 $landingAvatarUrl = '';
+$landingAvatarAlt = '站点头像';
 $blogUrl = '';
 $memoUrl = '';
 $blogSlug = 'posts';
@@ -47,6 +48,7 @@ if ($this->is('index')) {
         $this->options->siteUrl('favicon.ico');
         $landingAvatarUrl = trim((string) ob_get_clean());
     }
+    $landingAvatarAlt = trim($brandName) !== '' ? ($brandName . '头像') : '站点头像';
 
     $blogUrl = (string) (($themeConfig['links']['blog'] ?? '') ?: '');
     $memoUrl = (string) (($themeConfig['links']['memo'] ?? '') ?: '');
@@ -299,7 +301,7 @@ if ($this->is('index')) {
                     <div class="landing-avatar" aria-hidden="true">
                         <img
                             src="<?php echo escape($landingAvatarUrl); ?>"
-                            alt=""
+                            alt="<?php echo escape($landingAvatarAlt); ?>"
                             width="256"
                             height="256"
                             loading="eager"
@@ -655,9 +657,10 @@ if ($this->is('index')) {
 
                                                     $avatarHash = $commentMail !== '' ? md5(strtolower($commentMail)) : '';
                                                     $avatarUrl = $avatarHash !== '' ? ('http://www.gravatar.com/avatar/' . $avatarHash . '?s=32&d=retro') : '';
+                                                    $activityAvatarAlt = $commentAuthor !== '' ? ($commentAuthor . '头像') : '评论者头像';
                                                     ?>
                                                     <?php if ($avatarUrl !== ''): ?>
-                                                        <img class="activity-avatar" loading="lazy" src="<?php echo escape($avatarUrl); ?>" alt="" width="16" height="16">
+                                                        <img class="activity-avatar" loading="lazy" src="<?php echo escape($avatarUrl); ?>" alt="<?php echo escape($activityAvatarAlt); ?>" width="16" height="16">
                                                     <?php endif; ?>
                                                     <?php if ($commentAuthor !== ''): ?>
                                                         <span class="activity-name"><?php echo escape($commentAuthor); ?></span>
@@ -728,10 +731,15 @@ HTML;
             'prevClass' => 'prev',
             'nextClass' => 'next',
         ];
+        $listHeading = hansjackArchiveRawTitle($this);
+        if ($listHeading === '') {
+            $listHeading = _t('文章列表');
+        }
         ?>
         <section class="posts" aria-label="<?php _e('文章列表'); ?>">
             <div class="posts-layout">
                 <div class="posts-main">
+                    <h1 class="section-title"><?php echo escape($listHeading); ?></h1>
                     <?php if (!$this->is('index') && !$this->is('post') && !$this->is('category') && !$this->is('tag')): ?>
                         <h2 class="section-title"><?php $this->archiveTitle([
                                 'category' => _t('分类 %s'),

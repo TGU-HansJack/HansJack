@@ -5344,6 +5344,268 @@ function text(string $value, string $fallback = ''): string
     return $trimmed === '' ? $fallback : $trimmed;
 }
 
+function hansjackMbLength(string $value): int
+{
+    if (function_exists('mb_strlen')) {
+        return (int) mb_strlen($value, 'UTF-8');
+    }
+
+    return strlen($value);
+}
+
+function hansjackMbSubstr(string $value, int $start, int $length): string
+{
+    if (function_exists('mb_substr')) {
+        return (string) mb_substr($value, $start, $length, 'UTF-8');
+    }
+
+    return substr($value, $start, $length);
+}
+
+function hansjackNormalizeSeoText(string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    $text = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $text = strip_tags($text);
+    $text = preg_replace('/\s+/u', ' ', $text);
+    return trim((string) $text);
+}
+
+function hansjackTruncateText(string $value, int $maxLen = 180): string
+{
+    $text = hansjackNormalizeSeoText($value);
+    if ($text === '') {
+        return '';
+    }
+
+    $maxLen = max(1, (int) $maxLen);
+    if (hansjackMbLength($text) <= $maxLen) {
+        return $text;
+    }
+
+    $short = rtrim(
+        hansjackMbSubstr($text, 0, $maxLen),
+        " \t\n\r\0\x0B,，。.;；:：!?！？"
+    );
+    return $short . '...';
+}
+
+function hansjackArchiveRawTitle($archive): string
+{
+    if (!is_object($archive)) {
+        return '';
+    }
+
+    $title = '';
+    if (method_exists($archive, 'archiveTitle')) {
+        ob_start();
+        try {
+            $archive->archiveTitle([
+                'category' => _t('分类 %s'),
+                'search' => _t('搜索 %s'),
+                'tag' => _t('标签 %s'),
+                'author' => _t('%s 的文章'),
+            ], '', '');
+        } catch (\Throwable $e) {
+            // Ignore archive title rendering errors.
+        }
+        $title = trim((string) ob_get_clean());
+    }
+
+    if ($title === '') {
+        try {
+            $title = trim((string) ($archive->title ?? ''));
+        } catch (\Throwable $e) {
+            $title = '';
+        }
+    }
+
+    if ($title === '' && method_exists($archive, 'is')) {
+        try {
+            if ($archive->is('index')) {
+                $title = _t('首页');
+            } elseif ($archive->is('404')) {
+                $title = _t('404 页面');
+            }
+        } catch (\Throwable $e) {
+            $title = '';
+        }
+    }
+
+    return $title;
+}
+
+function hansjackArchiveSeoTitle($archive): string
+{
+    $siteTitle = 'Typecho';
+    $siteDescription = '';
+    $isIndex = false;
+    $is404 = false;
+
+    if (is_object($archive)) {
+        try {
+            $siteTitle = (string) ($archive->options->title ?? $siteTitle);
+        } catch (\Throwable $e) {
+            $siteTitle = 'Typecho';
+        }
+
+        try {
+            $siteDescription = (string) ($archive->options->description ?? '');
+        } catch (\Throwable $e) {
+            $siteDescription = '';
+        }
+
+        if (method_exists($archive, 'is')) {
+            try {
+                $isIndex = (bool) $archive->is('index');
+                $is404 = (bool) $archive->is('404');
+            } catch (\Throwable $e) {
+                $isIndex = false;
+                $is404 = false;
+            }
+        }
+    }
+
+    $siteTitle = text($siteTitle, 'Typecho');
+    $siteDescription = hansjackNormalizeSeoText($siteDescription);
+    $archiveTitle = hansjackArchiveRawTitle($archive);
+
+    if ($isIndex) {
+        $suffix = $siteDescription !== '' ? $siteDescription : _t('首页');
+        $title = $siteTitle . ' - ' . $suffix;
+    } elseif ($archiveTitle === '') {
+        $title = $is404 ? (_t('404 页面') . ' - ' . $siteTitle) : $siteTitle;
+    } elseif ($siteTitle !== '' && strpos($archiveTitle, $siteTitle) !== false) {
+        $title = $archiveTitle;
+    } else {
+        $title = $archiveTitle . ' - ' . $siteTitle;
+    }
+
+    $title = trim($title);
+    if ($siteDescription !== '' && hansjackMbLength($title) < 8) {
+        $title .= ' - ' . $siteDescription;
+    }
+
+    return trim($title, " \t\n\r\0\x0B-");
+}
+
+function hansjackArchiveSeoDescription($archive, int $maxLen = 180): string
+{
+    $maxLen = max(80, min(320, (int) $maxLen));
+
+    $siteTitle = 'Typecho';
+    $siteDescription = '';
+    $isIndex = false;
+    $isPost = false;
+    $isPage = false;
+    $is404 = false;
+
+    if (is_object($archive)) {
+        try {
+            $siteTitle = (string) ($archive->options->title ?? $siteTitle);
+        } catch (\Throwable $e) {
+            $siteTitle = 'Typecho';
+        }
+
+        try {
+            $siteDescription = (string) ($archive->options->description ?? '');
+        } catch (\Throwable $e) {
+            $siteDescription = '';
+        }
+
+        if (method_exists($archive, 'is')) {
+            try {
+                $isIndex = (bool) $archive->is('index');
+                $isPost = (bool) $archive->is('post');
+                $isPage = (bool) $archive->is('page');
+                $is404 = (bool) $archive->is('404');
+            } catch (\Throwable $e) {
+                $isIndex = false;
+                $isPost = false;
+                $isPage = false;
+                $is404 = false;
+            }
+        }
+    }
+
+    $siteTitle = text($siteTitle, 'Typecho');
+    $siteDescription = hansjackNormalizeSeoText($siteDescription);
+    $archiveTitle = hansjackArchiveRawTitle($archive);
+
+    $description = '';
+
+    if ($isIndex) {
+        $description = $siteDescription;
+        if ($description === '') {
+            $description = $siteTitle . '的最新文章与动态更新。';
+        }
+    } elseif ($is404) {
+        $description = '你访问的页面不存在，可返回' . $siteTitle . '继续浏览。';
+    } elseif (($isPost || $isPage) && is_object($archive)) {
+        $fieldCandidates = ['seo_description', 'meta_description', 'description', 'desc', 'excerpt'];
+        foreach ($fieldCandidates as $fieldKey) {
+            $fieldValue = '';
+            try {
+                $fieldValue = (string) ($archive->fields->{$fieldKey} ?? '');
+            } catch (\Throwable $e) {
+                $fieldValue = '';
+            }
+            $fieldValue = hansjackNormalizeSeoText($fieldValue);
+            if ($fieldValue !== '') {
+                $description = $fieldValue;
+                break;
+            }
+        }
+
+        if ($description === '' && method_exists($archive, 'excerpt')) {
+            ob_start();
+            try {
+                $archive->excerpt(180, '');
+            } catch (\Throwable $e) {
+                // Ignore excerpt rendering errors.
+            }
+            $description = hansjackNormalizeSeoText((string) ob_get_clean());
+        }
+
+        if ($description === '') {
+            $description = hansjackNormalizeSeoText(renderArchiveContent($archive));
+        }
+
+        if ($description === '') {
+            $description = $archiveTitle;
+            if ($siteDescription !== '') {
+                $description = trim($description . '，' . $siteDescription, "， \t\n\r\0\x0B");
+            }
+        }
+    } else {
+        if ($archiveTitle !== '') {
+            $description = $archiveTitle;
+        }
+        if ($siteDescription !== '') {
+            $description = $description !== ''
+                ? ($description . '，' . $siteDescription)
+                : $siteDescription;
+        }
+        if ($description === '') {
+            $description = $siteTitle . '的文章列表与归档页面。';
+        }
+    }
+
+    $description = hansjackTruncateText($description, $maxLen);
+    if ($description === '') {
+        $description = hansjackTruncateText(
+            $siteDescription !== '' ? $siteDescription : ($siteTitle . '博客'),
+            $maxLen
+        );
+    }
+
+    return $description;
+}
+
 function percent(string $value, int $fallback = 86): int
 {
     $num = (int) trim($value);
@@ -5685,6 +5947,76 @@ function applyImageSizeSyntaxToHtml(string $html): string
         }
 
         return $updated;
+    }, $html);
+
+    return is_string($result) ? $result : $html;
+}
+
+function buildImageAltFromSrc(string $src, string $fallback = ''): string
+{
+    $src = trim($src);
+    if ($src === '') {
+        return trim($fallback);
+    }
+
+    $path = (string) parse_url($src, PHP_URL_PATH);
+    $base = trim(basename($path));
+    if ($base === '') {
+        return trim($fallback);
+    }
+
+    $base = (string) preg_replace('/\.[A-Za-z0-9]{1,8}$/u', '', $base);
+    $base = str_replace(['-', '_'], ' ', $base);
+    $base = trim((string) preg_replace('/\s+/u', ' ', $base));
+    if ($base === '') {
+        return trim($fallback);
+    }
+
+    // Skip hash-like file names that do not convey useful semantics.
+    if (preg_match('/^[A-Fa-f0-9]{8,}$/', $base) === 1) {
+        return trim($fallback);
+    }
+
+    return hansjackTruncateText($base, 80);
+}
+
+function applyImageAltFallbackToHtml(string $html, string $defaultAlt = ''): string
+{
+    if ($html === '' || strpos($html, '<img') === false) {
+        return $html;
+    }
+
+    $defaultAlt = trim($defaultAlt);
+    if ($defaultAlt === '') {
+        $defaultAlt = '插图';
+    }
+
+    $pattern = '/<img\b[^>]*>/iu';
+    $result = preg_replace_callback($pattern, static function (array $matches) use ($defaultAlt): string {
+        $tag = (string) ($matches[0] ?? '');
+        if ($tag === '') {
+            return $tag;
+        }
+
+        $hasAlt = preg_match('/\balt\s*=\s*(["\'])(.*?)\1/isu', $tag, $altMatch) === 1;
+        if ($hasAlt) {
+            $altValue = trim(html_entity_decode((string) ($altMatch[2] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            if ($altValue !== '') {
+                return $tag;
+            }
+        }
+
+        $src = '';
+        if (preg_match('/\bsrc\s*=\s*(["\'])(.*?)\1/isu', $tag, $srcMatch)) {
+            $src = trim(html_entity_decode((string) ($srcMatch[2] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        }
+
+        $altText = buildImageAltFromSrc($src, $defaultAlt);
+        if ($altText === '') {
+            $altText = $defaultAlt;
+        }
+
+        return setHtmlTagAttr($tag, 'alt', $altText);
     }, $html);
 
     return is_string($result) ? $result : $html;
@@ -7205,6 +7537,16 @@ function renderArchiveContent($archive): string
 
     $html = (string) ob_get_clean();
     $html = applyImageSizeSyntaxToHtml($html);
+    $archiveImageAlt = _t('文章配图');
+    try {
+        $archiveTitle = trim((string) ($archive->title ?? ''));
+    } catch (\Throwable $e) {
+        $archiveTitle = '';
+    }
+    if ($archiveTitle !== '') {
+        $archiveImageAlt = $archiveTitle . '配图';
+    }
+    $html = applyImageAltFallbackToHtml($html, $archiveImageAlt);
     $html = applyImagePerformanceAttrsToHtml($html, true);
     $html = applyTaskListSyntaxToHtml($html);
     $html = applyInlineSyntaxToHtml($html);
@@ -7274,6 +7616,16 @@ function renderCommentContent($comments): string
     }
 
     $html = applyImageSizeSyntaxToHtml($html);
+    $commentImageAlt = _t('评论配图');
+    try {
+        $commentAuthor = trim((string) ($comments->author ?? ''));
+    } catch (\Throwable $e) {
+        $commentAuthor = '';
+    }
+    if ($commentAuthor !== '') {
+        $commentImageAlt = $commentAuthor . '的配图';
+    }
+    $html = applyImageAltFallbackToHtml($html, $commentImageAlt);
     $html = applyImagePerformanceAttrsToHtml($html, false);
     $html = applyTaskListSyntaxToHtml($html);
     $html = applyInlineSyntaxToHtml($html);
@@ -7871,6 +8223,14 @@ function threadedComments($comments, $singleCommentOptions): void
         }
     }
 
+    $avatarAuthor = '';
+    try {
+        $avatarAuthor = trim((string) ($comments->author ?? ''));
+    } catch (\Throwable $e) {
+        $avatarAuthor = '';
+    }
+    $avatarAlt = $avatarAuthor !== '' ? ($avatarAuthor . '的头像') : _t('评论者头像');
+
     $memoryReactionEnabled = ($commentCoid > 0 && memoryReactionIsMemoryComment($commentCoid));
     $memoryReactionEmojis = $memoryReactionEnabled ? memoryReactionAllowedEmojis() : [];
     ?>
@@ -7890,7 +8250,7 @@ function threadedComments($comments, $singleCommentOptions): void
                     class="avatar"
                     src="<?php echo escape($avatarUrl); ?>"
                     <?php if ($avatarSrcset !== ''): ?>srcset="<?php echo escape($avatarSrcset); ?>"<?php endif; ?>
-                    alt=""
+                    alt="<?php echo escape($avatarAlt); ?>"
                     width="<?php echo (int) $avatarSize; ?>"
                     height="<?php echo (int) $avatarSize; ?>"
                     loading="lazy"

@@ -153,6 +153,10 @@ if (!function_exists('aboutTimelineRows')) {
 }
 
 $timelineRows = aboutTimelineRows($this);
+$pageHeading = trim((string) ($this->title ?? ''));
+if ($pageHeading === '') {
+    $pageHeading = _t('关于');
+}
 $this->need('header.php');
 ?>
 
@@ -160,6 +164,7 @@ $this->need('header.php');
     <section class="about" aria-label="<?php _e('关于'); ?>">
         <div class="about-layout">
             <article class="about-article">
+                <h1 class="section-title"><?php echo escape($pageHeading); ?></h1>
                 <div class="article-content about-content">
                     <?php echoArchiveContent($this); ?>
                 </div>

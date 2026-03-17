@@ -150,6 +150,11 @@ $cvAddress = cvField($this, 'address', 200);
 $cvEducation = cvFirstField($this, ['education', 'degree'], 200);
 $cvBlog = cvFirstField($this, ['blog', 'blog_url', 'blogUrl'], 300);
 $cvBlogHref = cvSafeUrl($cvBlog);
+$cvHeading = $cvName !== '' ? $cvName : trim((string) ($this->title ?? ''));
+if ($cvHeading === '') {
+    $cvHeading = _t('简历');
+}
+$cvAvatarAlt = $cvHeading . _t('头像');
 
 $metaRows = [
     ['label' => '邮箱', 'value' => $cvEmail, 'type' => 'email'],
@@ -171,17 +176,15 @@ $metaRows = [
             <div class="cv-avatar" aria-label="<?php _e('头像'); ?>">
                 <?php if ($avatarLinkHref !== ''): ?>
                     <a href="<?php echo escape($avatarLinkHref); ?>" target="_blank" rel="noreferrer">
-                        <img src="<?php echo escape($avatarUrl); ?>" alt="" width="112" height="112" loading="eager" decoding="async" fetchpriority="high">
+                        <img src="<?php echo escape($avatarUrl); ?>" alt="<?php echo escape($cvAvatarAlt); ?>" width="112" height="112" loading="eager" decoding="async" fetchpriority="high">
                     </a>
                 <?php else: ?>
-                    <img src="<?php echo escape($avatarUrl); ?>" alt="" width="112" height="112" loading="eager" decoding="async" fetchpriority="high">
+                    <img src="<?php echo escape($avatarUrl); ?>" alt="<?php echo escape($cvAvatarAlt); ?>" width="112" height="112" loading="eager" decoding="async" fetchpriority="high">
                 <?php endif; ?>
             </div>
 
             <div class="cv-info">
-                <?php if ($cvName !== ''): ?>
-                    <h1 class="cv-name"><?php echo escape($cvName); ?></h1>
-                <?php endif; ?>
+                <h1 class="cv-name"><?php echo escape($cvHeading); ?></h1>
 
                 <dl class="cv-meta">
                     <?php foreach ($metaRows as $row): ?>
