@@ -14,7 +14,7 @@
     --day-text: var(--day-black);
     --night-text: var(--night-white);
     --desktop-width: 86%;
-    --font-main: "Noto Serif SC VF Core", "Noto Serif SC VF Fallback", "Noto Serif SC XL Core", "Noto Serif SC XL Fallback", "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+    --font-main: "Noto Serif SC VF Core", "Noto Serif SC XL Core", "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
     --font-main-weight: 450;
     --font-ui: var(--font-main);
     --font-brand: var(--font-main);
@@ -10204,3 +10204,4 @@ html.theme-dark .comments .comment-author-badge {
     color: var(--night-white);
     opacity: 1;
 }
+
