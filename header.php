@@ -3,6 +3,8 @@
 } ?>
 <?php
 $themeConfig = buildThemeConfig($this->options);
+$fontChoice = themeFontChoice($this->options);
+$useMapleMonoRegular = $fontChoice === 'maple_mono_cn_regular';
 
 // Read persisted theme choice early (cookie), so the initial HTML can render without a light flash in dark mode.
 $themeCookie = '';
@@ -59,6 +61,7 @@ try {
 $themeStyleHref = assetUrlSmart($this->options, 'style.css');
 $katexCssHref = assetUrl($this->options, 'assets/vendor/katex/katex.min.css');
 $playwriteMxCssHref = assetUrl($this->options, 'assets/fonts/PlaywriteMX/playwrite-mx.css');
+$mapleMonoRegularCssHref = assetUrl($this->options, 'assets/fonts/MapleMonoNormal-CN-Regular/result.css');
 
 $customCss = trim((string) ($this->options->customCss ?? ''));
 if ($customCss !== '') {
@@ -229,7 +232,32 @@ $seoDescription = hansjackArchiveSeoDescription($this, 180);
         <link rel="preload" as="style" href="<?php echo escape($playwriteMxCssHref); ?>" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="<?php echo escape($playwriteMxCssHref); ?>"></noscript>
     <?php endif; ?>
+    <?php if ($useMapleMonoRegular): ?>
+        <link rel="preload" as="style" href="<?php echo escape($mapleMonoRegularCssHref); ?>" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="<?php echo escape($mapleMonoRegularCssHref); ?>"></noscript>
+    <?php endif; ?>
     <link rel="stylesheet" href="<?php echo escape($themeStyleHref); ?>">
+    <?php if ($useMapleMonoRegular): ?>
+    <style id="theme-font-style">
+        :root {
+            --font-main: "Maple Mono Normal CN", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+            --font-main-weight: 400;
+            --font-ui: var(--font-main);
+            --font-brand: var(--font-main);
+            --font-code: "Maple Mono Normal CN", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+    </style>
+    <?php else: ?>
+    <style id="theme-font-style">
+        :root {
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+            --font-main-weight: 400;
+            --font-ui: var(--font-main);
+            --font-brand: var(--font-main);
+            --font-code: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+        }
+    </style>
+    <?php endif; ?>
     <?php $this->header(); ?>
     <?php if ($customCss !== ''): ?>
     <style id="custom-css">

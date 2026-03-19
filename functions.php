@@ -65,6 +65,18 @@ function themeConfig($form)
     );
     $form->addInput($landingWelcomeText);
 
+    $fontChoice = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'fontChoice',
+        [
+            'maple_mono_cn_regular' => _t('MapleMonoNormal-CN-Regular'),
+            'system' => _t('系统默认'),
+        ],
+        'maple_mono_cn_regular',
+        _t('选择字体'),
+        _t('控制主题主要文字字体；选择 Maple 时将使用分包后的 MapleMonoNormal-CN-Regular/result.css。')
+    );
+    $form->addInput($fontChoice);
+
     $githubOauthEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
         'githubOauthEnabled',
         [
@@ -4074,6 +4086,16 @@ function landingHitokotoEnabled(Options $options): bool
 {
     $raw = strtolower(trim((string) ($options->landingHitokotoEnabled ?? '1')));
     return in_array($raw, ['1', 'on', 'true', 'yes'], true);
+}
+
+function themeFontChoice(Options $options): string
+{
+    $raw = trim((string) ($options->fontChoice ?? 'maple_mono_cn_regular'));
+    $allowed = ['maple_mono_cn_regular', 'system'];
+    if (!in_array($raw, $allowed, true)) {
+        return 'maple_mono_cn_regular';
+    }
+    return $raw;
 }
 
 function githubCurrentAdminUid(&$uid = 0): bool
