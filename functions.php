@@ -77,6 +77,18 @@ function themeConfig($form)
     );
     $form->addInput($serifFontEnabled);
 
+    $disableFontLoading = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'disableFontLoading',
+        [
+            '0' => _t('关闭'),
+            '1' => _t('开启'),
+        ],
+        '0',
+        _t('关闭字体加载'),
+        _t('开启后尽量不加载主题内置字体，改为使用用户系统字体；仅保留首页英文欢迎词（.landing-welcome.is-english）所需字体。')
+    );
+    $form->addInput($disableFontLoading);
+
     $subsetFontEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
         'subsetFontEnabled',
         [
@@ -4103,6 +4115,12 @@ function landingHitokotoEnabled(Options $options): bool
 function serifFontEnabled(Options $options): bool
 {
     $raw = strtolower(trim((string) ($options->serifFontEnabled ?? '1')));
+    return in_array($raw, ['1', 'on', 'true', 'yes'], true);
+}
+
+function disableFontLoading(Options $options): bool
+{
+    $raw = strtolower(trim((string) ($options->disableFontLoading ?? '0')));
     return in_array($raw, ['1', 'on', 'true', 'yes'], true);
 }
 

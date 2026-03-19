@@ -4,6 +4,10 @@
 <?php
 $themeConfig = buildThemeConfig($this->options);
 $serifFontEnabled = serifFontEnabled($this->options);
+$fontLoadingDisabled = disableFontLoading($this->options);
+if ($fontLoadingDisabled) {
+    $serifFontEnabled = false;
+}
 
 // Read persisted theme choice early (cookie), so the initial HTML can render without a light flash in dark mode.
 $themeCookie = '';
@@ -51,7 +55,17 @@ if ($serifFontEnabled) {
 
 $needsLandingWelcomeFont = false;
 try {
-    $needsLandingWelcomeFont = $this->is('index');
+    if ($this->is('index')) {
+        $welcomeText = trim((string) ($themeConfig['welcomeText'] ?? ''));
+        if ($welcomeText === '') {
+            $brandName = trim((string) ($themeConfig['brandName'] ?? ''));
+            $welcomeText = trim('欢迎来到 ' . $brandName);
+        }
+
+        $hasLatin = preg_match('/[A-Za-z]/u', $welcomeText) === 1;
+        $hasCjk = preg_match('/[\x{3400}-\x{9FFF}\x{F900}-\x{FAFF}]/u', $welcomeText) === 1;
+        $needsLandingWelcomeFont = $hasLatin && !$hasCjk;
+    }
 } catch (\Throwable $e) {
     $needsLandingWelcomeFont = false;
 }
@@ -236,7 +250,17 @@ $seoDescription = hansjackArchiveSeoDescription($this, 180);
         <noscript><link rel="stylesheet" href="<?php echo escape($playwriteMxCssHref); ?>"></noscript>
     <?php endif; ?>
     <link rel="stylesheet" href="<?php echo escape($themeStyleHref); ?>">
-    <?php if (!$serifFontEnabled): ?>
+    <?php if ($fontLoadingDisabled): ?>
+    <style id="font-system-style">
+        :root {
+            --font-main: ui-serif, "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", serif;
+            --font-main-weight: 400;
+            --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+            --font-brand: var(--font-ui);
+            --font-code: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+    </style>
+    <?php elseif (!$serifFontEnabled): ?>
     <style id="font-fallback-style">
         :root {
             --font-main: unset;
