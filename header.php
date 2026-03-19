@@ -3,11 +3,6 @@
 } ?>
 <?php
 $themeConfig = buildThemeConfig($this->options);
-$serifFontEnabled = serifFontEnabled($this->options);
-$fontLoadingDisabled = disableFontLoading($this->options);
-if ($fontLoadingDisabled) {
-    $serifFontEnabled = false;
-}
 
 // Read persisted theme choice early (cookie), so the initial HTML can render without a light flash in dark mode.
 $themeCookie = '';
@@ -44,15 +39,6 @@ if ($needsContentEnhance) {
     $needsKatexAssets = false;
 }
 
-$needsSerifFontAssets = false;
-if ($serifFontEnabled) {
-    try {
-        $needsSerifFontAssets = $this->is('index') || $this->is('post') || $this->is('page');
-    } catch (\Throwable $e) {
-        $needsSerifFontAssets = false;
-    }
-}
-
 $needsLandingWelcomeFont = false;
 try {
     if ($this->is('index')) {
@@ -71,8 +57,6 @@ try {
 }
 
 $themeStyleHref = assetUrlSmart($this->options, 'style.css');
-$serifFontCssAsset = 'assets/fonts/NotoSerifSC-Variable/subset-800/subset-font.css';
-$serifFontCssHref = assetUrl($this->options, $serifFontCssAsset);
 $katexCssHref = assetUrl($this->options, 'assets/vendor/katex/katex.min.css');
 $playwriteMxCssHref = assetUrl($this->options, 'assets/fonts/PlaywriteMX/playwrite-mx.css');
 
@@ -241,33 +225,11 @@ $seoDescription = hansjackArchiveSeoDescription($this, 180);
     <?php if ($needsKatexAssets): ?>
         <link rel="stylesheet" href="<?php echo escape($katexCssHref); ?>">
     <?php endif; ?>
-    <?php if ($needsSerifFontAssets): ?>
-        <link rel="preload" as="style" href="<?php echo escape($serifFontCssHref); ?>" onload="this.onload=null;this.rel='stylesheet'">
-        <noscript><link rel="stylesheet" href="<?php echo escape($serifFontCssHref); ?>"></noscript>
-    <?php endif; ?>
     <?php if ($needsLandingWelcomeFont): ?>
         <link rel="preload" as="style" href="<?php echo escape($playwriteMxCssHref); ?>" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="<?php echo escape($playwriteMxCssHref); ?>"></noscript>
     <?php endif; ?>
     <link rel="stylesheet" href="<?php echo escape($themeStyleHref); ?>">
-    <?php if ($fontLoadingDisabled): ?>
-    <style id="font-system-style">
-        :root {
-            --font-main: ui-serif, "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", serif;
-            --font-main-weight: 400;
-            --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
-            --font-brand: var(--font-ui);
-            --font-code: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        }
-    </style>
-    <?php elseif (!$serifFontEnabled): ?>
-    <style id="font-fallback-style">
-        :root {
-            --font-main: unset;
-            --font-ui: unset;
-        }
-    </style>
-    <?php endif; ?>
     <?php $this->header(); ?>
     <?php if ($customCss !== ''): ?>
     <style id="custom-css">

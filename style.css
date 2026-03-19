@@ -14,11 +14,11 @@
     --day-text: var(--day-black);
     --night-text: var(--night-white);
     --desktop-width: 86%;
-    --font-main: "Noto Serif SC VF Core", "Noto Serif SC XL Core", "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
-    --font-main-weight: 450;
-    --font-ui: var(--font-main);
-    --font-brand: var(--font-main);
-    --font-code: "HansJack Code Consolas", "Consolas", "Monaco", "Courier New", var(--font-main), monospace;
+    --font-main: inherit;
+    --font-main-weight: 400;
+    --font-ui: inherit;
+    --font-brand: inherit;
+    --font-code: monospace;
 
     --surface-day: rgba(255, 255, 253, 0.82);
     --surface-night: rgba(24, 24, 22, 0.82);
@@ -47,83 +47,6 @@
     --dropdown-min-width: 6em;
     --fab-size: 36px;
     --fab-ring: 3px;
-}
-
-/* Self-host Consolas for code blocks; Han ideographs still fall back to theme CJK serif. */
-@font-face {
-    font-family: "HansJack Code Consolas";
-    src: url("assets/fonts/Consolas/subset/consola-subset.woff2") format("woff2");
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    unicode-range:
-        U+0000-00FF,
-        U+2000-206F,
-        U+3000-303F,
-        U+FF01,
-        U+FF08-FF09,
-        U+FF0C,
-        U+FF1A-FF1B,
-        U+FF1F,
-        U+FF5E,
-        U+FFE5;
-}
-
-@font-face {
-    font-family: "HansJack Code Consolas";
-    src: url("assets/fonts/Consolas/subset/consolab-subset.woff2") format("woff2");
-    font-style: normal;
-    font-weight: 700;
-    font-display: swap;
-    unicode-range:
-        U+0000-00FF,
-        U+2000-206F,
-        U+3000-303F,
-        U+FF01,
-        U+FF08-FF09,
-        U+FF0C,
-        U+FF1A-FF1B,
-        U+FF1F,
-        U+FF5E,
-        U+FFE5;
-}
-
-@font-face {
-    font-family: "HansJack Code Consolas";
-    src: url("assets/fonts/Consolas/subset/consolai-subset.woff2") format("woff2");
-    font-style: italic;
-    font-weight: 400;
-    font-display: swap;
-    unicode-range:
-        U+0000-00FF,
-        U+2000-206F,
-        U+3000-303F,
-        U+FF01,
-        U+FF08-FF09,
-        U+FF0C,
-        U+FF1A-FF1B,
-        U+FF1F,
-        U+FF5E,
-        U+FFE5;
-}
-
-@font-face {
-    font-family: "HansJack Code Consolas";
-    src: url("assets/fonts/Consolas/subset/consolaz-subset.woff2") format("woff2");
-    font-style: italic;
-    font-weight: 700;
-    font-display: swap;
-    unicode-range:
-        U+0000-00FF,
-        U+2000-206F,
-        U+3000-303F,
-        U+FF01,
-        U+FF08-FF09,
-        U+FF0C,
-        U+FF1A-FF1B,
-        U+FF1F,
-        U+FF5E,
-        U+FFE5;
 }
 
 * {
@@ -1294,7 +1217,6 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     margin: 0;
     margin-right: auto;
     max-width: min(36ch, 100%);
-    font-family: "LXGW WenKai", "Ma Shan Zheng", "HanziPen SC", "STKaiti", "KaiTi", cursive;
     font-weight: 400;
     font-size: clamp(1.25rem, 2.3vw, 1.9rem);
     line-height: 1.75;
@@ -10204,4 +10126,3 @@ html.theme-dark .comments .comment-author-badge {
     color: var(--night-white);
     opacity: 1;
 }
-

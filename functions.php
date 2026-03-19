@@ -65,42 +65,6 @@ function themeConfig($form)
     );
     $form->addInput($landingWelcomeText);
 
-    $serifFontEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
-        'serifFontEnabled',
-        [
-            '1' => _t('开启'),
-            '0' => _t('关闭'),
-        ],
-        '1',
-        _t('内置字体文件'),
-        _t('开启时在文章和独立页面按需加载内置字体文件；关闭后不加载字体文件并改用浏览器默认字体。')
-    );
-    $form->addInput($serifFontEnabled);
-
-    $disableFontLoading = new \Typecho\Widget\Helper\Form\Element\Radio(
-        'disableFontLoading',
-        [
-            '0' => _t('关闭'),
-            '1' => _t('开启'),
-        ],
-        '0',
-        _t('关闭字体加载'),
-        _t('开启后尽量不加载主题内置字体，改为使用用户系统字体；仅保留首页英文欢迎词（.landing-welcome.is-english）所需字体。')
-    );
-    $form->addInput($disableFontLoading);
-
-    $subsetFontEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
-        'subsetFontEnabled',
-        [
-            '1' => _t('开启'),
-            '0' => _t('关闭'),
-        ],
-        '1',
-        _t('启用子集字体'),
-        _t('开启时优先加载子集字体（core/fallback）；关闭时回退为旧版 result.css 字体。')
-    );
-    $form->addInput($subsetFontEnabled);
-
     $githubOauthEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
         'githubOauthEnabled',
         [
@@ -4109,24 +4073,6 @@ function qqOauthEnabled(Options $options): bool
 function landingHitokotoEnabled(Options $options): bool
 {
     $raw = strtolower(trim((string) ($options->landingHitokotoEnabled ?? '1')));
-    return in_array($raw, ['1', 'on', 'true', 'yes'], true);
-}
-
-function serifFontEnabled(Options $options): bool
-{
-    $raw = strtolower(trim((string) ($options->serifFontEnabled ?? '1')));
-    return in_array($raw, ['1', 'on', 'true', 'yes'], true);
-}
-
-function disableFontLoading(Options $options): bool
-{
-    $raw = strtolower(trim((string) ($options->disableFontLoading ?? '0')));
-    return in_array($raw, ['1', 'on', 'true', 'yes'], true);
-}
-
-function subsetFontEnabled(Options $options): bool
-{
-    $raw = strtolower(trim((string) ($options->subsetFontEnabled ?? '1')));
     return in_array($raw, ['1', 'on', 'true', 'yes'], true);
 }
 
