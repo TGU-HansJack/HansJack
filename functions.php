@@ -5362,6 +5362,32 @@ function text(string $value, string $fallback = ''): string
     return $trimmed === '' ? $fallback : $trimmed;
 }
 
+/**
+ * 统一读取站点 SEO 基础信息。
+ * 注意：不要在普通函数里访问 $archive->options（受保护属性），会触发异常并回退默认值。
+ */
+function hansjackSiteSeoBase(): array
+{
+    $siteTitle = 'Typecho';
+    $siteDescription = '';
+
+    try {
+        $options = Options::alloc();
+        if ($options) {
+            $siteTitle = (string) ($options->title ?? $siteTitle);
+            $siteDescription = (string) ($options->description ?? '');
+        }
+    } catch (\Throwable $e) {
+        $siteTitle = 'Typecho';
+        $siteDescription = '';
+    }
+
+    return [
+        'title' => $siteTitle,
+        'description' => $siteDescription,
+    ];
+}
+
 function hansjackMbLength(string $value): int
 {
     if (function_exists('mb_strlen')) {
@@ -5459,24 +5485,13 @@ function hansjackArchiveRawTitle($archive): string
 
 function hansjackArchiveSeoTitle($archive): string
 {
-    $siteTitle = 'Typecho';
-    $siteDescription = '';
+    $baseSeo = hansjackSiteSeoBase();
+    $siteTitle = (string) ($baseSeo['title'] ?? 'Typecho');
+    $siteDescription = (string) ($baseSeo['description'] ?? '');
     $isIndex = false;
     $is404 = false;
 
     if (is_object($archive)) {
-        try {
-            $siteTitle = (string) ($archive->options->title ?? $siteTitle);
-        } catch (\Throwable $e) {
-            $siteTitle = 'Typecho';
-        }
-
-        try {
-            $siteDescription = (string) ($archive->options->description ?? '');
-        } catch (\Throwable $e) {
-            $siteDescription = '';
-        }
-
         if (method_exists($archive, 'is')) {
             try {
                 $isIndex = (bool) $archive->is('index');
@@ -5515,26 +5530,15 @@ function hansjackArchiveSeoDescription($archive, int $maxLen = 180): string
 {
     $maxLen = max(80, min(320, (int) $maxLen));
 
-    $siteTitle = 'Typecho';
-    $siteDescription = '';
+    $baseSeo = hansjackSiteSeoBase();
+    $siteTitle = (string) ($baseSeo['title'] ?? 'Typecho');
+    $siteDescription = (string) ($baseSeo['description'] ?? '');
     $isIndex = false;
     $isPost = false;
     $isPage = false;
     $is404 = false;
 
     if (is_object($archive)) {
-        try {
-            $siteTitle = (string) ($archive->options->title ?? $siteTitle);
-        } catch (\Throwable $e) {
-            $siteTitle = 'Typecho';
-        }
-
-        try {
-            $siteDescription = (string) ($archive->options->description ?? '');
-        } catch (\Throwable $e) {
-            $siteDescription = '';
-        }
-
         if (method_exists($archive, 'is')) {
             try {
                 $isIndex = (bool) $archive->is('index');
