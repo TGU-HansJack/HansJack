@@ -6663,6 +6663,14 @@ function buildInlineSyntaxFragment(\DOMDocument $dom, string $text): ?\DOMDocume
         }
 
         if ($nextType === 'ruby') {
+            // Preserve embed shortcodes like "{% comment ... %}" for the
+            // downstream embed parser, and avoid treating them as ruby syntax.
+            if (substr($text, $nextPos, 2) === '{%') {
+                $fragment->appendChild($dom->createTextNode('{'));
+                $pos = $nextPos + 1;
+                continue;
+            }
+
             $rubyClose = strpos($text, '}', $nextPos + 1);
             if ($rubyClose === false) {
                 $fragment->appendChild($dom->createTextNode((string) substr($text, $nextPos)));

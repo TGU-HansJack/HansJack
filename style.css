@@ -7076,6 +7076,7 @@ html.theme-dark .fab-reward-backdrop {
   
 .comment-content.is-private-hidden { 
     min-height: 1.1rem;
+    min-width: 6.5rem;
 } 
 
 .private-mask {
