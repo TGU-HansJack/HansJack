@@ -28,6 +28,12 @@ $landingHeatmapDays = 140;
 $landingHeatmapSeries = [];
 $landingHeatmapColumns = 20;
 $landingLatestContent = null;
+$landingLetters = [];
+$landingMemories = [];
+$landingSeasonalTimeline = [];
+$landingSeasonalTimelineMobile = [];
+$landingSeasonalTotalCount = 0;
+$landingMemosPageUrl = '';
 $landingHitokotoEnabled = true;
 $landingPresenceEnabled = false;
 $landingPresenceEndpoint = '';
@@ -307,6 +313,403 @@ if ($this->is('index')) {
     if ($landingHeatmapColumns < 1) {
         $landingHeatmapColumns = 1;
     }
+
+    $landingLettersLimit = 5;
+    $landingMemoriesLimit = 5;
+    $landingCommentsPageSize = 180;
+    $landingMemosPageCid = 0;
+
+    try {
+        $this->widget('Widget_Contents_Page_List@landing_pages')->to($landingPages);
+        if ($landingPages && $landingPages->have()) {
+            while ($landingPages->next()) {
+                $landingPageSlug = trim((string) ($landingPages->slug ?? ''));
+                $landingPageSlugLower = function_exists('mb_strtolower')
+                    ? mb_strtolower($landingPageSlug, 'UTF-8')
+                    : strtolower($landingPageSlug);
+                if ($landingPageSlugLower !== 'memos') {
+                    continue;
+                }
+
+                $landingMemosPageCid = (int) ($landingPages->cid ?? 0);
+                $landingMemosPageUrl = trim((string) ($landingPages->permalink ?? ''));
+                break;
+            }
+        }
+    } catch (\Throwable $e) {
+        $landingMemosPageCid = 0;
+        $landingMemosPageUrl = '';
+    }
+
+    $landingMemoryDateLabel = static function (int $timestamp): string {
+        if ($timestamp <= 0) {
+            return '';
+        }
+
+        $weekdayMap = ['日', '一', '二', '三', '四', '五', '六'];
+        $weekday = $weekdayMap[(int) date('w', $timestamp)] ?? '';
+        $base = date('Y年n月j日', $timestamp);
+        if ($weekday === '') {
+            return $base;
+        }
+        return $base . '星期' . $weekday;
+    };
+
+    $landingStripCommentImages = static function (string $html): array {
+        $value = trim($html);
+        if ($value === '') {
+            return [
+                'html' => '',
+                'hasImage' => false,
+            ];
+        }
+
+        $hasImage = false;
+        if (
+            preg_match('/<img\b/i', $value) === 1
+            || preg_match('/<picture\b/i', $value) === 1
+            || preg_match('/!\[[^\]]*\]\([^)]+\)/u', $value) === 1
+        ) {
+            $hasImage = true;
+        }
+
+        $withoutFigures = preg_replace('/<figure\b[^>]*>.*?<\/figure>/isu', ' ', $value);
+        if ($withoutFigures !== null) {
+            $value = $withoutFigures;
+        }
+
+        $withoutPictures = preg_replace('/<picture\b[^>]*>.*?<\/picture>/isu', ' ', $value);
+        if ($withoutPictures !== null) {
+            $value = $withoutPictures;
+        }
+
+        $withoutImages = preg_replace('/<img\b[^>]*>/iu', ' ', $value);
+        if ($withoutImages !== null) {
+            $value = $withoutImages;
+        }
+
+        $withoutMarkdownImages = preg_replace('/!\[[^\]]*\]\([^)]+\)/u', ' ', $value);
+        if ($withoutMarkdownImages !== null) {
+            $value = $withoutMarkdownImages;
+        }
+
+        $withoutEmptyParagraphs = preg_replace('/<p>\s*(?:&nbsp;|\x{00A0}|\s|<br\s*\/?>)*<\/p>/iu', '', $value);
+        if ($withoutEmptyParagraphs !== null) {
+            $value = $withoutEmptyParagraphs;
+        }
+
+        $value = trim($value);
+        if ($hasImage) {
+            $hasText = trim(strip_tags($value)) !== '';
+            if (!$hasText) {
+                $value = '<p>（有图）</p>';
+            } elseif (preg_match('/<\/p>\s*$/iu', $value) === 1) {
+                $value = (string) preg_replace('/<\/p>\s*$/iu', '（有图）</p>', $value, 1);
+            } else {
+                $value .= '<p>（有图）</p>';
+            }
+        }
+
+        return [
+            'html' => $value,
+            'hasImage' => $hasImage,
+        ];
+    };
+
+    $landingRecentComments = null;
+    try {
+        $this->widget('Widget_Comments_Recent@landing_comments', 'pageSize=' . $landingCommentsPageSize, null, false)->to($landingRecentComments);
+    } catch (\Throwable $e) {
+        $landingRecentComments = null;
+    }
+
+    if ($landingRecentComments && $landingRecentComments->have()) {
+        $landingMemosBaseUrl = '';
+        if ($landingMemosPageUrl !== '') {
+            $landingMemosBaseUrl = (string) preg_replace('/[#?].*$/', '', $landingMemosPageUrl);
+            $landingMemosBaseUrl = rtrim($landingMemosBaseUrl, '/');
+        }
+
+        while ($landingRecentComments->next()) {
+            $commentTextRaw = (string) ($landingRecentComments->text ?? '');
+            $commentIsPrivate = function_exists('isPrivateCommentText')
+                ? isPrivateCommentText($commentTextRaw)
+                : false;
+            if ($commentIsPrivate) {
+                continue;
+            }
+
+            $commentPlainText = trim(strip_tags($commentTextRaw));
+            $commentPlainText = (string) preg_replace('/\s+/u', ' ', $commentPlainText);
+
+            $commentContentHtml = '';
+            if (function_exists('renderCommentContent')) {
+                $commentContentHtml = trim((string) renderCommentContent($landingRecentComments));
+            }
+
+            if ($commentContentHtml === '' && $commentPlainText !== '') {
+                $commentContentHtml = '<p>' . nl2br(escape($commentPlainText)) . '</p>';
+            }
+
+            $commentContentPrepared = $landingStripCommentImages($commentContentHtml);
+            $commentContentHtml = trim((string) ($commentContentPrepared['html'] ?? ''));
+
+            if ($commentContentHtml === '') {
+                continue;
+            }
+
+            $commentCreated = (int) ($landingRecentComments->created ?? 0);
+            $commentAuthor = trim((string) ($landingRecentComments->author ?? ''));
+            if ($commentAuthor === '') {
+                $commentAuthor = _t('匿名');
+            }
+            $commentAuthorUrl = trim((string) ($landingRecentComments->url ?? ''));
+            $commentMail = strtolower(trim((string) ($landingRecentComments->mail ?? '')));
+            $commentAvatarUrl = 'https://cdn.sep.cc/avatar/' . md5($commentMail) . '?s=64&d=mp&r=g';
+            $commentCoid = (int) ($landingRecentComments->coid ?? 0);
+            $commentTimeWord = trim((string) ($landingRecentComments->dateWord ?? ''));
+            $commentTargetTitle = trim((string) ($landingRecentComments->title ?? ''));
+            if ($commentTargetTitle === '') {
+                $commentTargetTitle = _t('无标题');
+            }
+            $commentTargetUrl = trim((string) ($landingRecentComments->permalink ?? ''));
+
+            if (count($landingLetters) < $landingLettersLimit) {
+                $landingLetters[] = [
+                    'id' => $commentCoid,
+                    'contentHtml' => $commentContentHtml,
+                    'author' => $commentAuthor,
+                    'authorUrl' => $commentAuthorUrl,
+                    'avatar' => $commentAvatarUrl,
+                    'dateIso' => $commentCreated > 0 ? date('c', $commentCreated) : '',
+                    'dateTime' => $commentCreated > 0 ? date('Y/m/d H:i:s', $commentCreated) : '',
+                    'timeWord' => $commentTimeWord,
+                    'postTitle' => $commentTargetTitle,
+                    'postUrl' => $commentTargetUrl,
+                ];
+            }
+
+            $isMemoryComment = false;
+            $commentCid = (int) ($landingRecentComments->cid ?? 0);
+            if ($landingMemosPageCid > 0 && $commentCid > 0) {
+                $isMemoryComment = ($landingMemosPageCid === $commentCid);
+            } elseif ($landingMemosBaseUrl !== '' && $commentTargetUrl !== '') {
+                $commentBaseUrl = (string) preg_replace('/[#?].*$/', '', $commentTargetUrl);
+                $commentBaseUrl = rtrim($commentBaseUrl, '/');
+                $isMemoryComment = (
+                    $commentBaseUrl === $landingMemosBaseUrl
+                    || strpos($commentBaseUrl, $landingMemosBaseUrl . '/') === 0
+                );
+            }
+
+            if ($isMemoryComment && count($landingMemories) < $landingMemoriesLimit) {
+                $landingMemories[] = [
+                    'id' => $commentCoid,
+                    'contentHtml' => $commentContentHtml,
+                    'author' => $commentAuthor,
+                    'authorUrl' => $commentAuthorUrl,
+                    'avatar' => $commentAvatarUrl,
+                    'dateIso' => $commentCreated > 0 ? date('c', $commentCreated) : '',
+                    'dateTime' => $commentCreated > 0 ? date('Y/m/d H:i:s', $commentCreated) : '',
+                    'dateLabel' => $landingMemoryDateLabel($commentCreated),
+                    'timeWord' => $commentTimeWord,
+                    'postTitle' => $commentTargetTitle,
+                    'postUrl' => $commentTargetUrl,
+                ];
+            }
+
+            if (count($landingLetters) >= $landingLettersLimit && count($landingMemories) >= $landingMemoriesLimit) {
+                break;
+            }
+        }
+    }
+
+    $landingSeasonalFetchLimit = 300;
+    $landingSeasonalPerBucketLimit = 10;
+    $landingTimelineCandidates = [];
+    $landingTimelineSeen = [];
+
+    $landingAppendTimelineItems = static function ($archiveWidget) use (&$landingTimelineCandidates, &$landingTimelineSeen): void {
+        if (!$archiveWidget || !$archiveWidget->have()) {
+            return;
+        }
+
+        while ($archiveWidget->next()) {
+            $itemUrl = trim((string) ($archiveWidget->permalink ?? ''));
+            if ($itemUrl === '') {
+                continue;
+            }
+            $itemUrlKey = strtolower($itemUrl);
+            if (isset($landingTimelineSeen[$itemUrlKey])) {
+                continue;
+            }
+
+            $itemCreated = (int) ($archiveWidget->created ?? 0);
+            if ($itemCreated <= 0) {
+                continue;
+            }
+
+            $itemTitle = trim((string) ($archiveWidget->title ?? ''));
+            if ($itemTitle === '') {
+                $itemTitle = _t('无标题');
+            }
+
+            $landingTimelineSeen[$itemUrlKey] = true;
+            $landingTimelineCandidates[] = [
+                'created' => $itemCreated,
+                'title' => $itemTitle,
+                'url' => $itemUrl,
+            ];
+        }
+    };
+
+    $landingTimelineBlog = null;
+    try {
+        $this->widget(
+            'Widget_Archive@landing_timeline_blog',
+            'pageSize=' . $landingSeasonalFetchLimit . '&type=category',
+            'slug=' . urlencode($blogSlug),
+            false
+        )->to($landingTimelineBlog);
+    } catch (\Throwable $e) {
+        $landingTimelineBlog = null;
+    }
+    $landingAppendTimelineItems($landingTimelineBlog);
+
+    $landingTimelineMemo = null;
+    try {
+        $this->widget(
+            'Widget_Archive@landing_timeline_memo',
+            'pageSize=' . $landingSeasonalFetchLimit . '&type=category',
+            'slug=' . urlencode($memoSlug),
+            false
+        )->to($landingTimelineMemo);
+    } catch (\Throwable $e) {
+        $landingTimelineMemo = null;
+    }
+    $landingAppendTimelineItems($landingTimelineMemo);
+
+    usort($landingTimelineCandidates, static function (array $a, array $b): int {
+        return ((int) ($b['created'] ?? 0)) <=> ((int) ($a['created'] ?? 0));
+    });
+
+    $landingSeasonNames = ['春', '夏', '秋', '冬'];
+    $landingMonthNames = [
+        1 => '一月',
+        2 => '二月',
+        3 => '三月',
+        4 => '四月',
+        5 => '五月',
+        6 => '六月',
+        7 => '七月',
+        8 => '八月',
+        9 => '九月',
+        10 => '十月',
+        11 => '十一月',
+        12 => '十二月',
+    ];
+
+    $landingReadSeasonMeta = static function (int $timestamp) use ($landingSeasonNames, $landingMonthNames): array {
+        if ($timestamp <= 0) {
+            return [
+                'order' => 0,
+                'idx' => 0,
+                'name' => $landingSeasonNames[0],
+                'monthLabel' => '',
+            ];
+        }
+
+        $year = (int) date('Y', $timestamp);
+        $month = (int) date('n', $timestamp);
+        $seasonIdx = 0;
+        $seasonYear = $year;
+
+        if ($month >= 3 && $month <= 5) {
+            $seasonIdx = 0;
+            $seasonYear = $year;
+        } elseif ($month >= 6 && $month <= 8) {
+            $seasonIdx = 1;
+            $seasonYear = $year;
+        } elseif ($month >= 9 && $month <= 11) {
+            $seasonIdx = 2;
+            $seasonYear = $year;
+        } else {
+            $seasonIdx = 3;
+            $seasonYear = ($month === 12) ? ($year + 1) : $year;
+        }
+
+        return [
+            'order' => ($seasonYear * 4) + $seasonIdx,
+            'idx' => $seasonIdx,
+            'name' => $landingSeasonNames[$seasonIdx] ?? $landingSeasonNames[0],
+            'monthLabel' => $landingMonthNames[$month] ?? ((string) $month . '月'),
+        ];
+    };
+
+    $landingCurrentSeasonMeta = $landingReadSeasonMeta(time());
+    $landingCurrentSeasonOrder = (int) ($landingCurrentSeasonMeta['order'] ?? 0);
+    $landingToneByDistance = [
+        0 => 'is-tone-10',
+        1 => 'is-tone-10',
+        2 => 'is-tone-8',
+        3 => 'is-tone-6',
+        4 => 'is-tone-5',
+    ];
+    $landingSeasonalTimelineByOrder = [];
+
+    for ($distance = 3; $distance >= 0; $distance--) {
+        $seasonOrder = $landingCurrentSeasonOrder - $distance;
+        $seasonIdx = $seasonOrder % 4;
+        if ($seasonIdx < 0) {
+            $seasonIdx += 4;
+        }
+        $seasonName = $landingSeasonNames[$seasonIdx] ?? $landingSeasonNames[0];
+        $isCurrentSeason = ($distance === 0);
+
+        $landingSeasonalTimelineByOrder[$seasonOrder] = [
+            'title' => $isCurrentSeason ? ($seasonName . ' · 今') : $seasonName,
+            'tone' => $landingToneByDistance[$distance] ?? 'is-tone-10',
+            'isCurrent' => $isCurrentSeason,
+            'items' => [],
+        ];
+    }
+
+    foreach ($landingTimelineCandidates as $timelineItem) {
+        $timelineCreated = (int) ($timelineItem['created'] ?? 0);
+        if ($timelineCreated <= 0) {
+            continue;
+        }
+
+        $timelineMeta = $landingReadSeasonMeta($timelineCreated);
+        $seasonOrder = (int) ($timelineMeta['order'] ?? 0);
+        if (!isset($landingSeasonalTimelineByOrder[$seasonOrder])) {
+            continue;
+        }
+
+        if (count($landingSeasonalTimelineByOrder[$seasonOrder]['items']) >= $landingSeasonalPerBucketLimit) {
+            continue;
+        }
+
+        $timelineTitle = trim((string) ($timelineItem['title'] ?? ''));
+        $timelineUrl = trim((string) ($timelineItem['url'] ?? ''));
+        if ($timelineTitle === '' || $timelineUrl === '') {
+            continue;
+        }
+
+        $landingSeasonalTimelineByOrder[$seasonOrder]['items'][] = [
+            'title' => $timelineTitle,
+            'month' => (string) ($timelineMeta['monthLabel'] ?? ''),
+            'url' => $timelineUrl,
+        ];
+    }
+
+    $landingSeasonalTimeline = array_values($landingSeasonalTimelineByOrder);
+    $landingSeasonalTimelineMobile = array_reverse($landingSeasonalTimeline);
+    $landingSeasonalTotalCount = 0;
+    foreach ($landingSeasonalTimeline as $seasonBlock) {
+        $seasonItems = is_array($seasonBlock['items'] ?? null) ? $seasonBlock['items'] : [];
+        $landingSeasonalTotalCount += count($seasonItems);
+    }
 }
 ?>
 
@@ -477,6 +880,205 @@ if ($this->is('index')) {
                 <button class="scroll-down" type="button" aria-label="<?php _e('向下滚动'); ?>" title="<?php _e('向下滚动'); ?>">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down-icon lucide-chevron-down" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                 </button>
+            </div>
+        </section>
+
+        <section class="landing-letter-memory" role="region" aria-label="<?php _e('来信与回忆'); ?>">
+            <div class="landing-letter-memory-top">
+                <div class="landing-letter-memory-col">
+                    <h2 class="landing-letter-memory-title"><?php _e('来信'); ?></h2>
+                    <div class="landing-letter-list">
+                    <?php if (!empty($landingLetters)): ?>
+                        <section class="comments landing-letter-comments-shell" aria-label="<?php _e('来信评论'); ?>">
+                            <ol class="comment-list">
+                                <?php foreach ($landingLetters as $letterItem): ?>
+                                    <?php
+                                    $letterId = (int) ($letterItem['id'] ?? 0);
+                                    $letterContentHtml = trim((string) ($letterItem['contentHtml'] ?? ''));
+                                    $letterAuthor = trim((string) ($letterItem['author'] ?? ''));
+                                    $letterAuthorUrl = trim((string) ($letterItem['authorUrl'] ?? ''));
+                                    $letterAvatar = trim((string) ($letterItem['avatar'] ?? ''));
+                                    $letterDateIso = trim((string) ($letterItem['dateIso'] ?? ''));
+                                    $letterDateTime = trim((string) ($letterItem['dateTime'] ?? ''));
+                                    $letterTimeWord = trim((string) ($letterItem['timeWord'] ?? ''));
+                                    if ($letterDateTime === '' && $letterTimeWord !== '') {
+                                        $letterDateTime = $letterTimeWord;
+                                    }
+                                    $letterAvatarAlt = $letterAuthor !== '' ? ($letterAuthor . _t('的头像')) : _t('评论者头像');
+                                    $letterItemId = $letterId > 0 ? ('landing-letter-comment-' . $letterId) : '';
+                                    ?>
+                                    <li
+                                        <?php if ($letterItemId !== ''): ?>
+                                            id="<?php echo escape($letterItemId); ?>"
+                                        <?php endif; ?>
+                                        class="comment-body comment-parent is-avatar-line-hidden"
+                                        data-letter-item
+                                        style="--comment-avatar-size: 36px; --comment-avatar-line-height: 0px;">
+                                        <div class="comment-author" itemprop="creator" itemscope itemtype="http://schema.org/Person">
+                                            <span itemprop="image">
+                                                <?php if ($letterAvatar !== ''): ?>
+                                                    <img class="avatar" src="<?php echo escape($letterAvatar); ?>" alt="<?php echo escape($letterAvatarAlt); ?>" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+                                                <?php endif; ?>
+                                            </span>
+                                            <div class="comment-author-meta">
+                                                <cite class="fn" itemprop="name"><?php echo escape($letterAuthor !== '' ? $letterAuthor : _t('匿名')); ?></cite>
+                                                <?php if ($letterAuthorUrl !== ''): ?>
+                                                    <a
+                                                        class="comment-author-home"
+                                                        href="<?php echo escape($letterAuthorUrl); ?>"
+                                                        rel="external nofollow"
+                                                        aria-label="<?php _e('访问作者网站'); ?>"
+                                                        title="<?php _e('访问作者网站'); ?>">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-house-icon lucide-house" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                                                    </a>
+                                                <?php endif; ?>
+                                                <?php if ($letterDateTime !== ''): ?>
+                                                    <div class="comment-meta">
+                                                        <time itemprop="commentTime" datetime="<?php echo escape($letterDateIso); ?>">
+                                                            <?php echo escape($letterDateTime); ?>
+                                                        </time>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <div class="comment-content" itemprop="commentText">
+                                            <?php if ($letterContentHtml !== ''): ?>
+                                                <?php echo $letterContentHtml; ?>
+                                            <?php else: ?>
+                                                <p><?php _e('暂无内容'); ?></p>
+                                            <?php endif; ?>
+                                        </div>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ol>
+                        </section>
+                    <?php else: ?>
+                        <p class="landing-letter-empty"><?php _e('暂无来信'); ?></p>
+                    <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="landing-letter-memory-col">
+                    <h2 class="landing-letter-memory-title"><?php _e('回忆'); ?></h2>
+                    <div class="landing-memory-list">
+                    <?php if (!empty($landingMemories)): ?>
+                        <?php foreach ($landingMemories as $memoryItem): ?>
+                            <?php
+                            $memoryContentHtml = trim((string) ($memoryItem['contentHtml'] ?? ''));
+                            $memoryAuthor = trim((string) ($memoryItem['author'] ?? ''));
+                            $memoryTimeWord = trim((string) ($memoryItem['timeWord'] ?? ''));
+                            $memoryDateLabel = trim((string) ($memoryItem['dateLabel'] ?? ''));
+                            if ($memoryTimeWord === '' && $memoryDateLabel !== '') {
+                                $memoryTimeWord = $memoryDateLabel;
+                            }
+                            $memoryPostTitle = trim((string) ($memoryItem['postTitle'] ?? ''));
+                            $memoryPostUrl = trim((string) ($memoryItem['postUrl'] ?? ''));
+                            ?>
+                            <article class="landing-letter-card landing-memory-card">
+                                <div class="landing-memory-content comment-content" itemprop="commentText">
+                                    <?php if ($memoryContentHtml !== ''): ?>
+                                        <?php echo $memoryContentHtml; ?>
+                                    <?php else: ?>
+                                        <p><?php _e('暂无内容'); ?></p>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="landing-letter-meta">
+                                    <?php if ($memoryPostUrl !== '' && $memoryPostTitle !== ''): ?>
+                                        <a class="landing-letter-post" href="<?php echo escape($memoryPostUrl); ?>"><?php echo escape($memoryPostTitle); ?></a>
+                                    <?php elseif ($memoryPostTitle !== ''): ?>
+                                        <span class="landing-letter-post"><?php echo escape($memoryPostTitle); ?></span>
+                                    <?php endif; ?>
+                                    <span class="landing-letter-author">
+                                        — <?php echo escape($memoryAuthor !== '' ? $memoryAuthor : _t('匿名')); ?>
+                                        <?php if ($memoryTimeWord !== ''): ?> · <?php echo escape($memoryTimeWord); ?><?php endif; ?>
+                                    </span>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <p class="landing-memory-empty"><?php _e('回忆页还没有评论'); ?></p>
+                    <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="landing-seasonal" role="region" aria-label="<?php _e('笔耕不辍'); ?>">
+            <div class="landing-seasonal-main">
+                <h2 class="landing-letter-memory-title"><?php _e('笔耕不辍'); ?></h2>
+
+                <div class="tl-scroll-desktop" aria-label="<?php _e('年度分季归档'); ?>">
+                    <?php foreach ($landingSeasonalTimeline as $seasonIndex => $season): ?>
+                        <?php
+                        $seasonTitle = trim((string) ($season['title'] ?? ''));
+                        $seasonToneClass = trim((string) ($season['tone'] ?? 'is-tone-10'));
+                        $seasonIsCurrent = (bool) ($season['isCurrent'] ?? false);
+                        $seasonItems = is_array($season['items'] ?? null) ? $season['items'] : [];
+                        ?>
+                        <?php if ($seasonIndex > 0): ?>
+                            <div class="tl-scroll-divider" aria-hidden="true"></div>
+                        <?php endif; ?>
+                        <div class="tl-scroll-col <?php echo escape($seasonToneClass); ?>">
+                            <div class="tl-scroll-season<?php echo $seasonIsCurrent ? ' is-current' : ''; ?>">
+                                <div class="tl-scroll-season-title"><?php echo escape($seasonTitle); ?></div>
+                                <div class="tl-scroll-links">
+                                    <?php foreach ($seasonItems as $seasonItem): ?>
+                                        <?php
+                                        $seasonItemTitle = trim((string) ($seasonItem['title'] ?? ''));
+                                        $seasonItemMonth = trim((string) ($seasonItem['month'] ?? ''));
+                                        $seasonItemUrl = trim((string) ($seasonItem['url'] ?? ''));
+                                        if ($seasonItemTitle === '' || $seasonItemUrl === '') {
+                                            continue;
+                                        }
+                                        ?>
+                                        <a class="tl-scroll-link" href="<?php echo escape($seasonItemUrl); ?>">
+                                            <span class="tl-scroll-link-title"><?php echo escape($seasonItemTitle); ?></span>
+                                            <?php if ($seasonItemMonth !== ''): ?>
+                                                <span class="tl-scroll-link-month"><?php echo escape($seasonItemMonth); ?></span>
+                                            <?php endif; ?>
+                                        </a>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <div class="tl-scroll-mobile" aria-label="<?php _e('年度分季归档（移动端）'); ?>">
+                    <?php foreach ($landingSeasonalTimelineMobile as $season): ?>
+                        <?php
+                        $seasonTitle = trim((string) ($season['title'] ?? ''));
+                        $seasonToneClass = trim((string) ($season['tone'] ?? 'is-tone-10'));
+                        $seasonIsCurrent = (bool) ($season['isCurrent'] ?? false);
+                        $seasonItems = is_array($season['items'] ?? null) ? $season['items'] : [];
+                        ?>
+                        <div class="tl-scroll-mobile-col <?php echo escape($seasonToneClass); ?>">
+                            <div class="tl-scroll-season<?php echo $seasonIsCurrent ? ' is-current' : ''; ?>">
+                                <div class="tl-scroll-season-title"><?php echo escape($seasonTitle); ?></div>
+                                <div class="tl-scroll-links">
+                                    <?php foreach ($seasonItems as $seasonItem): ?>
+                                        <?php
+                                        $seasonItemTitle = trim((string) ($seasonItem['title'] ?? ''));
+                                        $seasonItemMonth = trim((string) ($seasonItem['month'] ?? ''));
+                                        $seasonItemUrl = trim((string) ($seasonItem['url'] ?? ''));
+                                        if ($seasonItemTitle === '' || $seasonItemUrl === '') {
+                                            continue;
+                                        }
+                                        ?>
+                                        <a class="tl-scroll-link" href="<?php echo escape($seasonItemUrl); ?>">
+                                            <span class="tl-scroll-link-title"><?php echo escape($seasonItemTitle); ?></span>
+                                            <?php if ($seasonItemMonth !== ''): ?>
+                                                <span class="tl-scroll-link-month"><?php echo escape($seasonItemMonth); ?></span>
+                                            <?php endif; ?>
+                                        </a>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <div class="tl-scroll-footer"><?php echo escape('本年 ' . (int) $landingSeasonalTotalCount . ' 篇'); ?></div>
             </div>
         </section>
 

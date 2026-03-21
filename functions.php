@@ -7239,6 +7239,189 @@ function applyInlineSyntaxToHtml(string $html): string
     return $output !== '' ? $output : $html;
 }
 
+function parseMarkdownAlertMarkerLine(string $text): ?array
+{
+    $raw = (string) $text;
+    if ($raw === '') {
+        return null;
+    }
+
+    if (preg_match('/^\s*\[!([A-Za-z]+)\](?:[ \t]+([^\r\n]+))?(?:\r?\n|$)/u', $raw, $match) !== 1) {
+        return null;
+    }
+
+    $type = strtolower(trim((string) ($match[1] ?? '')));
+    $labels = [
+        'note' => 'Note',
+        'tip' => 'Tip',
+        'important' => 'Important',
+        'warning' => 'Warning',
+        'caution' => 'Caution',
+    ];
+    if (!isset($labels[$type])) {
+        return null;
+    }
+
+    return [
+        'type' => $type,
+        'label' => $labels[$type],
+        'title' => trim((string) ($match[2] ?? '')),
+        'markerLength' => strlen((string) ($match[0] ?? '')),
+    ];
+}
+
+function isMeaningfulAlertNode(\DOMNode $node): bool
+{
+    if ($node instanceof \DOMText) {
+        return trim((string) $node->nodeValue) !== '';
+    }
+
+    if (!$node instanceof \DOMElement) {
+        return false;
+    }
+
+    $tag = strtolower((string) $node->tagName);
+    if ($tag === 'br') {
+        return false;
+    }
+
+    if (in_array($tag, ['img', 'picture', 'figure', 'video', 'audio', 'iframe', 'svg', 'pre', 'table', 'ul', 'ol'], true)) {
+        return true;
+    }
+
+    return trim((string) $node->textContent) !== '';
+}
+
+function applyMarkdownAlertSyntaxToHtml(string $html): string
+{
+    if ($html === '' || strpos($html, '[!') === false || !class_exists('DOMDocument')) {
+        return $html;
+    }
+
+    $dom = new \DOMDocument('1.0', 'UTF-8');
+    $flags = 0;
+    if (defined('LIBXML_HTML_NODEFDTD')) {
+        $flags |= LIBXML_HTML_NODEFDTD;
+    }
+    if (defined('LIBXML_HTML_NOIMPLIED')) {
+        $flags |= LIBXML_HTML_NOIMPLIED;
+    }
+    if (defined('LIBXML_NOERROR')) {
+        $flags |= LIBXML_NOERROR;
+    }
+    if (defined('LIBXML_NOWARNING')) {
+        $flags |= LIBXML_NOWARNING;
+    }
+
+    $wrapped = '<div id="markdown-alert-root">' . $html . '</div>';
+    $useErrors = libxml_use_internal_errors(true);
+    $loaded = $flags > 0
+        ? $dom->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped, $flags)
+        : $dom->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped);
+    libxml_clear_errors();
+    libxml_use_internal_errors($useErrors);
+
+    if (!$loaded) {
+        return $html;
+    }
+
+    $xpath = new \DOMXPath($dom);
+    $rootNodes = $xpath->query('//div[@id="markdown-alert-root"]');
+    if (!$rootNodes instanceof \DOMNodeList || $rootNodes->length === 0) {
+        return $html;
+    }
+
+    $root = $rootNodes->item(0);
+    if (!$root instanceof \DOMElement) {
+        return $html;
+    }
+
+    $quotes = $xpath->query('.//blockquote[not(contains(concat(" ", normalize-space(@class), " "), " markdown-alert "))]', $root);
+    if (!$quotes instanceof \DOMNodeList || $quotes->length === 0) {
+        return $html;
+    }
+
+    $targets = [];
+    foreach ($quotes as $quote) {
+        if ($quote instanceof \DOMElement) {
+            $targets[] = $quote;
+        }
+    }
+
+    foreach ($targets as $quote) {
+        $textNodes = $xpath->query('.//text()', $quote);
+        if (!$textNodes instanceof \DOMNodeList || $textNodes->length === 0) {
+            continue;
+        }
+
+        $markerNode = null;
+        $marker = null;
+        foreach ($textNodes as $textNode) {
+            if (!$textNode instanceof \DOMText) {
+                continue;
+            }
+            $value = (string) $textNode->nodeValue;
+            if (trim($value) === '') {
+                continue;
+            }
+            $parsed = parseMarkdownAlertMarkerLine($value);
+            if (is_array($parsed)) {
+                $markerNode = $textNode;
+                $marker = $parsed;
+            }
+            break;
+        }
+
+        if (!$markerNode instanceof \DOMText || !is_array($marker)) {
+            continue;
+        }
+
+        $markerLength = max(0, (int) ($marker['markerLength'] ?? 0));
+        if ($markerLength > 0) {
+            $nodeText = (string) $markerNode->nodeValue;
+            $markerNode->nodeValue = (string) substr($nodeText, $markerLength);
+        }
+
+        $alert = $dom->createElement('div');
+        $alert->setAttribute('class', 'markdown-alert markdown-alert-' . (string) ($marker['type'] ?? 'note'));
+
+        $title = $dom->createElement('p');
+        $title->setAttribute('class', 'markdown-alert-title');
+        $strong = $dom->createElement('strong');
+        $strong->appendChild($dom->createTextNode((string) (($marker['title'] ?? '') !== '' ? $marker['title'] : ($marker['label'] ?? 'Note'))));
+        $title->appendChild($strong);
+        $alert->appendChild($title);
+
+        $bodyCount = 0;
+        while ($quote->firstChild) {
+            $child = $quote->firstChild;
+            $quote->removeChild($child);
+            if (!isMeaningfulAlertNode($child)) {
+                continue;
+            }
+            $alert->appendChild($child);
+            $bodyCount++;
+        }
+
+        if ($bodyCount <= 0 || !$quote->parentNode) {
+            continue;
+        }
+
+        try {
+            $quote->parentNode->replaceChild($alert, $quote);
+        } catch (\Throwable $e) {
+            // Keep original when replacement fails.
+        }
+    }
+
+    $output = '';
+    foreach ($root->childNodes as $child) {
+        $output .= (string) $dom->saveHTML($child);
+    }
+
+    return $output !== '' ? $output : $html;
+}
+
 function containsEmbedSyntaxMarker(string $text): bool
 {
     return strpos($text, '{%') !== false && strpos($text, '%}') !== false;
@@ -8181,6 +8364,7 @@ function renderCommentContent($comments): string
     $html = applyImageAltFallbackToHtml($html, $commentImageAlt);
     $html = applyImagePerformanceAttrsToHtml($html, false);
     $html = applyTaskListSyntaxToHtml($html);
+    $html = applyMarkdownAlertSyntaxToHtml($html);
     $html = applyInlineSyntaxToHtml($html);
     return $html;
 }

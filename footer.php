@@ -214,18 +214,20 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
             <span class="fab-tip" aria-hidden="true"><?php _e('赞赏'); ?></span>
         </button>
     <?php endif; ?>
-    <button class="fab-btn fab-comment" type="button" aria-label="<?php _e('评论'); ?>">
-        <span class="fab-ring" aria-hidden="true">
-            <svg class="fab-ring-svg" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-                <circle class="fab-ring-bg" cx="20" cy="20" r="18"></circle>
-                <circle class="fab-ring-fg" cx="20" cy="20" r="18"></circle>
-            </svg>
-        </span>
-        <span class="fab-icon" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
-        </span>
-        <span class="fab-tip" aria-hidden="true"><?php _e('评论'); ?></span>
-    </button>
+    <?php if ($this->is('post') || $this->is('page')): ?>
+        <button class="fab-btn fab-comment" type="button" aria-label="<?php _e('评论'); ?>">
+            <span class="fab-ring" aria-hidden="true">
+                <svg class="fab-ring-svg" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+                    <circle class="fab-ring-bg" cx="20" cy="20" r="18"></circle>
+                    <circle class="fab-ring-fg" cx="20" cy="20" r="18"></circle>
+                </svg>
+            </span>
+            <span class="fab-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
+            </span>
+            <span class="fab-tip" aria-hidden="true"><?php _e('评论'); ?></span>
+        </button>
+    <?php endif; ?>
     <button class="fab-btn fab-toc" type="button" aria-label="<?php _e('目录'); ?>" aria-haspopup="true" aria-expanded="false">
         <span class="fab-ring" aria-hidden="true">
             <svg class="fab-ring-svg" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
@@ -345,7 +347,7 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
 
 <script src="<?php echo escape(assetUrlSmart($this->options, 'assets/js/footer-global-pre.js')); ?>"></script>
 
-<?php if ($this->is('post') || $this->is('page')): ?>
+<?php if ($this->is('post') || $this->is('page') || $this->is('index')): ?>
     <script>
         (function () {
             var contents = Array.prototype.slice.call(document.querySelectorAll(".article-content, .comment-content"));

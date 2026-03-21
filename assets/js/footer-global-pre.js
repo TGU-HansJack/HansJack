@@ -165,6 +165,95 @@
         }
     })();
 
+/* block 2.2 */
+(function () {
+        var root = document.documentElement;
+        if (!root || !root.style || !root.style.setProperty) {
+            return;
+        }
+
+        var raf = window.requestAnimationFrame
+            ? window.requestAnimationFrame.bind(window)
+            : null;
+        var rafId = 0;
+
+        function readViewportHeight() {
+            var height = 0;
+
+            try {
+                if (window.visualViewport && typeof window.visualViewport.height === "number") {
+                    height = window.visualViewport.height;
+                }
+            } catch (e) {
+                height = 0;
+            }
+
+            if (!isFinite(height) || height <= 0) {
+                height = window.innerHeight || root.clientHeight || 0;
+            }
+
+            if (!isFinite(height) || height < 0) {
+                height = 0;
+            }
+
+            return height;
+        }
+
+        function applyViewportHeightVar() {
+            rafId = 0;
+            var viewportHeight = readViewportHeight();
+            root.style.setProperty("--hansjack-vh", viewportHeight.toFixed(2) + "px");
+        }
+
+        function requestViewportHeightSync() {
+            if (raf) {
+                if (rafId) {
+                    return;
+                }
+                rafId = raf(applyViewportHeightVar);
+                return;
+            }
+            applyViewportHeightVar();
+        }
+
+        function bindVisualViewportEvents() {
+            var viewport = null;
+            try {
+                viewport = window.visualViewport || null;
+            } catch (e) {
+                viewport = null;
+            }
+
+            if (!viewport || !viewport.addEventListener) {
+                return;
+            }
+
+            viewport.addEventListener("resize", requestViewportHeightSync);
+            viewport.addEventListener("scroll", requestViewportHeightSync);
+        }
+
+        requestViewportHeightSync();
+        window.setTimeout(requestViewportHeightSync, 80);
+        window.setTimeout(requestViewportHeightSync, 220);
+
+        window.addEventListener("load", function () {
+            requestViewportHeightSync();
+            window.setTimeout(requestViewportHeightSync, 120);
+        });
+
+        window.addEventListener("resize", requestViewportHeightSync);
+        window.addEventListener("orientationchange", function () {
+            requestViewportHeightSync();
+            window.setTimeout(requestViewportHeightSync, 160);
+        });
+        window.addEventListener("hansjack:pjax:after", function () {
+            requestViewportHeightSync();
+            window.setTimeout(requestViewportHeightSync, 120);
+        });
+
+        bindVisualViewportEvents();
+    })();
+
 /* block 2.5 */
 (function () {
         var body = document.body;
@@ -786,8 +875,18 @@
                 document.querySelector("[data-comment-respond]") ||
                 document.querySelector("#respond") ||
                 document.querySelector(".respond") ||
-                document.querySelector(".comment-list")
+                document.querySelector("#comments .comment-list")
             );
+        }
+
+        function updateCommentFabVisibility() {
+            if (!commentBtn) {
+                return null;
+            }
+
+            var target = findCommentTarget();
+            commentBtn.style.display = target ? "" : "none";
+            return target;
         }
 
         var topRing = topBtn ? topBtn.querySelector(".fab-top-ring-fg") : null;
@@ -1705,6 +1804,7 @@
 
         window.addEventListener("resize", function () {
             updateSettingsFabVisibility();
+            updateCommentFabVisibility();
             if (isSettingsPopoverOpen()) {
                 syncPostsSettingsUI();
                 positionSettingsPopover();
@@ -1719,6 +1819,7 @@
             syncPostsSettingsUI();
             applyPostsSettingsToAllLists();
             updateSettingsFabVisibility();
+            updateCommentFabVisibility();
             recomputeScrollMetrics();
             updateTopProgress(false);
             if (isSettingsPopoverOpen()) {
@@ -1730,17 +1831,13 @@
         });
 
         if (commentBtn) {
-            var target = findCommentTarget();
-            if (!target) {
-                commentBtn.style.display = "none";
-            } else {
-                commentBtn.addEventListener("click", function () {
-                    var t = findCommentTarget();
-                    if (t && t.scrollIntoView) {
-                        t.scrollIntoView({ behavior: "smooth", block: "start" });
-                    }
-                });
-            }
+            updateCommentFabVisibility();
+            commentBtn.addEventListener("click", function () {
+                var t = findCommentTarget();
+                if (t && t.scrollIntoView) {
+                    t.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            });
         }
 
         if (topBtn) {
