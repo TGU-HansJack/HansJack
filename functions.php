@@ -7634,6 +7634,135 @@ function stripCommentEmbedActionButtons(string $commentHtml): string
     return $html !== '' ? $html : $commentHtml;
 }
 
+function embedNormalizedHost(string $url): string
+{
+    $host = strtolower(trim((string) parse_url($url, PHP_URL_HOST)));
+    if ($host !== '' && strpos($host, 'www.') === 0) {
+        $host = (string) substr($host, 4);
+    }
+    return $host;
+}
+
+function isSameSiteCommentEmbedUrl(string $url): bool
+{
+    $urlHost = embedNormalizedHost($url);
+    if ($urlHost === '') {
+        return false;
+    }
+
+    $options = Options::alloc();
+    $siteHosts = [];
+    $siteHosts[] = embedNormalizedHost((string) ($options->siteUrl ?? ''));
+    $siteHosts[] = embedNormalizedHost((string) ($options->index ?? ''));
+
+    foreach ($siteHosts as $siteHost) {
+        if ($siteHost !== '' && $siteHost === $urlHost) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function renderCommentEmbedShortcodeFromDb(int $commentId, string $sourceUrl = ''): string
+{
+    if ($commentId <= 0) {
+        return '';
+    }
+
+    if ($sourceUrl !== '' && !isSameSiteCommentEmbedUrl($sourceUrl)) {
+        return '';
+    }
+
+    $db = githubDb();
+    if (!is_object($db)) {
+        return '';
+    }
+
+    try {
+        $row = $db->fetchRow(
+            $db->select('coid', 'created', 'author', 'mail', 'url', 'text', 'status', 'ownerId', 'authorId')
+                ->from('table.comments')
+                ->where('coid = ?', $commentId)
+                ->limit(1)
+        );
+    } catch (\Throwable $e) {
+        $row = null;
+    }
+
+    if (!is_array($row) && !is_object($row)) {
+        return '';
+    }
+
+    $status = strtolower(trim((string) hansjackSitemapRowValue($row, 'status', '')));
+    if (!currentUserIsAdmin() && $status !== 'approved') {
+        return '';
+    }
+
+    $rawText = (string) hansjackSitemapRowValue($row, 'text', '');
+    $isPrivate = isPrivateCommentText($rawText);
+    $ownerId = (int) hansjackSitemapRowValue($row, 'ownerId', 0);
+    $authorId = (int) hansjackSitemapRowValue($row, 'authorId', 0);
+    if ($isPrivate && !canViewPrivateComment($ownerId, $authorId)) {
+        return '';
+    }
+
+    $commentText = $isPrivate ? stripPrivateCommentMarker($rawText) : $rawText;
+    $author = trim((string) hansjackSitemapRowValue($row, 'author', ''));
+    if ($author === '') {
+        $author = _t('匿名');
+    }
+
+    $commentModel = (object) [
+        'text' => $commentText,
+        'author' => $author,
+    ];
+    $contentHtml = trim(renderCommentContent($commentModel));
+    if ($contentHtml === '') {
+        return '';
+    }
+
+    $avatarSize = 32;
+    $avatarEmail = strtolower(trim((string) hansjackSitemapRowValue($row, 'mail', '')));
+    $commentUrl = trim((string) hansjackSitemapRowValue($row, 'url', ''));
+    $githubLogin = githubLoginFromUrl($commentUrl);
+    if ($githubLogin !== '') {
+        $avatarBase = 'https://github.com/' . rawurlencode($githubLogin) . '.png';
+        $avatarUrl = $avatarBase . '?size=' . $avatarSize;
+    } else {
+        $avatarHash = md5($avatarEmail);
+        $avatarBase = 'https://cdn.sep.cc/avatar/' . $avatarHash;
+        $avatarUrl = $avatarBase . '?s=' . $avatarSize . '&d=' . rawurlencode('mp') . '&r=g';
+    }
+
+    $created = (int) hansjackSitemapRowValue($row, 'created', 0);
+    $dateTime = $created > 0 ? date('c', $created) : date('c');
+    $timeLabel = $created > 0 ? date('Y-m-d H:i:s', $created) : _t('未知时间');
+    $commentClass = 'comment-body comment-parent';
+    if ($authorId > 0 && $authorId === $ownerId) {
+        $commentClass .= ' comment-by-author';
+    } elseif ($authorId > 0) {
+        $commentClass .= ' comment-by-user';
+    }
+    if ($isPrivate) {
+        $commentClass .= ' comment-private';
+    }
+
+    $coid = max(0, (int) hansjackSitemapRowValue($row, 'coid', $commentId));
+
+    $html = '<li itemscope itemtype="http://schema.org/UserComments" id="comment-' . $coid . '" class="' . escape($commentClass) . '" data-comment-level="0">';
+    $html .= '<div class="comment-author" itemprop="creator" itemscope itemtype="http://schema.org/Person">';
+    $html .= '<span itemprop="image"><img class="avatar" src="' . escape($avatarUrl) . '" alt="' . escape($author . '的头像') . '" width="' . $avatarSize . '" height="' . $avatarSize . '" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>';
+    $html .= '<div class="comment-author-meta">';
+    $html .= '<cite class="fn" itemprop="name">' . escape($author) . '</cite>';
+    $html .= '<div class="comment-meta"><time itemprop="commentTime" datetime="' . escape($dateTime) . '">' . escape($timeLabel) . '</time></div>';
+    $html .= '</div></div>';
+    $html .= '<div class="comment-content' . ($isPrivate ? ' is-private' : '') . '" itemprop="commentText">' . $contentHtml . '</div>';
+    $html .= '</li>';
+
+    return $html;
+}
+
 function renderCommentEmbedShortcode(string $args): string
 {
     static $cache = [];
@@ -7665,18 +7794,28 @@ function renderCommentEmbedShortcode(string $args): string
         return '';
     }
 
+    $commentHtml = '';
     $pageHtml = embedHttpGet($pageUrl, 10, true);
-    if ($pageHtml === '') {
-        $cache[$url] = '';
-        return '';
+    if ($pageHtml !== '') {
+        $commentHtml = extractCommentEmbedHtmlFromPage($pageHtml, $commentId);
+        if ($commentHtml !== '') {
+            $commentHtml = stripCommentEmbedActionButtons($commentHtml);
+        }
     }
-
-    $commentHtml = extractCommentEmbedHtmlFromPage($pageHtml, $commentId);
     if ($commentHtml === '') {
-        $cache[$url] = '';
-        return '';
+        // Some hosts may intermittently block the embed_fetch variant. Retry once without it.
+        $retryHtml = embedHttpGet($pageUrl, 10, false);
+        if ($retryHtml !== '') {
+            $commentHtml = extractCommentEmbedHtmlFromPage($retryHtml, $commentId);
+            if ($commentHtml !== '') {
+                $commentHtml = stripCommentEmbedActionButtons($commentHtml);
+            }
+        }
     }
-    $commentHtml = stripCommentEmbedActionButtons($commentHtml);
+    if ($commentHtml === '') {
+        // Final fallback: for same-site URLs, read the comment row from DB directly.
+        $commentHtml = renderCommentEmbedShortcodeFromDb($commentId, $url);
+    }
     if ($commentHtml === '') {
         $cache[$url] = '';
         return '';
