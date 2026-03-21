@@ -69,11 +69,12 @@ function themeConfig($form)
         'fontChoice',
         [
             'maple_mono_cn_regular' => _t('MapleMonoNormal-CN-Regular'),
+            'noto_sans_sc_regular' => _t('Noto Sans SC'),
             'system' => _t('系统默认'),
         ],
         'maple_mono_cn_regular',
         _t('选择字体'),
-        _t('控制主题主要文字字体；选择 Maple 时将使用分包后的 MapleMonoNormal-CN-Regular/result.css。')
+        _t('控制主题主要文字字体；可选 MapleMonoNormal-CN-Regular、Noto Sans SC 或系统默认字体。')
     );
     $form->addInput($fontChoice);
 
@@ -4091,7 +4092,7 @@ function landingHitokotoEnabled(Options $options): bool
 function themeFontChoice(Options $options): string
 {
     $raw = trim((string) ($options->fontChoice ?? 'maple_mono_cn_regular'));
-    $allowed = ['maple_mono_cn_regular', 'system'];
+    $allowed = ['maple_mono_cn_regular', 'noto_sans_sc_regular', 'system'];
     if (!in_array($raw, $allowed, true)) {
         return 'maple_mono_cn_regular';
     }
