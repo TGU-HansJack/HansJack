@@ -889,69 +889,39 @@ if ($this->is('index')) {
                     <h2 class="landing-letter-memory-title"><?php _e('来信'); ?></h2>
                     <div class="landing-letter-list">
                     <?php if (!empty($landingLetters)): ?>
-                        <section class="comments landing-letter-comments-shell" aria-label="<?php _e('来信评论'); ?>">
-                            <ol class="comment-list">
-                                <?php foreach ($landingLetters as $letterItem): ?>
-                                    <?php
-                                    $letterId = (int) ($letterItem['id'] ?? 0);
-                                    $letterContentHtml = trim((string) ($letterItem['contentHtml'] ?? ''));
-                                    $letterAuthor = trim((string) ($letterItem['author'] ?? ''));
-                                    $letterAuthorUrl = trim((string) ($letterItem['authorUrl'] ?? ''));
-                                    $letterAvatar = trim((string) ($letterItem['avatar'] ?? ''));
-                                    $letterDateIso = trim((string) ($letterItem['dateIso'] ?? ''));
-                                    $letterDateTime = trim((string) ($letterItem['dateTime'] ?? ''));
-                                    $letterTimeWord = trim((string) ($letterItem['timeWord'] ?? ''));
-                                    if ($letterDateTime === '' && $letterTimeWord !== '') {
-                                        $letterDateTime = $letterTimeWord;
-                                    }
-                                    $letterAvatarAlt = $letterAuthor !== '' ? ($letterAuthor . _t('的头像')) : _t('评论者头像');
-                                    $letterItemId = $letterId > 0 ? ('landing-letter-comment-' . $letterId) : '';
-                                    ?>
-                                    <li
-                                        <?php if ($letterItemId !== ''): ?>
-                                            id="<?php echo escape($letterItemId); ?>"
-                                        <?php endif; ?>
-                                        class="comment-body comment-parent is-avatar-line-hidden"
-                                        data-letter-item
-                                        style="--comment-avatar-size: 36px; --comment-avatar-line-height: 0px;">
-                                        <div class="comment-author" itemprop="creator" itemscope itemtype="http://schema.org/Person">
-                                            <span itemprop="image">
-                                                <?php if ($letterAvatar !== ''): ?>
-                                                    <img class="avatar" src="<?php echo escape($letterAvatar); ?>" alt="<?php echo escape($letterAvatarAlt); ?>" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer">
-                                                <?php endif; ?>
-                                            </span>
-                                            <div class="comment-author-meta">
-                                                <cite class="fn" itemprop="name"><?php echo escape($letterAuthor !== '' ? $letterAuthor : _t('匿名')); ?></cite>
-                                                <?php if ($letterAuthorUrl !== ''): ?>
-                                                    <a
-                                                        class="comment-author-home"
-                                                        href="<?php echo escape($letterAuthorUrl); ?>"
-                                                        rel="external nofollow"
-                                                        aria-label="<?php _e('访问作者网站'); ?>"
-                                                        title="<?php _e('访问作者网站'); ?>">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-house-icon lucide-house" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-                                                    </a>
-                                                <?php endif; ?>
-                                                <?php if ($letterDateTime !== ''): ?>
-                                                    <div class="comment-meta">
-                                                        <time itemprop="commentTime" datetime="<?php echo escape($letterDateIso); ?>">
-                                                            <?php echo escape($letterDateTime); ?>
-                                                        </time>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                        <div class="comment-content" itemprop="commentText">
-                                            <?php if ($letterContentHtml !== ''): ?>
-                                                <?php echo $letterContentHtml; ?>
-                                            <?php else: ?>
-                                                <p><?php _e('暂无内容'); ?></p>
-                                            <?php endif; ?>
-                                        </div>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ol>
-                        </section>
+                        <?php foreach ($landingLetters as $letterItem): ?>
+                            <?php
+                            $letterContentHtml = trim((string) ($letterItem['contentHtml'] ?? ''));
+                            $letterAuthor = trim((string) ($letterItem['author'] ?? ''));
+                            $letterTimeWord = trim((string) ($letterItem['timeWord'] ?? ''));
+                            $letterDateTime = trim((string) ($letterItem['dateTime'] ?? ''));
+                            if ($letterTimeWord === '' && $letterDateTime !== '') {
+                                $letterTimeWord = $letterDateTime;
+                            }
+                            $letterPostTitle = trim((string) ($letterItem['postTitle'] ?? ''));
+                            $letterPostUrl = trim((string) ($letterItem['postUrl'] ?? ''));
+                            ?>
+                            <article class="landing-letter-card landing-memory-card">
+                                <div class="landing-memory-content comment-content" itemprop="commentText">
+                                    <?php if ($letterContentHtml !== ''): ?>
+                                        <?php echo $letterContentHtml; ?>
+                                    <?php else: ?>
+                                        <p><?php _e('暂无内容'); ?></p>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="landing-letter-meta">
+                                    <?php if ($letterPostUrl !== '' && $letterPostTitle !== ''): ?>
+                                        <a class="landing-letter-post" href="<?php echo escape($letterPostUrl); ?>"><?php echo escape($letterPostTitle); ?></a>
+                                    <?php elseif ($letterPostTitle !== ''): ?>
+                                        <span class="landing-letter-post"><?php echo escape($letterPostTitle); ?></span>
+                                    <?php endif; ?>
+                                    <span class="landing-letter-author">
+                                        — <?php echo escape($letterAuthor !== '' ? $letterAuthor : _t('匿名')); ?>
+                                        <?php if ($letterTimeWord !== ''): ?> · <?php echo escape($letterTimeWord); ?><?php endif; ?>
+                                    </span>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
                     <?php else: ?>
                         <p class="landing-letter-empty"><?php _e('暂无来信'); ?></p>
                     <?php endif; ?>

@@ -1986,8 +1986,8 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     color: inherit;
     text-decoration: none;
     font-family: var(--font-main);
-    font-size: clamp(0.86rem, 1.05vw, 0.98rem);
-    line-height: 1.62;
+    font-size: clamp(0.8rem, 0.95vw, 0.9rem);
+    line-height: 1.56;
     transition: color 0.2s ease;
 }
 
@@ -2223,6 +2223,8 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     .landing-letter-list .comment-body,
     .landing-letter-list .comment-author,
     .landing-letter-list .comment-content,
+    .landing-letter-list .landing-letter-card,
+    .landing-letter-list .landing-memory-content,
     .landing-memory-list .landing-letter-card,
     .landing-memory-list .landing-memory-content {
         overflow-x: clip;
@@ -2255,6 +2257,11 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     .landing-letter-list .comment-meta,
     .landing-letter-list .comment-meta time,
     .landing-letter-list .comment-content,
+    .landing-letter-list .landing-letter-card,
+    .landing-letter-list .landing-memory-content,
+    .landing-letter-list .landing-letter-meta,
+    .landing-letter-list .landing-letter-post,
+    .landing-letter-list .landing-letter-author,
     .landing-memory-list .landing-letter-card,
     .landing-memory-list .landing-memory-content,
     .landing-memory-list .landing-letter-meta,
@@ -2317,10 +2324,12 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
         word-break: break-word;
     }
 
+    .landing-letter-list .landing-letter-meta,
     .landing-memory-list .landing-letter-meta {
         flex-wrap: wrap;
     }
 
+    .landing-letter-list .landing-letter-author,
     .landing-memory-list .landing-letter-author {
         margin-left: 0;
         flex-shrink: 1;
