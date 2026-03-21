@@ -1110,6 +1110,39 @@ function hansjackPresenceSanitizeText(string $value, int $maxLen = 120): string
     return trim($text);
 }
 
+function hansjackPresenceSanitizeIcon(string $value): string
+{
+    $icon = trim($value);
+    if ($icon === '') {
+        return '';
+    }
+
+    // Keep payload bounded to avoid oversized cache writes.
+    if (strlen($icon) > 240000) {
+        return '';
+    }
+
+    $iconLower = strtolower($icon);
+    if (strpos($iconLower, 'data:image/') === 0) {
+        if (preg_match('/^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+\/=\r\n]+$/i', $icon) === 1) {
+            return $icon;
+        }
+        return '';
+    }
+
+    $parts = parse_url($icon);
+    if (!is_array($parts)) {
+        return '';
+    }
+
+    $scheme = strtolower(trim((string) ($parts['scheme'] ?? '')));
+    if ($scheme !== 'http' && $scheme !== 'https') {
+        return '';
+    }
+
+    return $icon;
+}
+
 function hansjackPresenceStatusReadStored(): array
 {
     $path = hansjackPresenceStatusFilePath();
@@ -1180,6 +1213,7 @@ function hansjackPresenceStatusPublicPayload(Options $options): array
     $app = hansjackPresenceSanitizeText((string) ($stored['app'] ?? ''), 96);
     $media = hansjackPresenceSanitizeText((string) ($stored['media'] ?? ''), 140);
     $detail = hansjackPresenceSanitizeText((string) ($stored['detail'] ?? ''), 180);
+    $icon = hansjackPresenceSanitizeIcon((string) ($stored['icon'] ?? ''));
     $updatedAt = max(0, (int) ($stored['updatedAt'] ?? 0));
     $expireAt = max(0, (int) ($stored['expireAt'] ?? 0));
     $isExpired = ($expireAt > 0 && $expireAt < $now);
@@ -1202,6 +1236,7 @@ function hansjackPresenceStatusPublicPayload(Options $options): array
         'app' => $app,
         'media' => $media,
         'detail' => $detail,
+        'icon' => $icon,
         'updatedAt' => $updatedAt,
         'updatedAtText' => $updatedAtText,
         'expireAt' => $expireAt,
@@ -2187,6 +2222,7 @@ function handlePresenceStatusRequest(Archive $archive): void
     $app = hansjackPresenceSanitizeText($readInput('app'), 96);
     $media = hansjackPresenceSanitizeText($readInput('media'), 140);
     $detail = hansjackPresenceSanitizeText($readInput('detail'), 180);
+    $icon = hansjackPresenceSanitizeIcon($readInput('icon'));
     $ttl = (int) $readInput('ttl', '180');
     if ($ttl <= 0) {
         $ttl = 180;
@@ -2202,6 +2238,7 @@ function handlePresenceStatusRequest(Archive $archive): void
         'app' => $app,
         'media' => $media,
         'detail' => $detail,
+        'icon' => $icon,
         'updatedAt' => $now,
         'expireAt' => $now + $ttl,
     ];

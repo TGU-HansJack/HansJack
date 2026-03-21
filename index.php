@@ -33,6 +33,7 @@ $landingPresenceEnabled = false;
 $landingPresenceEndpoint = '';
 $landingPresenceState = 'offline';
 $landingPresenceTitle = _t('实时活动图标：实现了实时的系统进程和媒体信息上报。');
+$landingPresenceIcon = '';
 if ($this->is('index')) {
     $brandName = trim((string) ($themeConfig['brandName'] ?? ''));
     if ($brandName === '') {
@@ -70,6 +71,7 @@ if ($this->is('index')) {
         if ($landingPresenceTitle === '') {
             $landingPresenceTitle = _t('实时活动图标：实现了实时的系统进程和媒体信息上报。');
         }
+        $landingPresenceIcon = trim((string) ($landingPresencePayload['icon'] ?? ''));
     }
 
     $heatmapDayCount = max(1, (int) $landingHeatmapDays);
@@ -332,8 +334,19 @@ if ($this->is('index')) {
                                 data-presence-enabled="1"
                                 data-presence-endpoint="<?php echo escape($landingPresenceEndpoint); ?>"
                                 data-state="<?php echo escape($landingPresenceState); ?>"
+                                data-icon="<?php echo escape($landingPresenceIcon); ?>"
+                                data-has-icon="<?php echo $landingPresenceIcon !== '' ? '1' : '0'; ?>"
                                 title="<?php echo escape($landingPresenceTitle); ?>"
                             >
+                                <img
+                                    class="landing-activity-icon"
+                                    <?php if ($landingPresenceIcon !== ''): ?>
+                                        src="<?php echo escape($landingPresenceIcon); ?>"
+                                    <?php endif; ?>
+                                    alt="<?php _e('应用图标'); ?>"
+                                    loading="lazy"
+                                    decoding="async"
+                                >
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                     <path d="M3 12h4l2.2-4.2L13 18l2.8-6H21"></path>
                                 </svg>
