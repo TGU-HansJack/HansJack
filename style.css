@@ -2051,7 +2051,22 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     font-family: var(--font-main);
     font-size: 0.84rem;
     font-style: italic;
-    text-align: right;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    text-align: left;
+}
+
+.tl-scroll-footer-left,
+.tl-scroll-footer-right {
+    min-width: 0;
+}
+
+.tl-scroll-footer-right {
+    margin-left: auto;
+    white-space: nowrap;
 }
 
 .landing-letter-card {

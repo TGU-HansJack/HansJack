@@ -33,6 +33,11 @@ $landingMemories = [];
 $landingSeasonalTimeline = [];
 $landingSeasonalTimelineMobile = [];
 $landingSeasonalTotalCount = 0;
+$landingSiteWordCount = 0;
+$landingSiteActiveDays = 0;
+$landingSitePostsCount = 0;
+$landingSiteCommentsCount = 0;
+$landingSiteStatsLabel = '0 字 0 天 0 篇 0评论';
 $landingMemosPageUrl = '';
 $landingHitokotoEnabled = true;
 $landingPresenceEnabled = false;
@@ -41,6 +46,17 @@ $landingPresenceState = 'offline';
 $landingPresenceTitle = _t('实时活动图标：实现了实时的系统进程和媒体信息上报。');
 $landingPresenceIcon = '';
 if ($this->is('index')) {
+    $landingCountChars = static function (string $text): int {
+        $plain = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
+        $plainNoSpace = (string) preg_replace('/\\s+/u', '', $plain);
+        if ($plainNoSpace === '') {
+            return 0;
+        }
+        return function_exists('mb_strlen')
+            ? (int) mb_strlen($plainNoSpace, 'UTF-8')
+            : (int) strlen($plainNoSpace);
+    };
+
     $brandName = trim((string) ($themeConfig['brandName'] ?? ''));
     if ($brandName === '') {
         ob_start();
@@ -245,24 +261,6 @@ if ($this->is('index')) {
                 ];
             }
 
-            if ($created < $heatmapStartTs || $created > $heatmapEndTs) {
-                continue;
-            }
-
-            $dayKey = date('Y-m-d', $created);
-            if (!isset($landingHeatmapSeries[$dayKey])) {
-                continue;
-            }
-
-            $itemTitle = trim((string) ($landingPosts->title ?? ''));
-            if ($itemTitle === '') {
-                $itemTitle = _t('无标题');
-            }
-            $itemUrl = trim((string) ($landingPosts->permalink ?? ''));
-            if ($itemUrl === '') {
-                continue;
-            }
-
             $bucket = 'others';
             $postCategories = [];
             try {
@@ -298,6 +296,24 @@ if ($this->is('index')) {
                 ) {
                     $bucket = 'notes';
                 }
+            }
+
+            if ($created < $heatmapStartTs || $created > $heatmapEndTs) {
+                continue;
+            }
+
+            $dayKey = date('Y-m-d', $created);
+            if (!isset($landingHeatmapSeries[$dayKey])) {
+                continue;
+            }
+
+            $itemTitle = trim((string) ($landingPosts->title ?? ''));
+            if ($itemTitle === '') {
+                $itemTitle = _t('无标题');
+            }
+            $itemUrl = trim((string) ($landingPosts->permalink ?? ''));
+            if ($itemUrl === '') {
+                continue;
             }
 
             $landingHeatmapSeries[$dayKey][$bucket][] = [
@@ -523,6 +539,86 @@ if ($this->is('index')) {
             }
         }
     }
+
+    $landingSiteStartTs = 0;
+    $landingPrivateMarker = function_exists('privateCommentMarker') ? (string) privateCommentMarker() : '<!--private-->';
+
+    try {
+        $db = \Typecho\Db::get();
+
+        $postRows = $db->fetchAll(
+            $db->select('created', 'text')
+                ->from('table.contents')
+                ->where('type = ?', 'post')
+                ->where('status = ?', 'publish')
+        );
+
+        if (is_array($postRows)) {
+            foreach ($postRows as $row) {
+                $rowCreated = 0;
+                $rowText = '';
+
+                if (is_object($row)) {
+                    $rowCreated = (int) ($row->created ?? 0);
+                    $rowText = (string) ($row->text ?? '');
+                } elseif (is_array($row)) {
+                    $rowCreated = (int) ($row['created'] ?? 0);
+                    $rowText = (string) ($row['text'] ?? '');
+                }
+
+                $landingSitePostsCount += 1;
+                if ($rowCreated > 0 && ($landingSiteStartTs <= 0 || $rowCreated < $landingSiteStartTs)) {
+                    $landingSiteStartTs = $rowCreated;
+                }
+                if ($rowText !== '') {
+                    $landingSiteWordCount += $landingCountChars((string) strip_tags($rowText));
+                }
+            }
+        }
+
+        $commentCountRow = $db->fetchObject(
+            $db->select('COUNT(coid) AS total')
+                ->from('table.comments')
+                ->where('status = ?', 'approved')
+                ->where('text NOT LIKE ?', '%' . $landingPrivateMarker . '%')
+                ->limit(1)
+        );
+        if (is_object($commentCountRow)) {
+            $landingSiteCommentsCount = (int) ($commentCountRow->total ?? 0);
+        }
+
+        $firstCommentRow = $db->fetchObject(
+            $db->select('created')
+                ->from('table.comments')
+                ->where('status = ?', 'approved')
+                ->where('text NOT LIKE ?', '%' . $landingPrivateMarker . '%')
+                ->order('created', \Typecho\Db::SORT_ASC)
+                ->limit(1)
+        );
+        if (is_object($firstCommentRow)) {
+            $firstCommentCreated = (int) ($firstCommentRow->created ?? 0);
+            if ($firstCommentCreated > 0 && ($landingSiteStartTs <= 0 || $firstCommentCreated < $landingSiteStartTs)) {
+                $landingSiteStartTs = $firstCommentCreated;
+            }
+        }
+    } catch (\Throwable $e) {
+        // Keep zero-values as fallback.
+    }
+
+    if ($landingSiteStartTs > 0) {
+        $landingSiteActiveDays = max(1, (int) floor((time() - $landingSiteStartTs) / 86400) + 1);
+    } else {
+        $landingSiteActiveDays = 0;
+    }
+
+    $landingSiteStatsLabel = number_format((int) $landingSiteWordCount)
+        . ' 字 '
+        . number_format((int) $landingSiteActiveDays)
+        . ' 天 '
+        . number_format((int) $landingSitePostsCount)
+        . ' 篇 '
+        . number_format((int) $landingSiteCommentsCount)
+        . '评论';
 
     $landingSeasonalFetchLimit = 300;
     $landingSeasonalPerBucketLimit = 10;
@@ -1048,7 +1144,10 @@ if ($this->is('index')) {
                     <?php endforeach; ?>
                 </div>
 
-                <div class="tl-scroll-footer"><?php echo escape('本年 ' . (int) $landingSeasonalTotalCount . ' 篇'); ?></div>
+                <div class="tl-scroll-footer">
+                    <span class="tl-scroll-footer-left"><?php echo escape($landingSiteStatsLabel); ?></span>
+                    <span class="tl-scroll-footer-right"><?php echo escape('本年 ' . (int) $landingSeasonalTotalCount . ' 篇'); ?></span>
+                </div>
             </div>
         </section>
 
