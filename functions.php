@@ -285,6 +285,27 @@ function themeConfig($form)
     );
     $form->addInput($visitorLivePollingEnabled);
 
+    $presenceStatusEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'presenceStatusEnabled',
+        [
+            '1' => _t('开启'),
+            '0' => _t('关闭'),
+        ],
+        '0',
+        _t('开启实时状态图标和接口'),
+        _t('开启后首页头像会显示实时状态图标，并启用 `?presence_status=1` 接口（GET 查询、POST 上报）。')
+    );
+    $form->addInput($presenceStatusEnabled);
+
+    $presenceStatusToken = new \Typecho\Widget\Helper\Form\Element\Text(
+        'presenceStatusToken',
+        null,
+        '',
+        _t('实时状态接口 Token'),
+        _t('用于 POST 上报鉴权。建议使用 32 位以上随机字符串；可通过请求头 `X-Presence-Token` 或参数 `token` 传入。')
+    );
+    $form->addInput($presenceStatusToken);
+
     $anonymousPageCacheEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
         'anonymousPageCacheEnabled',
         [
@@ -978,6 +999,221 @@ function hansjackHighLoadDegradeEnabled(Options $options): bool
     return hansjackOptionEnabled($raw, false);
 }
 
+function hansjackPresenceStatusEnabled(Options $options): bool
+{
+    $raw = '';
+    try {
+        $raw = (string) ($options->presenceStatusEnabled ?? '0');
+    } catch (\Throwable $e) {
+        $raw = '0';
+    }
+
+    return hansjackOptionEnabled($raw, false);
+}
+
+function hansjackPresenceStatusToken(Options $options): string
+{
+    $raw = '';
+    try {
+        $raw = (string) ($options->presenceStatusToken ?? '');
+    } catch (\Throwable $e) {
+        $raw = '';
+    }
+
+    return trim($raw);
+}
+
+function hansjackPresenceStatusEndpoint(Options $options): string
+{
+    $base = '';
+    try {
+        $base = trim((string) ($options->index ?? ''));
+    } catch (\Throwable $e) {
+        $base = '';
+    }
+
+    if ($base === '') {
+        try {
+            $base = trim((string) ($options->siteUrl ?? ''));
+        } catch (\Throwable $e) {
+            $base = '';
+        }
+    }
+
+    if ($base === '') {
+        return '?presence_status=1';
+    }
+
+    $separator = (strpos($base, '?') === false) ? '?' : '&';
+    return $base . $separator . 'presence_status=1';
+}
+
+function hansjackPresenceStatusFilePath(): string
+{
+    return __DIR__
+        . DIRECTORY_SEPARATOR . 'cache'
+        . DIRECTORY_SEPARATOR . 'presence-status.json';
+}
+
+function hansjackNormalizePresenceState(string $raw): string
+{
+    $state = strtolower(trim($raw));
+    $allowed = ['online', 'busy', 'idle', 'offline'];
+    if (!in_array($state, $allowed, true)) {
+        return 'offline';
+    }
+    return $state;
+}
+
+function hansjackPresenceStateLabel(string $state): string
+{
+    $state = hansjackNormalizePresenceState($state);
+    if ($state === 'online') {
+        return _t('在线');
+    }
+    if ($state === 'busy') {
+        return _t('忙碌');
+    }
+    if ($state === 'idle') {
+        return _t('离开');
+    }
+    return _t('离线');
+}
+
+function hansjackPresenceSanitizeText(string $value, int $maxLen = 120): string
+{
+    $text = trim($value);
+    if ($text === '') {
+        return '';
+    }
+
+    $text = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $text);
+    $text = preg_replace('/\s+/u', ' ', (string) $text);
+    $text = trim((string) $text);
+    if ($text === '') {
+        return '';
+    }
+
+    if ($maxLen < 1) {
+        $maxLen = 1;
+    }
+    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+        if (mb_strlen($text, 'UTF-8') > $maxLen) {
+            $text = (string) mb_substr($text, 0, $maxLen, 'UTF-8');
+        }
+        return trim($text);
+    }
+
+    if (strlen($text) > $maxLen) {
+        $text = substr($text, 0, $maxLen);
+    }
+    return trim($text);
+}
+
+function hansjackPresenceStatusReadStored(): array
+{
+    $path = hansjackPresenceStatusFilePath();
+    if (!is_file($path) || !is_readable($path)) {
+        return [];
+    }
+
+    $raw = @file_get_contents($path);
+    if (!is_string($raw) || trim($raw) === '') {
+        return [];
+    }
+
+    $data = json_decode($raw, true);
+    return is_array($data) ? $data : [];
+}
+
+function hansjackPresenceStatusBuildTitle(array $status): string
+{
+    $title = _t('实时活动图标：实现了实时的系统进程和媒体信息上报。');
+    $parts = [];
+
+    $stateLabel = trim((string) ($status['stateLabel'] ?? ''));
+    if ($stateLabel !== '') {
+        $parts[] = _t('当前状态：%s', $stateLabel);
+    }
+
+    $process = trim((string) ($status['process'] ?? ''));
+    if ($process !== '') {
+        $parts[] = _t('进程：%s', $process);
+    }
+
+    $app = trim((string) ($status['app'] ?? ''));
+    if ($app !== '') {
+        $parts[] = _t('应用：%s', $app);
+    }
+
+    $media = trim((string) ($status['media'] ?? ''));
+    if ($media !== '') {
+        $parts[] = _t('媒体：%s', $media);
+    }
+
+    $source = trim((string) ($status['source'] ?? ''));
+    if ($source !== '') {
+        $parts[] = _t('来源：%s', $source);
+    }
+
+    $updatedText = trim((string) ($status['updatedAtText'] ?? ''));
+    if ($updatedText !== '') {
+        $parts[] = _t('更新时间：%s', $updatedText);
+    }
+
+    if ($parts === []) {
+        return $title;
+    }
+
+    return $title . ' ' . implode('；', $parts);
+}
+
+function hansjackPresenceStatusPublicPayload(Options $options): array
+{
+    $enabled = hansjackPresenceStatusEnabled($options);
+    $stored = hansjackPresenceStatusReadStored();
+    $now = time();
+
+    $state = hansjackNormalizePresenceState((string) ($stored['state'] ?? 'offline'));
+    $source = hansjackPresenceSanitizeText((string) ($stored['source'] ?? ''), 48);
+    $process = hansjackPresenceSanitizeText((string) ($stored['process'] ?? ''), 96);
+    $app = hansjackPresenceSanitizeText((string) ($stored['app'] ?? ''), 96);
+    $media = hansjackPresenceSanitizeText((string) ($stored['media'] ?? ''), 140);
+    $detail = hansjackPresenceSanitizeText((string) ($stored['detail'] ?? ''), 180);
+    $updatedAt = max(0, (int) ($stored['updatedAt'] ?? 0));
+    $expireAt = max(0, (int) ($stored['expireAt'] ?? 0));
+    $isExpired = ($expireAt > 0 && $expireAt < $now);
+    if (!$enabled || $isExpired) {
+        $state = 'offline';
+    }
+
+    $updatedAtText = '';
+    if ($updatedAt > 0) {
+        $updatedAtText = date('Y-m-d H:i:s', $updatedAt);
+    }
+
+    $payload = [
+        'ok' => true,
+        'enabled' => $enabled,
+        'state' => $state,
+        'stateLabel' => hansjackPresenceStateLabel($state),
+        'source' => $source,
+        'process' => $process,
+        'app' => $app,
+        'media' => $media,
+        'detail' => $detail,
+        'updatedAt' => $updatedAt,
+        'updatedAtText' => $updatedAtText,
+        'expireAt' => $expireAt,
+        'isExpired' => $isExpired,
+        'serverTime' => $now,
+        'endpoint' => hansjackPresenceStatusEndpoint($options),
+    ];
+    $payload['title'] = hansjackPresenceStatusBuildTitle($payload);
+
+    return $payload;
+}
+
 function hansjackSitemapSize(Options $options): int
 {
     $raw = '';
@@ -1115,6 +1351,7 @@ function hansjackShouldUseAnonymousPageCache(Archive $archive, Options $options)
     if ($qs !== '') {
         $blockedKeys = [
             'live_version=',
+            'presence_status=',
             'series_list=',
             'comments_refresh=',
             'comment_upload=',
@@ -1852,6 +2089,143 @@ function handleSeriesListRequest(Archive $archive): void
     ]);
 }
 
+function handlePresenceStatusRequest(Archive $archive): void
+{
+    $exists = false;
+    $flag = '';
+    try {
+        $flag = trim((string) $archive->request->get('presence_status', '', $exists));
+    } catch (\Throwable $e) {
+        $exists = false;
+        $flag = '';
+    }
+
+    if (!$exists || $flag === '' || $flag === '0' || strtolower($flag) === 'false') {
+        return;
+    }
+
+    $options = Options::alloc();
+    if (!hansjackPresenceStatusEnabled($options)) {
+        emitJson([
+            'ok' => false,
+            'message' => _t('实时状态接口已关闭'),
+        ], 403);
+    }
+
+    $method = strtoupper(trim((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')));
+    if ($method === 'GET' || $method === 'HEAD') {
+        emitJson(hansjackPresenceStatusPublicPayload($options));
+    }
+    if ($method !== 'POST') {
+        emitJson([
+            'ok' => false,
+            'message' => _t('请求方式不支持'),
+        ], 405);
+    }
+
+    $isAuthorized = currentUserIsAdmin();
+    if (!$isAuthorized) {
+        $expectedToken = hansjackPresenceStatusToken($options);
+        $providedToken = trim((string) ($_SERVER['HTTP_X_PRESENCE_TOKEN'] ?? ''));
+
+        if ($providedToken === '') {
+            try {
+                $providedToken = trim((string) $archive->request->get('token', ''));
+            } catch (\Throwable $e) {
+                $providedToken = '';
+            }
+        }
+
+        if ($providedToken === '') {
+            $authHeader = trim((string) ($_SERVER['HTTP_AUTHORIZATION'] ?? ''));
+            if ($authHeader !== '' && preg_match('/^Bearer\s+(.+)$/i', $authHeader, $matches)) {
+                $providedToken = trim((string) ($matches[1] ?? ''));
+            }
+        }
+
+        if ($expectedToken === '' || $providedToken === '' || !hash_equals($expectedToken, $providedToken)) {
+            emitJson([
+                'ok' => false,
+                'message' => _t('鉴权失败'),
+            ], 403);
+        }
+    }
+
+    $bodyData = [];
+    $rawBody = @file_get_contents('php://input');
+    if (is_string($rawBody) && trim($rawBody) !== '') {
+        $decoded = json_decode($rawBody, true);
+        if (is_array($decoded)) {
+            $bodyData = $decoded;
+        }
+    }
+
+    $readInput = static function (string $name, string $fallback = '') use ($archive, $bodyData): string {
+        if (array_key_exists($name, $bodyData)) {
+            $value = $bodyData[$name];
+            if (is_scalar($value)) {
+                return trim((string) $value);
+            }
+            return '';
+        }
+
+        try {
+            $value = $archive->request->get($name, $fallback);
+        } catch (\Throwable $e) {
+            $value = $fallback;
+        }
+
+        if (is_scalar($value)) {
+            return trim((string) $value);
+        }
+        return trim($fallback);
+    };
+
+    $state = hansjackNormalizePresenceState($readInput('state', 'offline'));
+    $source = hansjackPresenceSanitizeText($readInput('source'), 48);
+    $process = hansjackPresenceSanitizeText($readInput('process'), 96);
+    $app = hansjackPresenceSanitizeText($readInput('app'), 96);
+    $media = hansjackPresenceSanitizeText($readInput('media'), 140);
+    $detail = hansjackPresenceSanitizeText($readInput('detail'), 180);
+    $ttl = (int) $readInput('ttl', '180');
+    if ($ttl <= 0) {
+        $ttl = 180;
+    }
+    $ttl = max(15, min(86400, $ttl));
+
+    $now = time();
+    $stored = [
+        'version' => 1,
+        'state' => $state,
+        'source' => $source,
+        'process' => $process,
+        'app' => $app,
+        'media' => $media,
+        'detail' => $detail,
+        'updatedAt' => $now,
+        'expireAt' => $now + $ttl,
+    ];
+
+    $json = json_encode($stored, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($json) || $json === '') {
+        emitJson([
+            'ok' => false,
+            'message' => _t('实时状态写入失败'),
+        ], 500);
+    }
+
+    if (!hansjackWriteFileAtomic(hansjackPresenceStatusFilePath(), $json)) {
+        emitJson([
+            'ok' => false,
+            'message' => _t('实时状态缓存不可写'),
+        ], 500);
+    }
+
+    $payload = hansjackPresenceStatusPublicPayload($options);
+    $payload['ttl'] = $ttl;
+    emitJson($payload);
+}
+
 /**
  * Theme entry hook.
  * Keep root "posts"/"notes" archives at a fixed 15 items per page.
@@ -1861,6 +2235,7 @@ function themeInit(Archive $archive)
     hansjackEnsureSitemapRoute();
     handleLiveVersionRequest($archive);
     handleSeriesListRequest($archive);
+    handlePresenceStatusRequest($archive);
     handleCommentUploadRequest($archive);
     handleCommentEditRequest($archive);
     handleMemoryReactionRequest($archive);
@@ -3859,6 +4234,7 @@ function hansjackThemeCacheTargetPaths(): array
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'page-cache',
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'post-guess',
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'series',
+        __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'presence-status.json',
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'internal-link-meta.json',
     ];
 }
@@ -3977,7 +4353,7 @@ function hansjackThemeCachePanelHtml(Options $options): string
     }
 
     $html = '<div class="hansjack-cache-panel">';
-    $html .= '<div>' . _t('目标缓存：page-cache、post-guess、series、internal-link-meta。') . '</div>';
+    $html .= '<div>' . _t('目标缓存：page-cache、post-guess、series、presence-status、internal-link-meta。') . '</div>';
 
     if ($message !== '') {
         $html .= '<div style="margin-top:6px;color:' . escape($messageColor) . ';">' . escape($message) . '</div>';
@@ -5315,6 +5691,8 @@ function buildThemeConfig(Options $options): array
         'brandName' => $brandName,
         'welcomeText' => text((string) ($options->landingWelcomeText ?? ($options->welcomeTitle ?? '')), ''),
         'landingHitokotoEnabled' => landingHitokotoEnabled($options),
+        'presenceStatusEnabled' => hansjackPresenceStatusEnabled($options),
+        'presenceStatusEndpoint' => hansjackPresenceStatusEndpoint($options),
         'links' => $links,
         'navItems' => [
             ['key' => 'home', 'label' => '首页', 'url' => $links['home']],

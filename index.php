@@ -29,6 +29,10 @@ $landingHeatmapSeries = [];
 $landingHeatmapColumns = 20;
 $landingLatestContent = null;
 $landingHitokotoEnabled = true;
+$landingPresenceEnabled = false;
+$landingPresenceEndpoint = '';
+$landingPresenceState = 'offline';
+$landingPresenceTitle = _t('实时活动图标：实现了实时的系统进程和媒体信息上报。');
 if ($this->is('index')) {
     $brandName = trim((string) ($themeConfig['brandName'] ?? ''));
     if ($brandName === '') {
@@ -53,6 +57,20 @@ if ($this->is('index')) {
     $blogUrl = (string) (($themeConfig['links']['blog'] ?? '') ?: '');
     $memoUrl = (string) (($themeConfig['links']['memo'] ?? '') ?: '');
     $landingHitokotoEnabled = (bool) ($themeConfig['landingHitokotoEnabled'] ?? true);
+    $landingPresenceEnabled = (bool) ($themeConfig['presenceStatusEnabled'] ?? false);
+
+    if ($landingPresenceEnabled) {
+        $landingPresencePayload = hansjackPresenceStatusPublicPayload($this->options);
+        $landingPresenceEndpoint = trim((string) ($landingPresencePayload['endpoint'] ?? ($themeConfig['presenceStatusEndpoint'] ?? '')));
+        $landingPresenceState = trim((string) ($landingPresencePayload['state'] ?? 'offline'));
+        if ($landingPresenceState === '') {
+            $landingPresenceState = 'offline';
+        }
+        $landingPresenceTitle = trim((string) ($landingPresencePayload['title'] ?? ''));
+        if ($landingPresenceTitle === '') {
+            $landingPresenceTitle = _t('实时活动图标：实现了实时的系统进程和媒体信息上报。');
+        }
+    }
 
     $heatmapDayCount = max(1, (int) $landingHeatmapDays);
     $todayStartTs = strtotime(date('Y-m-d 00:00:00'));
@@ -308,6 +326,19 @@ if ($this->is('index')) {
                             decoding="async"
                             fetchpriority="high"
                         >
+                        <?php if ($landingPresenceEnabled): ?>
+                            <span
+                                class="landing-activity-badge"
+                                data-presence-enabled="1"
+                                data-presence-endpoint="<?php echo escape($landingPresenceEndpoint); ?>"
+                                data-state="<?php echo escape($landingPresenceState); ?>"
+                                title="<?php echo escape($landingPresenceTitle); ?>"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M3 12h4l2.2-4.2L13 18l2.8-6H21"></path>
+                                </svg>
+                            </span>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

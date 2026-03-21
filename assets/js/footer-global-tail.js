@@ -1645,3 +1645,209 @@
         showQueuedToast();
         scheduleNext(1800);
     })();
+
+/* block 23 */
+(function () {
+        var globalKey = "__hansjackPresenceControl";
+        var previous = window[globalKey];
+        if (previous && typeof previous.teardown === "function") {
+            previous.teardown();
+        }
+
+        var runtime = null;
+        var baseInterval = 15000;
+        var hiddenInterval = 45000;
+        var requestTimeout = 10000;
+
+        function normalizeState(value) {
+            var state = String(value || "").trim().toLowerCase();
+            if (state === "online" || state === "busy" || state === "idle") {
+                return state;
+            }
+            return "offline";
+        }
+
+        function applyPayload(ctx, payload) {
+            if (!ctx || !ctx.badge || !payload || payload.ok !== true) {
+                return;
+            }
+
+            var state = normalizeState(payload.state);
+            ctx.badge.setAttribute("data-state", state);
+
+            var title = String(payload.title || "").trim();
+            if (title !== "") {
+                ctx.badge.setAttribute("title", title);
+                ctx.badge.setAttribute("aria-label", title);
+            }
+        }
+
+        function destroyRuntime() {
+            if (!runtime) {
+                return;
+            }
+
+            runtime.stopped = true;
+            runtime.inFlight = false;
+            if (runtime.timer) {
+                window.clearTimeout(runtime.timer);
+            }
+            runtime.timer = 0;
+            runtime.poll = null;
+            runtime = null;
+        }
+
+        function startPresencePolling() {
+            destroyRuntime();
+
+            var badge = document.querySelector(".landing-activity-badge[data-presence-enabled=\"1\"]");
+            if (!badge) {
+                return;
+            }
+
+            var endpoint = String(badge.getAttribute("data-presence-endpoint") || "").trim();
+            if (!endpoint) {
+                return;
+            }
+
+            var ctx = {
+                badge: badge,
+                endpoint: endpoint,
+                stopped: false,
+                inFlight: false,
+                timer: 0,
+                poll: null
+            };
+            runtime = ctx;
+
+            function scheduleNext(delay) {
+                if (runtime !== ctx || ctx.stopped) {
+                    return;
+                }
+
+                if (ctx.timer) {
+                    window.clearTimeout(ctx.timer);
+                }
+
+                var wait = Number(delay);
+                if (!Number.isFinite(wait) || wait < 1200) {
+                    wait = 1200;
+                }
+                ctx.timer = window.setTimeout(pollOnce, wait);
+            }
+
+            function pollOnce() {
+                if (runtime !== ctx || ctx.stopped) {
+                    return;
+                }
+                if (!ctx.badge || !ctx.badge.isConnected) {
+                    destroyRuntime();
+                    return;
+                }
+                if (ctx.inFlight) {
+                    scheduleNext(baseInterval);
+                    return;
+                }
+                if (document.visibilityState && document.visibilityState !== "visible") {
+                    scheduleNext(hiddenInterval);
+                    return;
+                }
+
+                ctx.inFlight = true;
+                var abortController = null;
+                var abortTimer = 0;
+                if (typeof window.AbortController === "function") {
+                    abortController = new window.AbortController();
+                    abortTimer = window.setTimeout(function () {
+                        try {
+                            abortController.abort();
+                        } catch (e) {}
+                    }, requestTimeout);
+                }
+
+                var fetchOptions = {
+                    method: "GET",
+                    credentials: "same-origin",
+                    cache: "no-store",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        "Accept": "application/json"
+                    }
+                };
+                if (abortController) {
+                    fetchOptions.signal = abortController.signal;
+                }
+
+                window.fetch(ctx.endpoint, fetchOptions).then(function (response) {
+                    if (!response || !response.ok) {
+                        throw new Error("presence status request failed");
+                    }
+                    return response.json();
+                }).then(function (payload) {
+                    if (abortTimer) {
+                        window.clearTimeout(abortTimer);
+                        abortTimer = 0;
+                    }
+                    applyPayload(ctx, payload);
+                }).catch(function () {
+                    // Ignore transient network failures.
+                }).then(function () {
+                    if (abortTimer) {
+                        window.clearTimeout(abortTimer);
+                    }
+                    if (runtime !== ctx || ctx.stopped) {
+                        return;
+                    }
+                    ctx.inFlight = false;
+                    var nextDelay = (document.visibilityState && document.visibilityState !== "visible")
+                        ? hiddenInterval
+                        : baseInterval;
+                    scheduleNext(nextDelay);
+                });
+            }
+
+            ctx.poll = pollOnce;
+            scheduleNext(1200);
+        }
+
+        var onVisibilityChange = function () {
+            if (!runtime || runtime.stopped) {
+                return;
+            }
+            if (document.visibilityState !== "visible") {
+                return;
+            }
+
+            if (runtime.timer) {
+                window.clearTimeout(runtime.timer);
+                runtime.timer = 0;
+            }
+            if (typeof runtime.poll === "function") {
+                runtime.poll();
+            }
+        };
+
+        var onPageHide = function () {
+            destroyRuntime();
+        };
+
+        var onPjaxAfter = function () {
+            startPresencePolling();
+        };
+
+        document.addEventListener("visibilitychange", onVisibilityChange);
+        window.addEventListener("pagehide", onPageHide);
+        window.addEventListener("hansjack:pjax:after", onPjaxAfter);
+
+        window[globalKey] = {
+            refresh: startPresencePolling,
+            teardown: function () {
+                destroyRuntime();
+                document.removeEventListener("visibilitychange", onVisibilityChange);
+                window.removeEventListener("pagehide", onPageHide);
+                window.removeEventListener("hansjack:pjax:after", onPjaxAfter);
+            }
+        };
+
+        startPresencePolling();
+    })();
