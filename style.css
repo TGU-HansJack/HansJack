@@ -1268,7 +1268,7 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     isolation: isolate;
 }
 
-.landing-avatar img {
+.landing-avatar > img {
     width: 100%;
     height: 100%;
     object-fit: contain;
@@ -1339,9 +1339,9 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 .landing-activity-icon {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     object-position: center;
-    border-radius: 6px;
+    border-radius: 0;
     display: none;
 }
 
@@ -1594,8 +1594,8 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     justify-content: flex-start;
     align-items: stretch;
     margin: 0;
-    padding-left: 0;
-    border-left: none;
+    padding-left: 0.75rem;
+    border-left: 2px solid rgba(17, 17, 17, 0.16);
     font-style: normal;
     box-sizing: border-box;
     overflow: hidden;
@@ -1703,9 +1703,12 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
         justify-content: flex-start;
         align-items: stretch;
         align-self: center;
-        padding-left: 0;
+        padding-left: 0.75rem;
         padding-top: 0;
-        border: none;
+        border-top: none;
+        border-right: none;
+        border-bottom: none;
+        border-left: 2px solid rgba(17, 17, 17, 0.16);
     }
 }
 
@@ -2085,6 +2088,13 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 
 .landing-memory-content {
     margin: 0;
+    font-size: clamp(0.8rem, 0.95vw, 0.9rem);
+    line-height: 1.56;
+}
+
+.landing-letter-list .comment-content {
+    font-size: clamp(0.8rem, 0.95vw, 0.9rem);
+    line-height: 1.56;
 }
 
 .landing-memory-content > :first-child {
@@ -2093,6 +2103,12 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 
 .landing-memory-content > :last-child {
     margin-bottom: 0;
+}
+
+.landing-image-note {
+    color: var(--muted-day);
+    font-style: italic;
+    font-size: 0.86em;
 }
 
 .landing-letter-quote,
@@ -2193,6 +2209,11 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
         padding-bottom: 0;
     }
 
+    .landing-seasonal {
+        height: auto;
+        min-height: 0;
+    }
+
     .landing-letter-memory-top {
         flex: 0 0 auto;
         flex-direction: column;
@@ -2214,11 +2235,12 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     }
 
     .landing-seasonal-main {
-        flex: 1 1 auto;
+        flex: 0 0 auto;
         min-height: 0;
         width: 100%;
         max-width: 100%;
         margin: 0;
+        overflow: visible;
     }
 
     .landing-letter-list,
@@ -2227,6 +2249,25 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
         width: 100%;
         max-width: 100%;
         overflow-x: hidden;
+    }
+
+    .tl-scroll-mobile {
+        flex: 0 0 auto;
+        min-height: 0;
+        max-height: none;
+        overflow-y: visible;
+        overscroll-behavior-y: auto;
+        -webkit-overflow-scrolling: auto;
+        padding-right: 0;
+    }
+
+    .tl-scroll-mobile .tl-scroll-links {
+        min-height: 0;
+        max-height: none;
+        overflow-y: visible;
+        overscroll-behavior-y: auto;
+        -webkit-overflow-scrolling: auto;
+        padding-right: 0;
     }
 
     .landing-letter-memory,

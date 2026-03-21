@@ -418,11 +418,11 @@ if ($this->is('index')) {
         if ($hasImage) {
             $hasText = trim(strip_tags($value)) !== '';
             if (!$hasText) {
-                $value = '<p>（有图）</p>';
+                $value = '<p><span class="landing-image-note">（有图）</span></p>';
             } elseif (preg_match('/<\/p>\s*$/iu', $value) === 1) {
-                $value = (string) preg_replace('/<\/p>\s*$/iu', '（有图）</p>', $value, 1);
+                $value = (string) preg_replace('/<\/p>\s*$/iu', '<span class="landing-image-note">（有图）</span></p>', $value, 1);
             } else {
-                $value .= '<p>（有图）</p>';
+                $value .= '<p><span class="landing-image-note">（有图）</span></p>';
             }
         }
 
