@@ -33,6 +33,7 @@ $landingMemories = [];
 $landingSeasonalTimeline = [];
 $landingSeasonalTimelineMobile = [];
 $landingSeasonalTotalCount = 0;
+$landingCurrentYearPostCount = 0;
 $landingSiteWordCount = 0;
 $landingSiteActiveDays = 0;
 $landingSitePostsCount = 0;
@@ -688,6 +689,17 @@ if ($this->is('index')) {
     usort($landingTimelineCandidates, static function (array $a, array $b): int {
         return ((int) ($b['created'] ?? 0)) <=> ((int) ($a['created'] ?? 0));
     });
+    $landingCurrentYear = (int) date('Y');
+    $landingCurrentYearPostCount = 0;
+    foreach ($landingTimelineCandidates as $timelineItem) {
+        $timelineCreated = (int) ($timelineItem['created'] ?? 0);
+        if ($timelineCreated <= 0) {
+            continue;
+        }
+        if ((int) date('Y', $timelineCreated) === $landingCurrentYear) {
+            $landingCurrentYearPostCount++;
+        }
+    }
 
     $landingSeasonNames = ['春', '夏', '秋', '冬'];
     $landingMonthNames = [
@@ -710,6 +722,7 @@ if ($this->is('index')) {
             return [
                 'order' => 0,
                 'idx' => 0,
+                'year' => 0,
                 'name' => $landingSeasonNames[0],
                 'monthLabel' => '',
             ];
@@ -731,19 +744,21 @@ if ($this->is('index')) {
             $seasonYear = $year;
         } else {
             $seasonIdx = 3;
-            $seasonYear = ($month === 12) ? ($year + 1) : $year;
+            $seasonYear = ($month === 12) ? $year : ($year - 1);
         }
 
         return [
             'order' => ($seasonYear * 4) + $seasonIdx,
             'idx' => $seasonIdx,
+            'year' => $seasonYear,
             'name' => $landingSeasonNames[$seasonIdx] ?? $landingSeasonNames[0],
             'monthLabel' => $landingMonthNames[$month] ?? ((string) $month . '月'),
         ];
     };
 
     $landingCurrentSeasonMeta = $landingReadSeasonMeta(time());
-    $landingCurrentSeasonOrder = (int) ($landingCurrentSeasonMeta['order'] ?? 0);
+    $landingCurrentSeasonIdx = (int) ($landingCurrentSeasonMeta['idx'] ?? 0);
+    $landingCurrentSeasonYear = (int) ($landingCurrentSeasonMeta['year'] ?? 0);
     $landingToneByDistance = [
         0 => 'is-tone-10',
         1 => 'is-tone-10',
@@ -752,15 +767,50 @@ if ($this->is('index')) {
         4 => 'is-tone-5',
     ];
     $landingSeasonalTimelineByOrder = [];
-
-    for ($distance = 3; $distance >= 0; $distance--) {
-        $seasonOrder = $landingCurrentSeasonOrder - $distance;
-        $seasonIdx = $seasonOrder % 4;
-        if ($seasonIdx < 0) {
-            $seasonIdx += 4;
+    $landingRetreatSeason = static function (int $seasonIdx, int $seasonYear): array {
+        if ($seasonIdx === 0) {
+            return [3, $seasonYear - 1];
         }
+        if ($seasonIdx === 1) {
+            return [0, $seasonYear];
+        }
+        if ($seasonIdx === 2) {
+            return [1, $seasonYear];
+        }
+
+        return [2, $seasonYear];
+    };
+
+    $landingSeasonSlots = [];
+    $slotSeasonIdx = $landingCurrentSeasonIdx;
+    $slotSeasonYear = $landingCurrentSeasonYear;
+    for ($step = 1; $step <= 3; $step++) {
+        [$slotSeasonIdx, $slotSeasonYear] = $landingRetreatSeason($slotSeasonIdx, $slotSeasonYear);
+        $landingSeasonSlots[] = [
+            'idx' => $slotSeasonIdx,
+            'year' => $slotSeasonYear,
+            'distance' => $step,
+            'isCurrent' => false,
+        ];
+    }
+    $landingSeasonSlots = array_reverse($landingSeasonSlots);
+    $landingSeasonSlots[] = [
+        'idx' => $landingCurrentSeasonIdx,
+        'year' => $landingCurrentSeasonYear,
+        'distance' => 0,
+        'isCurrent' => true,
+    ];
+
+    foreach ($landingSeasonSlots as $seasonSlot) {
+        $seasonIdx = (int) ($seasonSlot['idx'] ?? 0);
+        if ($seasonIdx < 0 || $seasonIdx > 3) {
+            $seasonIdx = 0;
+        }
+        $seasonYear = (int) ($seasonSlot['year'] ?? 0);
+        $distance = (int) ($seasonSlot['distance'] ?? 0);
+        $isCurrentSeason = (bool) ($seasonSlot['isCurrent'] ?? false);
+        $seasonOrder = ($seasonYear * 4) + $seasonIdx;
         $seasonName = $landingSeasonNames[$seasonIdx] ?? $landingSeasonNames[0];
-        $isCurrentSeason = ($distance === 0);
 
         $landingSeasonalTimelineByOrder[$seasonOrder] = [
             'title' => $isCurrentSeason ? ($seasonName . ' · 今') : $seasonName,
@@ -1146,7 +1196,7 @@ if ($this->is('index')) {
 
                 <div class="tl-scroll-footer">
                     <span class="tl-scroll-footer-left"><?php echo escape($landingSiteStatsLabel); ?></span>
-                    <span class="tl-scroll-footer-right"><?php echo escape('本年 ' . (int) $landingSeasonalTotalCount . ' 篇'); ?></span>
+                    <span class="tl-scroll-footer-right"><?php echo escape('本年 ' . (int) $landingCurrentYearPostCount . ' 篇'); ?></span>
                 </div>
             </div>
         </section>

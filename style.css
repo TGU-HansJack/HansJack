@@ -8991,8 +8991,11 @@ html.login-modal-open .login-modal {
 }
 
 :is(.article-content, .comment-content) ins {
+    text-decoration-line: underline;
+    text-decoration-style: dashed;
     text-decoration-thickness: 1.4px;
     text-underline-offset: 0.14em;
+    text-decoration-color: color-mix(in oklab, currentColor 72%, transparent);
 }
 
 :is(.article-content, .comment-content) mark {
