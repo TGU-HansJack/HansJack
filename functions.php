@@ -68,13 +68,13 @@ function themeConfig($form)
     $fontChoice = new \Typecho\Widget\Helper\Form\Element\Radio(
         'fontChoice',
         [
-            'maple_mono_cn_regular' => _t('MapleMonoNormal-CN-Regular'),
             'noto_sans_sc_regular' => _t('Noto Sans SC'),
+            'noto_serif_sc_light' => _t('Noto Serif SC Light'),
             'system' => _t('系统默认'),
         ],
-        'maple_mono_cn_regular',
+        'noto_serif_sc_light',
         _t('选择字体'),
-        _t('控制主题主要文字字体；可选 MapleMonoNormal-CN-Regular、Noto Sans SC 或系统默认字体。')
+        _t('控制主题主要文字字体；可选 Noto Sans SC、Noto Serif SC Light 或系统默认字体。')
     );
     $form->addInput($fontChoice);
 
@@ -4504,10 +4504,10 @@ function landingHitokotoEnabled(Options $options): bool
 
 function themeFontChoice(Options $options): string
 {
-    $raw = trim((string) ($options->fontChoice ?? 'maple_mono_cn_regular'));
-    $allowed = ['maple_mono_cn_regular', 'noto_sans_sc_regular', 'system'];
+    $raw = trim((string) ($options->fontChoice ?? 'noto_serif_sc_light'));
+    $allowed = ['noto_sans_sc_regular', 'noto_serif_sc_light', 'system'];
     if (!in_array($raw, $allowed, true)) {
-        return 'maple_mono_cn_regular';
+        return 'noto_serif_sc_light';
     }
     return $raw;
 }
