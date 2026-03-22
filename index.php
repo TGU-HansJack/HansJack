@@ -648,8 +648,7 @@ if ($this->is('index')) {
         . number_format((int) $landingSiteCommentsCount)
         . '评论';
 
-    $landingSeasonalFetchLimit = 300;
-    $landingSeasonalPerBucketLimit = 10;
+    $landingSeasonalFetchLimit = max(300, min(20000, $landingSitePostsCount + 200));
     $landingTimelineCandidates = [];
     $landingTimelineSeen = [];
 
@@ -856,10 +855,6 @@ if ($this->is('index')) {
         $timelineMeta = $landingReadSeasonMeta($timelineCreated);
         $seasonOrder = (int) ($timelineMeta['order'] ?? 0);
         if (!isset($landingSeasonalTimelineByOrder[$seasonOrder])) {
-            continue;
-        }
-
-        if (count($landingSeasonalTimelineByOrder[$seasonOrder]['items']) >= $landingSeasonalPerBucketLimit) {
             continue;
         }
 

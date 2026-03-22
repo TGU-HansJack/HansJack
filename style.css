@@ -1846,7 +1846,7 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     min-height: max(0px, calc(var(--hansjack-vh, 100svh) * 0.5));
     display: flex;
     flex-direction: column;
-    border-top: 1px solid rgba(17, 17, 17, 0.08);
+    border-top: none;
 }
 
 .landing-study {
@@ -1854,7 +1854,13 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     margin: 0 auto;
     padding: clamp(0.55rem, 2vh, 1.05rem) 0 clamp(0.65rem, 2vh, 1rem);
     box-sizing: border-box;
-    border-top: 1px solid rgba(17, 17, 17, 0.08);
+    border-top: none;
+}
+
+.landing + .landing-letter-memory,
+.landing-letter-memory + .landing-seasonal,
+.landing-seasonal + .landing-study {
+    margin-top: clamp(2.2rem, 5vh, 3rem);
 }
 
 .landing-study-main {
@@ -2540,6 +2546,7 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 
 .tl-scroll-col {
     flex: 1 1 0;
+    display: flex;
     min-width: 13.2rem;
     min-height: 0;
     padding: 0 0.62rem;
@@ -2571,6 +2578,7 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 
 .tl-scroll-season {
     width: 100%;
+    flex: 1 1 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
@@ -2595,27 +2603,21 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 .tl-scroll-links {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     gap: 0.22rem;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior-y: auto;
     -webkit-overflow-scrolling: touch;
     padding-right: 0.2rem;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(117, 117, 117, 0.35) transparent;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
 .tl-scroll-links::-webkit-scrollbar {
-    width: 6px;
-}
-
-.tl-scroll-links::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background: rgba(117, 117, 117, 0.35);
-}
-
-.tl-scroll-links::-webkit-scrollbar-track {
-    background: transparent;
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 .tl-scroll-link {
@@ -2635,6 +2637,13 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 .tl-scroll-link:hover,
 .tl-scroll-link:focus-visible {
     color: var(--accent);
+}
+
+.tl-scroll-link:hover .tl-scroll-link-title,
+.tl-scroll-link:focus-visible .tl-scroll-link-title,
+.tl-scroll-link:active .tl-scroll-link-title,
+.tl-scroll-link[aria-current="page"] .tl-scroll-link-title {
+    text-decoration: underline;
 }
 
 .tl-scroll-link-title {
@@ -2908,6 +2917,7 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     }
 
     .tl-scroll-mobile .tl-scroll-links {
+        flex: 0 0 auto;
         min-height: 0;
         max-height: none;
         overflow-y: visible;
