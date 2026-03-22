@@ -974,7 +974,7 @@ if ($this->is('index')) {
                     </section>
 
                     <blockquote class="landing-latest">
-                        <h1><?php _e('最新内容'); ?></h1>
+                        <h2 class="landing-latest-title"><?php _e('最新消息'); ?></h2>
                         <?php if ($landingLatestContent !== null): ?>
                             <?php
                             $latestTitle = (string) ($landingLatestContent['title'] ?? '');

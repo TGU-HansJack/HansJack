@@ -1665,12 +1665,14 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     text-align: left;
 }
 
-.landing-latest h1 {
+.landing-latest-title {
     margin: 0;
+    color: var(--muted-day);
     font-family: var(--font-ui);
-    font-size: clamp(1rem, 1.35vw, 1.2rem);
-    font-weight: 700;
-    line-height: 1.2;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
 }
 
 .landing-latest-main {
@@ -1696,9 +1698,10 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     max-width: 100%;
     color: inherit;
     text-decoration: none;
+    font-family: var(--font-main);
     font-weight: 400;
-    font-size: clamp(0.92rem, 1.2vw, 1.08rem);
-    line-height: 1.42;
+    font-size: clamp(0.8rem, 0.95vw, 0.9rem);
+    line-height: 1.56;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -1721,8 +1724,8 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 .landing-latest-tag {
     color: var(--muted-day);
     text-decoration: none;
-    font-size: clamp(0.88rem, 1.05vw, 1rem);
-    line-height: 1.35;
+    font-size: 0.74rem;
+    line-height: 1.25;
 }
 
 .landing-latest-tag:hover,
