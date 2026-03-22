@@ -6394,3 +6394,329 @@
 
         Array.prototype.slice.call(blocks).forEach(setup);
     })();
+
+/* block 12 */
+(function () {
+        var controlKey = "__hansjackStudyCarouselControl";
+        var previous = window[controlKey];
+        if (previous && typeof previous.teardown === "function") {
+            try {
+                previous.teardown();
+            } catch (e) {}
+        }
+
+        var instances = [];
+        var visibilityBound = false;
+        var pjaxBound = false;
+        var pagehideBound = false;
+
+        function readScrollLeft(node) {
+            if (!node) {
+                return 0;
+            }
+            if (typeof node.scrollLeft === "number") {
+                return node.scrollLeft || 0;
+            }
+            return 0;
+        }
+
+        function nearestCardIndex(container, cards) {
+            if (!container || !cards || cards.length === 0) {
+                return 0;
+            }
+
+            var scrollLeft = readScrollLeft(container);
+            var bestIndex = 0;
+            var bestDistance = Number.MAX_SAFE_INTEGER;
+
+            for (var i = 0; i < cards.length; i++) {
+                var card = cards[i];
+                if (!card) {
+                    continue;
+                }
+
+                var left = typeof card.offsetLeft === "number" ? card.offsetLeft : 0;
+                var distance = Math.abs(left - scrollLeft);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestIndex = i;
+                }
+            }
+
+            return bestIndex;
+        }
+
+        function scrollToCard(container, cards, index, smooth) {
+            if (!container || !cards || cards.length === 0) {
+                return;
+            }
+
+            var maxIndex = cards.length - 1;
+            var next = Math.max(0, Math.min(maxIndex, index));
+            var target = cards[next];
+            if (!target) {
+                return;
+            }
+
+            var left = typeof target.offsetLeft === "number" ? target.offsetLeft : 0;
+            if (typeof container.scrollTo === "function") {
+                try {
+                    container.scrollTo({
+                        left: left,
+                        behavior: smooth ? "smooth" : "auto"
+                    });
+                    return;
+                } catch (e) {}
+            }
+            container.scrollLeft = left;
+        }
+
+        function createInstance(container) {
+            if (!container || !container.querySelector) {
+                return null;
+            }
+
+            var track = container.querySelector("[data-study-carousel-track]");
+            if (!track || !track.querySelectorAll) {
+                return null;
+            }
+
+            var cards = Array.prototype.slice.call(track.querySelectorAll("[data-study-card]"));
+            if (!cards || cards.length <= 1) {
+                return null;
+            }
+
+            var intervalMsRaw = parseInt(container.getAttribute("data-study-interval") || "2000", 10);
+            var intervalMs = Number.isFinite(intervalMsRaw) ? intervalMsRaw : 2000;
+            intervalMs = Math.max(1200, intervalMs);
+
+            var state = {
+                container: container,
+                track: track,
+                cards: cards,
+                intervalMs: intervalMs,
+                timer: 0,
+                resumeTimer: 0,
+                scrollTimer: 0,
+                paused: false,
+                index: 0
+            };
+
+            function refreshCards() {
+                state.cards = Array.prototype.slice.call(track.querySelectorAll("[data-study-card]"));
+                if (!state.cards || state.cards.length <= 1) {
+                    return false;
+                }
+                if (state.index >= state.cards.length) {
+                    state.index = 0;
+                }
+                return true;
+            }
+
+            function stopAuto() {
+                if (state.timer) {
+                    window.clearInterval(state.timer);
+                    state.timer = 0;
+                }
+            }
+
+            function startAuto() {
+                if (state.paused) {
+                    return;
+                }
+                if (!refreshCards()) {
+                    return;
+                }
+                stopAuto();
+                state.timer = window.setInterval(function () {
+                    if (document.visibilityState && document.visibilityState !== "visible") {
+                        return;
+                    }
+                    if (state.paused) {
+                        return;
+                    }
+                    if (!refreshCards()) {
+                        return;
+                    }
+                    state.index = nearestCardIndex(container, state.cards);
+                    var nextIndex = state.index + 1;
+                    if (nextIndex >= state.cards.length) {
+                        nextIndex = 0;
+                    }
+                    state.index = nextIndex;
+                    scrollToCard(container, state.cards, nextIndex, true);
+                }, state.intervalMs);
+            }
+
+            function scheduleResume(delayMs) {
+                if (state.resumeTimer) {
+                    window.clearTimeout(state.resumeTimer);
+                    state.resumeTimer = 0;
+                }
+                state.resumeTimer = window.setTimeout(function () {
+                    state.resumeTimer = 0;
+                    if (state.paused) {
+                        return;
+                    }
+                    startAuto();
+                }, Math.max(900, delayMs || 2800));
+            }
+
+            function onPointerEnter() {
+                state.paused = true;
+                stopAuto();
+            }
+
+            function onPointerLeave() {
+                state.paused = false;
+                scheduleResume(700);
+            }
+
+            function onUserScrollIntent() {
+                if (state.paused) {
+                    return;
+                }
+                stopAuto();
+                scheduleResume(3200);
+            }
+
+            function onScroll() {
+                if (state.scrollTimer) {
+                    window.clearTimeout(state.scrollTimer);
+                    state.scrollTimer = 0;
+                }
+                state.scrollTimer = window.setTimeout(function () {
+                    state.scrollTimer = 0;
+                    state.index = nearestCardIndex(container, state.cards);
+                }, 120);
+            }
+
+            try {
+                container.addEventListener("mouseenter", onPointerEnter);
+                container.addEventListener("mouseleave", onPointerLeave);
+                container.addEventListener("pointerdown", onUserScrollIntent, { passive: true });
+                container.addEventListener("touchstart", onUserScrollIntent, { passive: true });
+                container.addEventListener("wheel", onUserScrollIntent, { passive: true });
+                container.addEventListener("scroll", onScroll, { passive: true });
+            } catch (e) {
+                container.addEventListener("mouseenter", onPointerEnter);
+                container.addEventListener("mouseleave", onPointerLeave);
+                container.addEventListener("pointerdown", onUserScrollIntent);
+                container.addEventListener("touchstart", onUserScrollIntent);
+                container.addEventListener("wheel", onUserScrollIntent);
+                container.addEventListener("scroll", onScroll);
+            }
+
+            state.index = nearestCardIndex(container, state.cards);
+            startAuto();
+
+            state.start = startAuto;
+            state.stop = stopAuto;
+            state.destroy = function () {
+                stopAuto();
+                if (state.resumeTimer) {
+                    window.clearTimeout(state.resumeTimer);
+                    state.resumeTimer = 0;
+                }
+                if (state.scrollTimer) {
+                    window.clearTimeout(state.scrollTimer);
+                    state.scrollTimer = 0;
+                }
+                container.removeEventListener("mouseenter", onPointerEnter);
+                container.removeEventListener("mouseleave", onPointerLeave);
+                container.removeEventListener("pointerdown", onUserScrollIntent);
+                container.removeEventListener("touchstart", onUserScrollIntent);
+                container.removeEventListener("wheel", onUserScrollIntent);
+                container.removeEventListener("scroll", onScroll);
+            };
+
+            return state;
+        }
+
+        function teardownInstances() {
+            if (!instances || instances.length === 0) {
+                return;
+            }
+            instances.forEach(function (instance) {
+                if (!instance || typeof instance.destroy !== "function") {
+                    return;
+                }
+                try {
+                    instance.destroy();
+                } catch (e) {}
+            });
+            instances = [];
+        }
+
+        function bootstrap() {
+            teardownInstances();
+            var carousels = Array.prototype.slice.call(document.querySelectorAll("[data-study-carousel]"));
+            if (!carousels || carousels.length === 0) {
+                return;
+            }
+
+            carousels.forEach(function (container) {
+                var instance = createInstance(container);
+                if (instance) {
+                    instances.push(instance);
+                }
+            });
+        }
+
+        function onVisibilityChange() {
+            if (!instances || instances.length === 0) {
+                return;
+            }
+            var visible = !document.visibilityState || document.visibilityState === "visible";
+            instances.forEach(function (instance) {
+                if (!instance) {
+                    return;
+                }
+                if (visible) {
+                    if (typeof instance.start === "function") {
+                        instance.start();
+                    }
+                    return;
+                }
+                if (typeof instance.stop === "function") {
+                    instance.stop();
+                }
+            });
+        }
+
+        function teardownAll() {
+            teardownInstances();
+            if (visibilityBound) {
+                document.removeEventListener("visibilitychange", onVisibilityChange);
+                visibilityBound = false;
+            }
+            if (pjaxBound) {
+                window.removeEventListener("hansjack:pjax:after", bootstrap);
+                pjaxBound = false;
+            }
+            if (pagehideBound) {
+                window.removeEventListener("pagehide", teardownAll);
+                pagehideBound = false;
+            }
+        }
+
+        if (!visibilityBound) {
+            document.addEventListener("visibilitychange", onVisibilityChange);
+            visibilityBound = true;
+        }
+        if (!pjaxBound) {
+            window.addEventListener("hansjack:pjax:after", bootstrap);
+            pjaxBound = true;
+        }
+        if (!pagehideBound) {
+            window.addEventListener("pagehide", teardownAll);
+            pagehideBound = true;
+        }
+
+        window[controlKey] = {
+            refresh: bootstrap,
+            teardown: teardownAll
+        };
+
+        bootstrap();
+    })();

@@ -307,6 +307,27 @@ function themeConfig($form)
     );
     $form->addInput($presenceStatusToken);
 
+    $maimemoStudyEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'maimemoStudyEnabled',
+        [
+            '1' => _t('开启'),
+            '0' => _t('关闭'),
+        ],
+        '0',
+        _t('首页今日学习进度'),
+        _t('在首页“笔耕不辍”下方显示墨墨今日学习进度和单词记录。')
+    );
+    $form->addInput($maimemoStudyEnabled);
+
+    $maimemoApiToken = new \Typecho\Widget\Helper\Form\Element\Password(
+        'maimemoApiToken',
+        null,
+        '',
+        _t('墨墨开放 API Token'),
+        _t('请求 Header 会使用 `Authorization: <Token>`。留空则无法请求学习进度。')
+    );
+    $form->addInput($maimemoApiToken);
+
     $anonymousPageCacheEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
         'anonymousPageCacheEnabled',
         [
@@ -1248,6 +1269,460 @@ function hansjackPresenceStatusPublicPayload(Options $options): array
     $payload['title'] = hansjackPresenceStatusBuildTitle($payload);
 
     return $payload;
+}
+
+function hansjackMaimemoStudyEnabled(Options $options): bool
+{
+    $raw = '';
+    try {
+        $raw = (string) ($options->maimemoStudyEnabled ?? '0');
+    } catch (\Throwable $e) {
+        $raw = '0';
+    }
+
+    return hansjackOptionEnabled($raw, false);
+}
+
+function hansjackMaimemoApiToken(Options $options): string
+{
+    $raw = '';
+    try {
+        $raw = (string) ($options->maimemoApiToken ?? '');
+    } catch (\Throwable $e) {
+        $raw = '';
+    }
+
+    return trim($raw);
+}
+
+function hansjackMaimemoStudyCacheTtl(Options $options): int
+{
+    if (hansjackHighLoadDegradeEnabled($options)) {
+        return 900;
+    }
+
+    return 300;
+}
+
+function hansjackMaimemoStudyCacheFilePath(): string
+{
+    return __DIR__
+        . DIRECTORY_SEPARATOR . 'cache'
+        . DIRECTORY_SEPARATOR . 'maimemo-study.json';
+}
+
+function hansjackMaimemoTodayDate(): string
+{
+    return date('Y-m-d');
+}
+
+function hansjackMaimemoNormalizeProgress($progress): array
+{
+    if (!is_array($progress)) {
+        $progress = [];
+    }
+
+    $finished = max(0, (int) ($progress['finished'] ?? 0));
+    $total = max(0, (int) ($progress['total'] ?? 0));
+    $studyTime = max(0, (int) ($progress['study_time'] ?? 0));
+
+    if ($total > 0 && $finished > $total) {
+        $finished = $total;
+    }
+    if ($total <= 0 && $finished > 0) {
+        $total = $finished;
+    }
+
+    $percent = 0.0;
+    if ($total > 0) {
+        $percent = min(100, max(0, ($finished / $total) * 100));
+    }
+
+    return [
+        'finished' => $finished,
+        'total' => $total,
+        'study_time' => $studyTime,
+        'percent' => round($percent, 2),
+    ];
+}
+
+function hansjackMaimemoNormalizeTodayItems($items, int $limit = 120): array
+{
+    if (!is_array($items)) {
+        return [];
+    }
+
+    $limit = max(1, min(1000, $limit));
+    $normalized = [];
+    $fallbackOrder = 1;
+    foreach ($items as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $vocId = trim((string) ($item['voc_id'] ?? ''));
+        $spelling = trim((string) ($item['voc_spelling'] ?? ''));
+        if ($spelling === '') {
+            continue;
+        }
+
+        $order = (int) ($item['order'] ?? 0);
+        if ($order <= 0) {
+            $order = $fallbackOrder;
+        }
+        $fallbackOrder = max($fallbackOrder + 1, $order + 1);
+
+        $firstResponse = strtoupper(trim((string) ($item['first_response'] ?? '')));
+        if (!preg_match('/^[A-Z_]+$/', $firstResponse)) {
+            $firstResponse = '';
+        }
+
+        $normalized[] = [
+            'voc_id' => $vocId,
+            'voc_spelling' => $spelling,
+            'order' => $order,
+            'first_response' => $firstResponse,
+            'is_new' => !empty($item['is_new']),
+            'is_finished' => !empty($item['is_finished']),
+        ];
+
+        if (count($normalized) >= $limit) {
+            break;
+        }
+    }
+
+    usort($normalized, static function (array $a, array $b): int {
+        $aOrder = (int) ($a['order'] ?? 0);
+        $bOrder = (int) ($b['order'] ?? 0);
+        if ($aOrder === $bOrder) {
+            return strcmp((string) ($a['voc_spelling'] ?? ''), (string) ($b['voc_spelling'] ?? ''));
+        }
+        return $aOrder <=> $bOrder;
+    });
+
+    return $normalized;
+}
+
+function hansjackMaimemoStudyTimeText(int $milliseconds): string
+{
+    $milliseconds = max(0, $milliseconds);
+    $seconds = (int) floor($milliseconds / 1000);
+    if ($seconds <= 0) {
+        return _t('0 分钟');
+    }
+
+    $hours = (int) floor($seconds / 3600);
+    $minutes = (int) floor(($seconds % 3600) / 60);
+    if ($hours > 0) {
+        if ($minutes > 0) {
+            return _t('%d 小时 %d 分钟', $hours, $minutes);
+        }
+        return _t('%d 小时', $hours);
+    }
+
+    if ($minutes > 0) {
+        return _t('%d 分钟', $minutes);
+    }
+
+    return _t('%d 秒', max(1, $seconds));
+}
+
+function hansjackMaimemoResponseLabel(string $code): string
+{
+    $map = [
+        'UNSPECIFIED' => _t('未反馈'),
+        'STUDY_RESPONSE_UNSPECIFIED' => _t('未反馈'),
+        'FAMILIAR' => _t('熟悉'),
+        'VAGUE' => _t('模糊'),
+        'FORGET' => _t('遗忘'),
+        'WELL_FAMILIAR' => _t('非常熟悉'),
+        'CANCEL_WELL_FAMILIAR' => _t('取消非常熟悉'),
+        // 兼容少量接口返回数字枚举值
+        '0' => _t('未反馈'),
+        '1' => _t('熟悉'),
+        '2' => _t('模糊'),
+        '3' => _t('遗忘'),
+        '4' => _t('非常熟悉'),
+        '5' => _t('取消非常熟悉'),
+    ];
+
+    $key = strtoupper(trim($code));
+    if ($key === '') {
+        return '';
+    }
+    if (strpos($key, 'STUDY_RESPONSE_') === 0 && isset($map[$key]) === false) {
+        $key = substr($key, strlen('STUDY_RESPONSE_'));
+    }
+    return (string) ($map[$key] ?? $key);
+}
+
+function hansjackMaimemoReadCache(): array
+{
+    $path = hansjackMaimemoStudyCacheFilePath();
+    if (!is_file($path) || !is_readable($path)) {
+        return [];
+    }
+
+    $raw = @file_get_contents($path);
+    if (!is_string($raw) || trim($raw) === '') {
+        return [];
+    }
+
+    $decoded = json_decode($raw, true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+function hansjackMaimemoWriteCache(array $payload): bool
+{
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($json) || $json === '') {
+        return false;
+    }
+
+    return hansjackWriteFileAtomic(hansjackMaimemoStudyCacheFilePath(), $json);
+}
+
+function hansjackMaimemoRequestJson(string $endpoint, string $token, array $payload = []): array
+{
+    $endpoint = trim($endpoint, '/');
+    if ($endpoint === '' || $token === '') {
+        return ['status' => 0, 'body' => '', 'json' => []];
+    }
+
+    $authToken = trim($token);
+    if (!preg_match('/^Bearer\s+/i', $authToken)) {
+        $authToken = 'Bearer ' . $authToken;
+    }
+
+    $url = 'https://open.maimemo.com/open/api/v1/study/' . $endpoint;
+    $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (!is_string($body)) {
+        $body = '{}';
+    }
+
+    $resp = githubHttpRequest(
+        'POST',
+        $url,
+        [
+            'Accept: application/json',
+            'Authorization: ' . $authToken,
+            'Content-Type: application/json',
+            'User-Agent: HansJack-MaiMemo/1.0',
+        ],
+        $body
+    );
+
+    $json = json_decode((string) ($resp['body'] ?? ''), true);
+
+    return [
+        'status' => (int) ($resp['status'] ?? 0),
+        'body' => (string) ($resp['body'] ?? ''),
+        'json' => is_array($json) ? $json : [],
+    ];
+}
+
+function hansjackMaimemoApiErrorText(array $response): string
+{
+    $json = is_array($response['json'] ?? null) ? $response['json'] : [];
+
+    $errors = $json['errors'] ?? null;
+    if (is_array($errors) && !empty($errors)) {
+        $errorTexts = [];
+        foreach ($errors as $item) {
+            if (is_scalar($item)) {
+                $text = trim((string) $item);
+                if ($text !== '') {
+                    $errorTexts[] = $text;
+                }
+            }
+        }
+        if (!empty($errorTexts)) {
+            return implode('；', $errorTexts);
+        }
+    }
+
+    $data = is_array($json['data'] ?? null) ? $json['data'] : [];
+    foreach (['message', 'msg', 'error_description', 'error'] as $field) {
+        $value = trim((string) ($data[$field] ?? ''));
+        if ($value !== '') {
+            return $value;
+        }
+    }
+
+    foreach (['message', 'msg', 'error_description', 'error'] as $field) {
+        $value = trim((string) ($json[$field] ?? ''));
+        if ($value !== '') {
+            return $value;
+        }
+    }
+
+    $status = (int) ($response['status'] ?? 0);
+    if ($status >= 400) {
+        return _t('接口返回错误（HTTP %d）', $status);
+    }
+
+    return '';
+}
+
+function hansjackMaimemoStudyPayload(Options $options): array
+{
+    $enabled = hansjackMaimemoStudyEnabled($options);
+    $today = hansjackMaimemoTodayDate();
+    $base = [
+        'enabled' => $enabled,
+        'tokenConfigured' => false,
+        'ok' => false,
+        'date' => $today,
+        'progress' => hansjackMaimemoNormalizeProgress([]),
+        'today_items' => [],
+        'study_time_text' => hansjackMaimemoStudyTimeText(0),
+        'updatedAt' => 0,
+        'updatedAtText' => '',
+        'source' => 'none',
+        'message' => '',
+    ];
+
+    if (!$enabled) {
+        return $base;
+    }
+
+    $token = hansjackMaimemoApiToken($options);
+    if ($token === '') {
+        $base['message'] = _t('请在主题设置中填写墨墨开放 API Token。');
+        return $base;
+    }
+    $base['tokenConfigured'] = true;
+
+    $now = time();
+    $ttl = hansjackMaimemoStudyCacheTtl($options);
+    $cache = hansjackMaimemoReadCache();
+    $cacheDate = trim((string) ($cache['date'] ?? ''));
+    $cacheUpdatedAt = max(0, (int) ($cache['updatedAt'] ?? 0));
+    $cacheProgress = hansjackMaimemoNormalizeProgress($cache['progress'] ?? []);
+    $cacheItems = hansjackMaimemoNormalizeTodayItems($cache['today_items'] ?? [], 200);
+    $cacheMessage = trim((string) ($cache['message'] ?? ''));
+
+    $cacheHasData = (
+        !empty($cacheItems)
+        || (int) ($cacheProgress['total'] ?? 0) > 0
+        || (int) ($cacheProgress['finished'] ?? 0) > 0
+    );
+    $cacheIsToday = ($cacheDate === $today);
+    $cacheFresh = $cacheIsToday
+        && $cacheHasData
+        && $cacheUpdatedAt > 0
+        && ($now - $cacheUpdatedAt) <= $ttl;
+
+    if ($cacheFresh) {
+        $base['ok'] = true;
+        $base['progress'] = $cacheProgress;
+        $base['today_items'] = $cacheItems;
+        $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($cacheProgress['study_time'] ?? 0));
+        $base['updatedAt'] = $cacheUpdatedAt;
+        $base['updatedAtText'] = date('Y-m-d H:i:s', $cacheUpdatedAt);
+        $base['source'] = 'cache';
+        $base['message'] = $cacheMessage;
+        return $base;
+    }
+
+    $progressResp = hansjackMaimemoRequestJson('get_study_progress', $token, []);
+    $itemsResp = hansjackMaimemoRequestJson('get_today_items', $token, [
+        'limit' => 120,
+    ]);
+
+    $progressStatus = (int) ($progressResp['status'] ?? 0);
+    $itemsStatus = (int) ($itemsResp['status'] ?? 0);
+    $progressJson = is_array($progressResp['json'] ?? null) ? $progressResp['json'] : [];
+    $itemsJson = is_array($itemsResp['json'] ?? null) ? $itemsResp['json'] : [];
+
+    $progressRoot = is_array($progressJson['data'] ?? null) ? $progressJson['data'] : $progressJson;
+    $itemsRoot = is_array($itemsJson['data'] ?? null) ? $itemsJson['data'] : $itemsJson;
+
+    $progressSuccess = !array_key_exists('success', $progressJson) || !empty($progressJson['success']);
+    $itemsSuccess = !array_key_exists('success', $itemsJson) || !empty($itemsJson['success']);
+
+    $progressOk = (
+        $progressStatus >= 200
+        && $progressStatus < 300
+        && $progressSuccess
+        && isset($progressRoot['progress'])
+        && is_array($progressRoot['progress'])
+    );
+    $itemsOk = (
+        $itemsStatus >= 200
+        && $itemsStatus < 300
+        && $itemsSuccess
+        && array_key_exists('today_items', $itemsRoot)
+        && is_array($itemsRoot['today_items'])
+    );
+
+    $liveProgress = $progressOk ? hansjackMaimemoNormalizeProgress($progressRoot['progress'] ?? []) : $cacheProgress;
+    $liveItems = $itemsOk ? hansjackMaimemoNormalizeTodayItems($itemsRoot['today_items'] ?? [], 200) : $cacheItems;
+
+    $liveHasData = (
+        !empty($liveItems)
+        || (int) ($liveProgress['total'] ?? 0) > 0
+        || (int) ($liveProgress['finished'] ?? 0) > 0
+    );
+
+    $message = '';
+    if (!$progressOk || !$itemsOk) {
+        $errors = [];
+        if (!$progressOk) {
+            $progressError = hansjackMaimemoApiErrorText($progressResp);
+            if ($progressError !== '') {
+                $errors[] = _t('进度接口：%s', $progressError);
+            }
+        }
+        if (!$itemsOk) {
+            $itemsError = hansjackMaimemoApiErrorText($itemsResp);
+            if ($itemsError !== '') {
+                $errors[] = _t('单词接口：%s', $itemsError);
+            }
+        }
+        if (!empty($errors)) {
+            $message = implode('；', $errors);
+        }
+    }
+
+    if ($liveHasData) {
+        $base['ok'] = true;
+        $base['progress'] = $liveProgress;
+        $base['today_items'] = $liveItems;
+        $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($liveProgress['study_time'] ?? 0));
+        $base['updatedAt'] = $now;
+        $base['updatedAtText'] = date('Y-m-d H:i:s', $now);
+        $base['source'] = ($progressOk && $itemsOk) ? 'api' : 'api-partial';
+        $base['message'] = $message;
+
+        hansjackMaimemoWriteCache([
+            'date' => $today,
+            'updatedAt' => $now,
+            'progress' => $liveProgress,
+            'today_items' => $liveItems,
+            'message' => $message,
+        ]);
+
+        return $base;
+    }
+
+    if ($cacheIsToday && $cacheHasData) {
+        $base['ok'] = true;
+        $base['progress'] = $cacheProgress;
+        $base['today_items'] = $cacheItems;
+        $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($cacheProgress['study_time'] ?? 0));
+        $base['updatedAt'] = $cacheUpdatedAt;
+        $base['updatedAtText'] = ($cacheUpdatedAt > 0) ? date('Y-m-d H:i:s', $cacheUpdatedAt) : '';
+        $base['source'] = 'cache-stale';
+        $base['message'] = $message !== '' ? $message : _t('接口暂不可用，已展示今日缓存数据。');
+        return $base;
+    }
+
+    if ($message === '') {
+        $message = _t('暂时无法获取学习数据，请稍后重试。');
+    }
+    $base['message'] = $message;
+    return $base;
 }
 
 function hansjackSitemapSize(Options $options): int
@@ -4273,6 +4748,7 @@ function hansjackThemeCacheTargetPaths(): array
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'post-guess',
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'series',
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'presence-status.json',
+        __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'maimemo-study.json',
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'internal-link-meta.json',
     ];
 }
@@ -4391,7 +4867,7 @@ function hansjackThemeCachePanelHtml(Options $options): string
     }
 
     $html = '<div class="hansjack-cache-panel">';
-    $html .= '<div>' . _t('目标缓存：page-cache、post-guess、series、presence-status、internal-link-meta。') . '</div>';
+    $html .= '<div>' . _t('目标缓存：page-cache、post-guess、series、presence-status、maimemo-study、internal-link-meta。') . '</div>';
 
     if ($message !== '') {
         $html .= '<div style="margin-top:6px;color:' . escape($messageColor) . ';">' . escape($message) . '</div>';
@@ -5731,6 +6207,7 @@ function buildThemeConfig(Options $options): array
         'landingHitokotoEnabled' => landingHitokotoEnabled($options),
         'presenceStatusEnabled' => hansjackPresenceStatusEnabled($options),
         'presenceStatusEndpoint' => hansjackPresenceStatusEndpoint($options),
+        'maimemoStudyEnabled' => hansjackMaimemoStudyEnabled($options),
         'links' => $links,
         'navItems' => [
             ['key' => 'home', 'label' => '首页', 'url' => $links['home']],

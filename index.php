@@ -46,6 +46,22 @@ $landingPresenceEndpoint = '';
 $landingPresenceState = 'offline';
 $landingPresenceTitle = _t('实时活动图标：实现了实时的系统进程和媒体信息上报。');
 $landingPresenceIcon = '';
+$landingStudyEnabled = false;
+$landingStudyPayload = [
+    'enabled' => false,
+    'ok' => false,
+    'progress' => [
+        'finished' => 0,
+        'total' => 0,
+        'study_time' => 0,
+        'percent' => 0,
+    ],
+    'today_items' => [],
+    'study_time_text' => '',
+    'updatedAtText' => '',
+    'source' => 'none',
+    'message' => '',
+];
 if ($this->is('index')) {
     $landingCountChars = static function (string $text): int {
         $plain = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
@@ -96,6 +112,9 @@ if ($this->is('index')) {
         }
         $landingPresenceIcon = trim((string) ($landingPresencePayload['icon'] ?? ''));
     }
+
+    $landingStudyPayload = hansjackMaimemoStudyPayload($this->options);
+    $landingStudyEnabled = !empty($landingStudyPayload['enabled']);
 
     $heatmapDayCount = max(1, (int) $landingHeatmapDays);
     $todayStartTs = strtotime(date('Y-m-d 00:00:00'));
@@ -1200,6 +1219,126 @@ if ($this->is('index')) {
                 </div>
             </div>
         </section>
+
+        <?php if ($landingStudyEnabled): ?>
+            <?php
+            $studyProgress = is_array($landingStudyPayload['progress'] ?? null) ? $landingStudyPayload['progress'] : [];
+            $studyItems = is_array($landingStudyPayload['today_items'] ?? null) ? $landingStudyPayload['today_items'] : [];
+            $studyOk = !empty($landingStudyPayload['ok']);
+            $studyMessage = trim((string) ($landingStudyPayload['message'] ?? ''));
+            $studySource = trim((string) ($landingStudyPayload['source'] ?? ''));
+            $studyUpdatedAtText = trim((string) ($landingStudyPayload['updatedAtText'] ?? ''));
+
+            $studyFinished = max(0, (int) ($studyProgress['finished'] ?? 0));
+            $studyTotal = max(0, (int) ($studyProgress['total'] ?? 0));
+            $studyPercent = max(0, min(100, (float) ($studyProgress['percent'] ?? 0)));
+            $studyPercentText = rtrim(rtrim(number_format($studyPercent, 1, '.', ''), '0'), '.');
+            if ($studyPercentText === '') {
+                $studyPercentText = '0';
+            }
+            $studyPercentStyle = number_format($studyPercent, 2, '.', '');
+            $studyTimeText = trim((string) ($landingStudyPayload['study_time_text'] ?? ''));
+            if ($studyTimeText === '') {
+                $studyTimeText = hansjackMaimemoStudyTimeText((int) ($studyProgress['study_time'] ?? 0));
+            }
+            $studyRenderableItems = [];
+            foreach ($studyItems as $studyItem) {
+                if (!is_array($studyItem)) {
+                    continue;
+                }
+                $studyWord = trim((string) ($studyItem['voc_spelling'] ?? ''));
+                if ($studyWord === '') {
+                    continue;
+                }
+                $studyRenderableItems[] = $studyItem;
+            }
+            $studyWordsCount = count($studyRenderableItems);
+            ?>
+            <section class="landing-study" role="region" aria-label="<?php _e('今日学习进度'); ?>">
+                <div class="landing-study-main">
+                    <div class="landing-study-head">
+                        <h2 class="landing-letter-memory-title"><?php _e('今日学习进度'); ?></h2>
+                        <?php if ($studyUpdatedAtText !== ''): ?>
+                            <span class="landing-study-updated"><?php echo escape(_t('更新于 %s', $studyUpdatedAtText)); ?></span>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="landing-study-progress-wrap">
+                        <div class="landing-study-progress-top">
+                            <p class="landing-study-progress-label"><?php echo escape(sprintf(_t('%d / %d 单词'), $studyFinished, $studyTotal)); ?></p>
+                            <p class="landing-study-progress-percent"><?php echo escape($studyPercentText); ?>%</p>
+                        </div>
+                        <div
+                            class="landing-study-progress-track"
+                            role="progressbar"
+                            aria-label="<?php _e('今日学习完成进度'); ?>"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            aria-valuenow="<?php echo (int) round($studyPercent); ?>"
+                        >
+                            <div class="landing-study-progress-fill" style="width: <?php echo escape($studyPercentStyle); ?>%;"></div>
+                        </div>
+                        <div class="landing-study-progress-meta">
+                            <span><?php echo escape(_t('学习时长：') . $studyTimeText); ?></span>
+                            <span><?php echo escape(sprintf(_t('记录 %d 个单词'), $studyWordsCount)); ?></span>
+                        </div>
+                    </div>
+
+                    <div class="landing-study-record">
+                        <?php if ($studySource === 'cache-stale'): ?>
+                            <span class="landing-study-record-tip"><?php _e('缓存数据'); ?></span>
+                        <?php endif; ?>
+
+                        <?php if (!empty($studyRenderableItems)): ?>
+                            <div class="landing-study-carousel" data-study-carousel data-study-interval="2000">
+                                <ol class="landing-study-cards" data-study-carousel-track>
+                                    <?php $studyCardIndex = 1; ?>
+                                    <?php foreach ($studyRenderableItems as $studyItem): ?>
+                                        <?php
+                                        $studyWord = trim((string) ($studyItem['voc_spelling'] ?? ''));
+                                        $studyOrder = (int) ($studyItem['order'] ?? 0);
+                                        if ($studyOrder <= 0) {
+                                            $studyOrder = $studyCardIndex;
+                                        }
+                                        $studyIsNew = !empty($studyItem['is_new']);
+                                        $studyIsFinished = !empty($studyItem['is_finished']);
+                                        $studyFirstResponse = trim((string) ($studyItem['first_response'] ?? ''));
+                                        $studyFirstResponseLabel = hansjackMaimemoResponseLabel($studyFirstResponse);
+                                        ?>
+                                        <li class="landing-study-card links-step" data-study-card>
+                                            <div class="landing-study-card-head">
+                                                <span class="landing-study-card-order">#<?php echo (int) $studyOrder; ?></span>
+                                                <span class="landing-study-card-tags">
+                                                    <?php if ($studyIsNew): ?>
+                                                        <span class="landing-study-tag is-new"><?php _e('新学'); ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if ($studyIsFinished): ?>
+                                                        <span class="landing-study-tag is-finished"><?php _e('已完成'); ?></span>
+                                                    <?php endif; ?>
+                                                </span>
+                                            </div>
+                                            <p class="landing-study-card-word"><?php echo escape($studyWord); ?></p>
+                                            <?php if ($studyFirstResponseLabel !== ''): ?>
+                                                <p class="landing-study-card-feedback"><?php echo escape(_t('首次反馈：%s', $studyFirstResponseLabel)); ?></p>
+                                            <?php endif; ?>
+                                        </li>
+                                        <?php $studyCardIndex++; ?>
+                                    <?php endforeach; ?>
+                                </ol>
+                            </div>
+                        <?php else: ?>
+                            <p class="landing-study-empty"><?php _e('今天还没有学习记录，请先打开墨墨 App 完成当日初始化。'); ?></p>
+                        <?php endif; ?>
+                    </div>
+
+                    <?php if ($studyMessage !== ''): ?>
+                        <p class="landing-study-note"><?php echo escape($studyMessage); ?></p>
+                    <?php elseif (!$studyOk): ?>
+                        <p class="landing-study-note"><?php _e('暂未获取到学习进度数据。'); ?></p>
+                    <?php endif; ?>
+                </div>
+            </section>
+        <?php endif; ?>
 
         <?php if (false): ?>
         <section class="recent" id="recent" aria-label="<?php _e('最近内容'); ?>">
