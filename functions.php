@@ -70,11 +70,12 @@ function themeConfig($form)
         [
             'noto_sans_sc_regular' => _t('Noto Sans SC'),
             'noto_serif_sc_light' => _t('Noto Serif SC Light'),
+            'maple_mono_cn_light' => _t('Maple Mono CN Light'),
             'system' => _t('系统默认'),
         ],
         'noto_serif_sc_light',
         _t('选择字体'),
-        _t('控制主题主要文字字体；可选 Noto Sans SC、Noto Serif SC Light 或系统默认字体。')
+        _t('控制主题主要文字字体；可选 Noto Sans SC、Noto Serif SC Light、Maple Mono CN Light 或系统默认字体。')
     );
     $form->addInput($fontChoice);
 
@@ -4505,7 +4506,7 @@ function landingHitokotoEnabled(Options $options): bool
 function themeFontChoice(Options $options): string
 {
     $raw = trim((string) ($options->fontChoice ?? 'noto_serif_sc_light'));
-    $allowed = ['noto_sans_sc_regular', 'noto_serif_sc_light', 'system'];
+    $allowed = ['noto_sans_sc_regular', 'noto_serif_sc_light', 'maple_mono_cn_light', 'system'];
     if (!in_array($raw, $allowed, true)) {
         return 'noto_serif_sc_light';
     }

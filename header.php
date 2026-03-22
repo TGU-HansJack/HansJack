@@ -6,6 +6,7 @@ $themeConfig = buildThemeConfig($this->options);
 $fontChoice = themeFontChoice($this->options);
 $useNotoSansScRegular = $fontChoice === 'noto_sans_sc_regular';
 $useNotoSerifScLight = $fontChoice === 'noto_serif_sc_light';
+$useMapleMonoCnLight = $fontChoice === 'maple_mono_cn_light';
 
 // Read persisted theme choice early (cookie), so the initial HTML can render without a light flash in dark mode.
 $themeCookie = '';
@@ -64,6 +65,7 @@ $katexCssHref = assetUrl($this->options, 'assets/vendor/katex/katex.min.css');
 $playwriteMxCssHref = assetUrl($this->options, 'assets/fonts/PlaywriteMX/playwrite-mx.css');
 $notoSansScRegularCssHref = assetUrl($this->options, 'assets/fonts/NotoSansSC-Regular/result.css');
 $notoSerifScLightCssHref = assetUrl($this->options, 'assets/fonts/NotoSerifSC-Light/result.css');
+$mapleMonoCnLightCssHref = assetUrl($this->options, 'assets/fonts/MapleMono-CN-Light/result.css');
 
 $customCss = trim((string) ($this->options->customCss ?? ''));
 if ($customCss !== '') {
@@ -242,6 +244,10 @@ $seoDescription = hansjackArchiveSeoDescription($this, 180);
         <link rel="preload" as="style" href="<?php echo escape($notoSerifScLightCssHref); ?>" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="<?php echo escape($notoSerifScLightCssHref); ?>"></noscript>
     <?php endif; ?>
+    <?php if ($useMapleMonoCnLight): ?>
+        <link rel="preload" as="style" href="<?php echo escape($mapleMonoCnLightCssHref); ?>" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="<?php echo escape($mapleMonoCnLightCssHref); ?>"></noscript>
+    <?php endif; ?>
     <link rel="stylesheet" href="<?php echo escape($themeStyleHref); ?>">
     <?php if ($useNotoSansScRegular): ?>
     <style id="theme-font-style">
@@ -261,6 +267,16 @@ $seoDescription = hansjackArchiveSeoDescription($this, 180);
             --font-ui: var(--font-main);
             --font-brand: var(--font-main);
             --font-code: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+        }
+    </style>
+    <?php elseif ($useMapleMonoCnLight): ?>
+    <style id="theme-font-style">
+        :root {
+            --font-main: "Maple Mono CN Light", "Maple Mono", "Sarasa Mono SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", ui-monospace, monospace;
+            --font-main-weight: 300;
+            --font-ui: var(--font-main);
+            --font-brand: var(--font-main);
+            --font-code: "Maple Mono CN Light", "Maple Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
         }
     </style>
     <?php else: ?>
