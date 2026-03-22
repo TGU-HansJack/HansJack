@@ -57,14 +57,6 @@ $landingStudyPayload = [
         'percent' => 0,
     ],
     'today_items' => [],
-    'records' => [],
-    'records_stats' => [
-        'planned_count' => 0,
-        'records_count' => 0,
-        'next_buckets' => [],
-        'status_legend' => [],
-        'status_pie_gradient' => '',
-    ],
     'study_time_text' => '',
     'updatedAtText' => '',
     'source' => 'none',
@@ -1264,7 +1256,6 @@ if ($this->is('index')) {
             $studyMessage = trim((string) ($landingStudyPayload['message'] ?? ''));
             $studySource = trim((string) ($landingStudyPayload['source'] ?? ''));
             $studyUpdatedAtText = trim((string) ($landingStudyPayload['updatedAtText'] ?? ''));
-            $studyRecordsStats = is_array($landingStudyPayload['records_stats'] ?? null) ? $landingStudyPayload['records_stats'] : [];
 
             $studyFinished = max(0, (int) ($studyProgress['finished'] ?? 0));
             $studyTotal = max(0, (int) ($studyProgress['total'] ?? 0));
@@ -1277,36 +1268,6 @@ if ($this->is('index')) {
             $studyTimeText = trim((string) ($landingStudyPayload['study_time_text'] ?? ''));
             if ($studyTimeText === '') {
                 $studyTimeText = hansjackMaimemoStudyTimeText((int) ($studyProgress['study_time'] ?? 0));
-            }
-            $studyPlannedCount = max(0, (int) ($studyRecordsStats['planned_count'] ?? 0));
-            $studyRecordsCount = max(0, (int) ($studyRecordsStats['records_count'] ?? 0));
-            $studyCountCardValue = ($studyPlannedCount > 0) ? $studyPlannedCount : $studyRecordsCount;
-            $studyNextBuckets = is_array($studyRecordsStats['next_buckets'] ?? null) ? $studyRecordsStats['next_buckets'] : [];
-            $studyStatusLegend = is_array($studyRecordsStats['status_legend'] ?? null) ? $studyRecordsStats['status_legend'] : [];
-            $studyStatusTotal = max(0, (int) ($studyRecordsStats['status_total'] ?? 0));
-            $studyPieGradient = trim((string) ($studyRecordsStats['status_pie_gradient'] ?? ''));
-            if ($studyPieGradient === '') {
-                $studyPieGradient = 'conic-gradient(rgba(117, 117, 117, 0.28) 0deg 360deg)';
-            }
-            $studyUseSampleMeta = ($studyPlannedCount > 0 && $studyPlannedCount > $studyRecordsCount);
-            $studyCountMetaText = $studyUseSampleMeta
-                ? _t('总量 %d 条，当前统计样本 %d 条', $studyPlannedCount, $studyRecordsCount)
-                : _t('已拉取 %d 条明细', $studyRecordsCount);
-            $studyBarsMetaText = $studyUseSampleMeta
-                ? _t('样本 %d / 总量 %d', $studyRecordsCount, $studyPlannedCount)
-                : _t('共 %d 条', $studyRecordsCount);
-            $studyPieMetaText = $studyUseSampleMeta
-                ? _t('样本 %d / 总量 %d', $studyStatusTotal, $studyPlannedCount)
-                : _t('总计 %d 条', $studyStatusTotal);
-            $studyMaxBucketCount = 0;
-            foreach ($studyNextBuckets as $studyBucketRow) {
-                if (!is_array($studyBucketRow)) {
-                    continue;
-                }
-                $studyMaxBucketCount = max($studyMaxBucketCount, (int) ($studyBucketRow['count'] ?? 0));
-            }
-            if ($studyMaxBucketCount <= 0) {
-                $studyMaxBucketCount = 1;
             }
             $studyRenderableItems = [];
             foreach ($studyItems as $studyItem) {
@@ -1396,95 +1357,6 @@ if ($this->is('index')) {
                         <?php else: ?>
                             <p class="landing-study-empty"><?php _e('今天还没有学习记录，请先打开墨墨 App 完成当日初始化。'); ?></p>
                         <?php endif; ?>
-                    </div>
-
-                    <div class="landing-study-metrics" role="group" aria-label="<?php _e('学习记录统计'); ?>">
-                        <article class="landing-study-metric landing-study-metric-count" aria-label="<?php _e('记录总量'); ?>">
-                            <p class="landing-study-metric-kicker"><?php _e('记录总量'); ?></p>
-                            <p class="landing-study-metric-value"><?php echo (int) $studyCountCardValue; ?></p>
-                            <p class="landing-study-metric-meta"><?php echo escape($studyCountMetaText); ?></p>
-                        </article>
-
-                        <article class="landing-study-metric landing-study-metric-bars" aria-label="<?php _e('未来复习日期分布'); ?>">
-                            <div class="landing-study-metric-head">
-                                <p class="landing-study-metric-kicker"><?php _e('未来复习日期分布'); ?></p>
-                                <p class="landing-study-metric-meta"><?php echo escape($studyBarsMetaText); ?></p>
-                            </div>
-                            <?php if (!empty($studyNextBuckets)): ?>
-                                <ul class="landing-study-bars" role="list">
-                                    <?php foreach ($studyNextBuckets as $studyBucket): ?>
-                                        <?php
-                                        if (!is_array($studyBucket)) {
-                                            continue;
-                                        }
-                                        $studyBucketLabel = trim((string) ($studyBucket['label'] ?? ''));
-                                        if ($studyBucketLabel === '') {
-                                            $studyBucketLabel = _t('未知');
-                                        }
-                                        $studyBucketCount = max(0, (int) ($studyBucket['count'] ?? 0));
-                                        $studyBucketPercent = max(0, min(100, (float) ($studyBucket['percent'] ?? 0)));
-                                        if ($studyBucketPercent <= 0 && $studyBucketCount > 0) {
-                                            $studyBucketPercent = ($studyBucketCount / $studyMaxBucketCount) * 100;
-                                        }
-                                        $studyBucketPercentStyle = number_format($studyBucketPercent, 2, '.', '');
-                                        ?>
-                                        <li class="landing-study-bar">
-                                            <span class="landing-study-bar-label"><?php echo escape($studyBucketLabel); ?></span>
-                                            <span class="landing-study-bar-track">
-                                                <span class="landing-study-bar-fill" style="width: <?php echo escape($studyBucketPercentStyle); ?>%;"></span>
-                                            </span>
-                                            <span class="landing-study-bar-value"><?php echo (int) $studyBucketCount; ?></span>
-                                        </li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            <?php else: ?>
-                                <p class="landing-study-empty"><?php _e('暂无时间分布数据。'); ?></p>
-                            <?php endif; ?>
-                        </article>
-
-                        <article class="landing-study-metric landing-study-metric-pie" aria-label="<?php _e('反馈状态分布'); ?>">
-                            <div class="landing-study-metric-head">
-                                <p class="landing-study-metric-kicker"><?php _e('反馈状态'); ?></p>
-                                <p class="landing-study-metric-meta"><?php echo escape($studyPieMetaText); ?></p>
-                            </div>
-                            <div class="landing-study-pie-wrap">
-                                <div class="landing-study-pie" style="background: <?php echo escape($studyPieGradient); ?>;"></div>
-                            </div>
-                            <?php if (!empty($studyStatusLegend)): ?>
-                                <ul class="landing-study-pie-legend" role="list">
-                                    <?php foreach ($studyStatusLegend as $studyStatusRow): ?>
-                                        <?php
-                                        if (!is_array($studyStatusRow)) {
-                                            continue;
-                                        }
-                                        $studyStatusLabel = trim((string) ($studyStatusRow['label'] ?? ''));
-                                        if ($studyStatusLabel === '') {
-                                            $studyStatusLabel = _t('未反馈');
-                                        }
-                                        $studyStatusCount = max(0, (int) ($studyStatusRow['count'] ?? 0));
-                                        $studyStatusPercent = max(0, min(100, (float) ($studyStatusRow['percent'] ?? 0)));
-                                        $studyStatusPercentText = rtrim(rtrim(number_format($studyStatusPercent, 1, '.', ''), '0'), '.');
-                                        if ($studyStatusPercentText === '') {
-                                            $studyStatusPercentText = '0';
-                                        }
-                                        $studyStatusColor = trim((string) ($studyStatusRow['color'] ?? ''));
-                                        if ($studyStatusColor === '') {
-                                            $studyStatusColor = 'rgba(117, 117, 117, 0.42)';
-                                        }
-                                        ?>
-                                        <li class="landing-study-pie-item">
-                                            <span class="landing-study-pie-item-main">
-                                                <span class="landing-study-pie-dot" style="background: <?php echo escape($studyStatusColor); ?>;"></span>
-                                                <span class="landing-study-pie-label"><?php echo escape($studyStatusLabel); ?></span>
-                                            </span>
-                                            <span class="landing-study-pie-value"><?php echo escape($studyStatusPercentText); ?>% · <?php echo (int) $studyStatusCount; ?></span>
-                                        </li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            <?php else: ?>
-                                <p class="landing-study-empty"><?php _e('暂无反馈分布数据。'); ?></p>
-                            <?php endif; ?>
-                        </article>
                     </div>
 
                     <?php if ($studyMessage !== ''): ?>

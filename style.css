@@ -2360,6 +2360,15 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     }
 }
 
+@media (max-width: 768px) {
+    .landing-study-cards {
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+        grid-auto-flow: column;
+        grid-auto-columns: calc((100% - var(--landing-study-gap)) / 2);
+        align-items: stretch;
+    }
+}
+
 @media (max-width: 480px) {
     .landing-study-carousel {
         --landing-study-visible: 2;

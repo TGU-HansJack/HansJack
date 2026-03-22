@@ -2298,7 +2298,6 @@ function hansjackMaimemoStudyPayload(Options $options): array
 {
     $enabled = hansjackMaimemoStudyEnabled($options);
     $today = hansjackMaimemoTodayDate($options);
-    $recordsLimit = hansjackMaimemoRecordsFetchLimit($options);
     $base = [
         'enabled' => $enabled,
         'tokenConfigured' => false,
@@ -2306,8 +2305,6 @@ function hansjackMaimemoStudyPayload(Options $options): array
         'date' => $today,
         'progress' => hansjackMaimemoNormalizeProgress([]),
         'today_items' => [],
-        'records' => [],
-        'records_stats' => hansjackMaimemoBuildRecordsStats([], 0),
         'study_time_text' => hansjackMaimemoStudyTimeText(0),
         'updatedAt' => 0,
         'updatedAtText' => '',
@@ -2333,43 +2330,12 @@ function hansjackMaimemoStudyPayload(Options $options): array
     $cacheUpdatedAt = max(0, (int) ($cache['updatedAt'] ?? 0));
     $cacheProgress = hansjackMaimemoNormalizeProgress($cache['progress'] ?? []);
     $cacheItems = hansjackMaimemoNormalizeTodayItems($cache['today_items'] ?? [], 200);
-    $cacheRecordsRaw = is_array($cache['records'] ?? null) ? $cache['records'] : [];
-    $cacheRecordsStatsRaw = is_array($cache['records_stats'] ?? null) ? $cache['records_stats'] : [];
-    $cachePlannedCount = max(0, (int) ($cacheRecordsStatsRaw['planned_count'] ?? ($cache['planned_count'] ?? 0)));
-    $cacheRecordsStoreLimit = hansjackMaimemoRecordsStoreLimit(max($cachePlannedCount, count($cacheRecordsRaw)));
-    $cacheRecords = hansjackMaimemoNormalizeRecords($cacheRecordsRaw, $cacheRecordsStoreLimit);
-    $cacheRecordsCursorTs = max(0, (int) ($cache['records_cursor_ts'] ?? 0));
-    $cacheRecordsQueue = hansjackMaimemoNormalizeRangeQueue($cache['records_queue'] ?? []);
-    $cacheRecordsComplete = !empty($cache['records_complete']);
-    if (
-        $cacheDate === $today
-        && empty($cacheRecordsQueue)
-        && !$cacheRecordsComplete
-        && $cacheRecordsCursorTs > 0
-        && !empty($cacheRecords)
-    ) {
-        $queueStart = max(hansjackMaimemoRangeTsMin(), $cacheRecordsCursorTs);
-        if ($queueStart <= hansjackMaimemoRangeTsMax()) {
-            // 兼容旧版 cursor，迁移为区间队列增量模式。
-            $cacheRecordsQueue[] = [
-                'start' => $queueStart,
-                'end' => hansjackMaimemoRangeTsMax(),
-            ];
-        }
-    }
-    if ($cachePlannedCount > 0 && count($cacheRecords) >= $cachePlannedCount) {
-        $cacheRecordsComplete = true;
-        $cacheRecordsQueue = [];
-    }
-    $cacheRecordsStats = hansjackMaimemoBuildRecordsStats($cacheRecords, $cachePlannedCount);
     $cacheMessage = trim((string) ($cache['message'] ?? ''));
 
     $cacheHasData = (
         !empty($cacheItems)
         || (int) ($cacheProgress['total'] ?? 0) > 0
         || (int) ($cacheProgress['finished'] ?? 0) > 0
-        || (int) ($cacheRecordsStats['planned_count'] ?? 0) > 0
-        || (int) ($cacheRecordsStats['records_count'] ?? 0) > 0
     );
     $cacheHasSnapshot = $cacheHasData || $cacheMessage !== '';
     $cacheIsToday = ($cacheDate === $today);
@@ -2382,8 +2348,6 @@ function hansjackMaimemoStudyPayload(Options $options): array
         $base['ok'] = true;
         $base['progress'] = $cacheProgress;
         $base['today_items'] = $cacheItems;
-        $base['records'] = $cacheRecords;
-        $base['records_stats'] = $cacheRecordsStats;
         $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($cacheProgress['study_time'] ?? 0));
         $base['updatedAt'] = $cacheUpdatedAt;
         $base['updatedAtText'] = hansjackFormatTimestampByOptions($options, $cacheUpdatedAt);
@@ -2396,24 +2360,17 @@ function hansjackMaimemoStudyPayload(Options $options): array
     $itemsResp = hansjackMaimemoRequestJson('get_today_items', $token, [
         'limit' => 120,
     ]);
-    $recordsCountResp = hansjackMaimemoRequestJson('query_study_records', $token, [
-        'as_count' => true,
-    ]);
 
     $progressStatus = (int) ($progressResp['status'] ?? 0);
     $itemsStatus = (int) ($itemsResp['status'] ?? 0);
-    $recordsCountStatus = (int) ($recordsCountResp['status'] ?? 0);
     $progressJson = is_array($progressResp['json'] ?? null) ? $progressResp['json'] : [];
     $itemsJson = is_array($itemsResp['json'] ?? null) ? $itemsResp['json'] : [];
-    $recordsCountJson = is_array($recordsCountResp['json'] ?? null) ? $recordsCountResp['json'] : [];
 
     $progressRoot = is_array($progressJson['data'] ?? null) ? $progressJson['data'] : $progressJson;
     $itemsRoot = is_array($itemsJson['data'] ?? null) ? $itemsJson['data'] : $itemsJson;
-    $recordsCountRoot = is_array($recordsCountJson['data'] ?? null) ? $recordsCountJson['data'] : $recordsCountJson;
 
     $progressSuccess = !array_key_exists('success', $progressJson) || !empty($progressJson['success']);
     $itemsSuccess = !array_key_exists('success', $itemsJson) || !empty($itemsJson['success']);
-    $recordsCountSuccess = !array_key_exists('success', $recordsCountJson) || !empty($recordsCountJson['success']);
 
     $progressOk = (
         $progressStatus >= 200
@@ -2429,80 +2386,18 @@ function hansjackMaimemoStudyPayload(Options $options): array
         && array_key_exists('today_items', $itemsRoot)
         && is_array($itemsRoot['today_items'])
     );
-    $recordsCountOk = (
-        $recordsCountStatus >= 200
-        && $recordsCountStatus < 300
-        && $recordsCountSuccess
-        && array_key_exists('count', $recordsCountRoot)
-        && is_numeric($recordsCountRoot['count'])
-    );
 
     $liveProgress = $progressOk ? hansjackMaimemoNormalizeProgress($progressRoot['progress'] ?? []) : $cacheProgress;
     $liveItems = $itemsOk ? hansjackMaimemoNormalizeTodayItems($itemsRoot['today_items'] ?? [], 200) : $cacheItems;
-    $livePlannedCount = $recordsCountOk ? max(0, (int) ($recordsCountRoot['count'] ?? 0)) : 0;
-    if ($livePlannedCount <= 0) {
-        $livePlannedCount = max(0, (int) ($cacheRecordsStats['planned_count'] ?? 0), count($cacheRecords));
-    }
-
-    $recordsStoreLimit = hansjackMaimemoRecordsStoreLimit(max($livePlannedCount, count($cacheRecords)));
-    $seedRecords = $cacheIsToday ? $cacheRecords : [];
-    $seedQueue = $cacheIsToday ? $cacheRecordsQueue : [];
-    $seedComplete = $cacheIsToday ? $cacheRecordsComplete : false;
-    if ($seedComplete && $livePlannedCount > 0 && count($seedRecords) < $livePlannedCount) {
-        $seedComplete = false;
-    }
-    if (
-        $cacheIsToday
-        && empty($seedQueue)
-        && !$seedComplete
-        && $cacheRecordsCursorTs > 0
-        && !empty($seedRecords)
-    ) {
-        $queueStart = max(hansjackMaimemoRangeTsMin(), $cacheRecordsCursorTs);
-        if ($queueStart <= hansjackMaimemoRangeTsMax()) {
-            $seedQueue[] = [
-                'start' => $queueStart,
-                'end' => hansjackMaimemoRangeTsMax(),
-            ];
-        }
-    }
-
-    $collectResult = hansjackMaimemoCollectRecordsIncremental(
-        $token,
-        $seedRecords,
-        $seedQueue,
-        $seedComplete,
-        $recordsLimit,
-        $recordsStoreLimit,
-        hansjackMaimemoIncrementalBudget($options),
-        $livePlannedCount
-    );
-    $recordsCollectError = trim((string) ($collectResult['error'] ?? ''));
-    $liveRecords = hansjackMaimemoNormalizeRecords($collectResult['records'] ?? [], $recordsStoreLimit);
-    $liveRecordsQueue = hansjackMaimemoNormalizeRangeQueue($collectResult['queue'] ?? []);
-    $liveRecordsComplete = !empty($collectResult['complete']);
-    if ($livePlannedCount > 0 && count($liveRecords) >= $livePlannedCount) {
-        $liveRecordsComplete = true;
-        $liveRecordsQueue = [];
-    }
-    $liveRecordsCursorTs = 0;
-    $liveRecordsMaxTs = hansjackMaimemoMaxNextStudyTs($liveRecords);
-    if ($liveRecordsMaxTs > 0) {
-        $liveRecordsCursorTs = $liveRecordsMaxTs + 1;
-    }
-
-    $liveRecordsStats = hansjackMaimemoBuildRecordsStats($liveRecords, $livePlannedCount);
 
     $liveHasData = (
         !empty($liveItems)
         || (int) ($liveProgress['total'] ?? 0) > 0
         || (int) ($liveProgress['finished'] ?? 0) > 0
-        || (int) ($liveRecordsStats['planned_count'] ?? 0) > 0
-        || (int) ($liveRecordsStats['records_count'] ?? 0) > 0
     );
 
     $message = '';
-    if (!$progressOk || !$itemsOk || !$recordsCountOk || $recordsCollectError !== '') {
+    if (!$progressOk || !$itemsOk) {
         $errors = [];
         if (!$progressOk) {
             $progressError = hansjackMaimemoApiErrorText($progressResp);
@@ -2516,15 +2411,6 @@ function hansjackMaimemoStudyPayload(Options $options): array
                 $errors[] = _t('单词接口：%s', $itemsError);
             }
         }
-        if (!$recordsCountOk) {
-            $recordsCountError = hansjackMaimemoApiErrorText($recordsCountResp);
-            if ($recordsCountError !== '') {
-                $errors[] = _t('记录总量接口：%s', $recordsCountError);
-            }
-        }
-        if ($recordsCollectError !== '') {
-            $errors[] = _t('记录明细接口：%s', $recordsCollectError);
-        }
         if (!empty($errors)) {
             $message = implode('；', $errors);
         }
@@ -2534,12 +2420,10 @@ function hansjackMaimemoStudyPayload(Options $options): array
         $base['ok'] = true;
         $base['progress'] = $liveProgress;
         $base['today_items'] = $liveItems;
-        $base['records'] = $liveRecords;
-        $base['records_stats'] = $liveRecordsStats;
         $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($liveProgress['study_time'] ?? 0));
         $base['updatedAt'] = $now;
         $base['updatedAtText'] = hansjackFormatTimestampByOptions($options, $now);
-        $base['source'] = ($progressOk && $itemsOk && $recordsCountOk && $recordsCollectError === '') ? 'api' : 'api-partial';
+        $base['source'] = ($progressOk && $itemsOk) ? 'api' : 'api-partial';
         $base['message'] = $message;
 
         hansjackMaimemoWriteCache([
@@ -2547,12 +2431,6 @@ function hansjackMaimemoStudyPayload(Options $options): array
             'updatedAt' => $now,
             'progress' => $liveProgress,
             'today_items' => $liveItems,
-            'records' => $liveRecords,
-            'planned_count' => $livePlannedCount,
-            'records_cursor_ts' => $liveRecordsCursorTs,
-            'records_queue' => $liveRecordsQueue,
-            'records_complete' => $liveRecordsComplete,
-            'records_stats' => $liveRecordsStats,
             'message' => $message,
         ]);
 
@@ -2563,8 +2441,6 @@ function hansjackMaimemoStudyPayload(Options $options): array
         $base['ok'] = true;
         $base['progress'] = $cacheProgress;
         $base['today_items'] = $cacheItems;
-        $base['records'] = $cacheRecords;
-        $base['records_stats'] = $cacheRecordsStats;
         $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($cacheProgress['study_time'] ?? 0));
         $base['updatedAt'] = $cacheUpdatedAt;
         $base['updatedAtText'] = hansjackFormatTimestampByOptions($options, $cacheUpdatedAt);
