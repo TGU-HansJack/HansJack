@@ -1157,6 +1157,69 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     min-width: 0;
 }
 
+.page-404-main {
+    min-height: calc(100vh - var(--header-h) - 7rem);
+    justify-content: center;
+    padding: clamp(0.9rem, 3.2vh, 2rem) 0;
+}
+
+.page-404-wrap {
+    width: min(780px, 100%);
+    margin: auto;
+}
+
+.page-404-wrap .links-apply-main-inner {
+    gap: 0;
+}
+
+.links-step.page-404-panel {
+    border-radius: 4px;
+    padding: clamp(1rem, 2vw, 1.4rem);
+}
+
+.page-404-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.34rem;
+    text-align: center;
+}
+
+.page-404-title {
+    margin: 0;
+    font-family: var(--font-main);
+    font-size: clamp(1.45rem, 2.5vw, 2rem);
+    line-height: 1.2;
+    font-weight: 700;
+}
+
+.page-404-title-en {
+    margin: 0;
+    font-family: var(--font-ui);
+    font-size: 0.95rem;
+    line-height: 1.4;
+    color: var(--muted-day);
+}
+
+.page-404-desc,
+.page-404-desc-en {
+    margin: 0;
+    max-width: 56ch;
+    font-family: var(--font-ui);
+    font-size: 0.94rem;
+    line-height: 1.58;
+    color: var(--muted-day);
+}
+
+.links-step-actions.page-404-actions {
+    margin-top: 0.82rem;
+    justify-content: center;
+}
+
+.page-404-actions .links-btn {
+    min-width: 190px;
+}
+
 .page-index .header-inner {
     height: var(--header-h);
 }
@@ -9604,7 +9667,10 @@ html.login-modal-open .login-modal {
     html:not(.theme-light) .card-meta,
     html:not(.theme-light) .card-summary,
     html:not(.theme-light) .article-meta,
-    html:not(.theme-light) .footer p {
+    html:not(.theme-light) .footer p,
+    html:not(.theme-light) .page-404-title-en,
+    html:not(.theme-light) .page-404-desc,
+    html:not(.theme-light) .page-404-desc-en {
         color: var(--muted-night);
     }
 
@@ -10288,6 +10354,9 @@ html.theme-dark .card-meta,
 html.theme-dark .card-summary,
 html.theme-dark .article-meta,
 html.theme-dark .footer p,
+html.theme-dark .page-404-title-en,
+html.theme-dark .page-404-desc,
+html.theme-dark .page-404-desc-en,
 html.theme-dark .hitokoto-text,
 html.theme-dark .landing-letter-post,
 html.theme-dark .landing-letter-author,
