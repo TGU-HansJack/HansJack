@@ -144,10 +144,23 @@
             return weights;
         }
 
-        function compressSingleColumnGroups(groups) {
+        function getRangeWeight(columnWeights, start, end) {
+            if (!columnWeights || columnWeights.length === 0) {
+                return 0;
+            }
+            var sum = 0;
+            for (var i = start; i < end && i < columnWeights.length; i++) {
+                sum += Math.max(4, parseInt(columnWeights[i] || 0, 10));
+            }
+            return sum;
+        }
+
+        function compressSingleColumnGroups(groups, columnWeights, targetCharsPerPart) {
             if (!groups || groups.length <= 1) {
                 return groups || [];
             }
+
+            var softCap = Math.max(targetCharsPerPart + 10, Math.round(targetCharsPerPart * 1.35));
 
             for (var i = 0; i < groups.length; i++) {
                 var group = groups[i];
@@ -161,22 +174,37 @@
 
                 var prev = i > 0 ? groups[i - 1] : null;
                 var next = i + 1 < groups.length ? groups[i + 1] : null;
-                var prevSize = prev ? (prev.end - prev.start) : 0;
-                var nextSize = next ? (next.end - next.start) : 0;
-
-                if (next && nextSize > 1) {
-                    group.end += 1;
-                    next.start += 1;
+                if (!prev && !next) {
                     continue;
                 }
 
-                if (prev && prevSize > 1) {
-                    group.start -= 1;
-                    prev.end -= 1;
-                    continue;
-                }
+                var singleWeight = getRangeWeight(columnWeights, group.start, group.end);
+
+                var prevScore = Number.POSITIVE_INFINITY;
+                var nextScore = Number.POSITIVE_INFINITY;
 
                 if (prev) {
+                    var prevWeightAfterMerge = getRangeWeight(columnWeights, prev.start, prev.end) + singleWeight;
+                    var prevOverflow = Math.max(0, prevWeightAfterMerge - softCap);
+                    prevScore = prevOverflow * 1000 + prevWeightAfterMerge;
+                }
+
+                if (next) {
+                    var nextWeightAfterMerge = getRangeWeight(columnWeights, next.start, next.end) + singleWeight;
+                    var nextOverflow = Math.max(0, nextWeightAfterMerge - softCap);
+                    nextScore = nextOverflow * 1000 + nextWeightAfterMerge;
+                }
+
+                var mergeToPrev = false;
+                if (prev && next) {
+                    mergeToPrev = prevScore <= nextScore;
+                } else if (prev) {
+                    mergeToPrev = true;
+                } else {
+                    mergeToPrev = false;
+                }
+
+                if (mergeToPrev && prev) {
                     prev.end = group.end;
                     groups.splice(i, 1);
                     i -= 1;
@@ -237,7 +265,7 @@
             }
             groups.push({ start: start, end: columnWeights.length });
 
-            groups = compressSingleColumnGroups(groups);
+            groups = compressSingleColumnGroups(groups, columnWeights, targetCharsPerPart);
             if (!groups || groups.length < 2) {
                 return [];
             }
@@ -259,6 +287,145 @@
             }
 
             return normalized;
+        }
+
+        function normalizeWeight(value) {
+            var parsed = parseInt(value || 0, 10);
+            if (!Number.isFinite(parsed) || parsed <= 0) {
+                return 4;
+            }
+            return Math.max(4, parsed);
+        }
+
+        function getMinColumnPercent(columnCount) {
+            if (columnCount <= 1) {
+                return 100;
+            }
+            if (columnCount === 2) {
+                return 26;
+            }
+            if (columnCount === 3) {
+                return 18;
+            }
+            if (columnCount === 4) {
+                return 13;
+            }
+            return Math.max(8, Math.min(12, (100 / columnCount) * 0.55));
+        }
+
+        function computeColumnPercents(weights) {
+            if (!weights || weights.length === 0) {
+                return [];
+            }
+
+            var normalized = [];
+            var totalWeight = 0;
+            for (var i = 0; i < weights.length; i++) {
+                var w = normalizeWeight(weights[i]);
+                normalized.push(w);
+                totalWeight += w;
+            }
+
+            if (!Number.isFinite(totalWeight) || totalWeight <= 0) {
+                var fallback = 100 / normalized.length;
+                var fallbackPercents = [];
+                for (var f = 0; f < normalized.length; f++) {
+                    fallbackPercents.push(fallback);
+                }
+                return fallbackPercents;
+            }
+
+            var raw = [];
+            for (var r = 0; r < normalized.length; r++) {
+                raw.push((normalized[r] / totalWeight) * 100);
+            }
+
+            var minPercent = getMinColumnPercent(normalized.length);
+            var adjusted = [];
+            var adjustedTotal = 0;
+            for (var a = 0; a < raw.length; a++) {
+                var p = Math.max(raw[a], minPercent);
+                adjusted.push(p);
+                adjustedTotal += p;
+            }
+
+            if (adjustedTotal > 100.0001) {
+                var excess = adjustedTotal - 100;
+                var shrinkableTotal = 0;
+                for (var s = 0; s < adjusted.length; s++) {
+                    shrinkableTotal += Math.max(0, adjusted[s] - minPercent);
+                }
+
+                if (shrinkableTotal > 0) {
+                    for (var c = 0; c < adjusted.length; c++) {
+                        var shrinkable = Math.max(0, adjusted[c] - minPercent);
+                        if (shrinkable <= 0) {
+                            continue;
+                        }
+                        var reduce = excess * (shrinkable / shrinkableTotal);
+                        adjusted[c] = Math.max(minPercent, adjusted[c] - reduce);
+                    }
+                }
+            } else if (adjustedTotal < 99.9999) {
+                var remainder = 100 - adjustedTotal;
+                var richest = 0;
+                for (var m = 1; m < adjusted.length; m++) {
+                    if (adjusted[m] > adjusted[richest]) {
+                        richest = m;
+                    }
+                }
+                adjusted[richest] += remainder;
+            }
+
+            var finalTotal = 0;
+            for (var t = 0; t < adjusted.length; t++) {
+                finalTotal += adjusted[t];
+            }
+            if (Math.abs(finalTotal - 100) > 0.0001) {
+                var delta = 100 - finalTotal;
+                var maxIdx = 0;
+                for (var x = 1; x < adjusted.length; x++) {
+                    if (adjusted[x] > adjusted[maxIdx]) {
+                        maxIdx = x;
+                    }
+                }
+                adjusted[maxIdx] += delta;
+            }
+
+            return adjusted;
+        }
+
+        function applyColumnPercents(table, percents) {
+            if (!table || !percents || percents.length === 0) {
+                return;
+            }
+
+            var oldGroups = table.querySelectorAll("colgroup[data-hj-colratio='1']");
+            for (var i = 0; i < oldGroups.length; i++) {
+                var old = oldGroups[i];
+                if (old && old.parentNode === table) {
+                    old.parentNode.removeChild(old);
+                }
+            }
+
+            var colgroup = document.createElement("colgroup");
+            colgroup.setAttribute("data-hj-colratio", "1");
+
+            for (var c = 0; c < percents.length; c++) {
+                var col = document.createElement("col");
+                col.style.width = percents[c].toFixed(3) + "%";
+                colgroup.appendChild(col);
+            }
+
+            var insertBeforeNode = table.firstElementChild;
+            if (
+                insertBeforeNode &&
+                insertBeforeNode.tagName &&
+                String(insertBeforeNode.tagName).toLowerCase() === "caption"
+            ) {
+                insertBeforeNode = insertBeforeNode.nextElementSibling;
+            }
+            table.insertBefore(colgroup, insertBeforeNode || null);
         }
 
         function cloneRows(rows, startCol, endCol) {
@@ -385,64 +552,71 @@
                 if (table.closest && table.closest(".table-split")) {
                     continue;
                 }
+
+                var columnCount = getColumnCount(table);
+                if (!Number.isFinite(columnCount) || columnCount <= 0) {
+                    continue;
+                }
+
                 if (hasComplexSpan(table)) {
                     continue;
                 }
 
-                var columnCount = getColumnCount(table);
-                if (!Number.isFinite(columnCount) || columnCount <= 3) {
-                    continue;
-                }
-
                 var columnWeights = estimateColumnWeights(table, columnCount);
-                var columnGroups = buildColumnGroupsByWeight(columnWeights);
-                var partTotal = columnGroups.length;
-                if (!Number.isFinite(partTotal) || partTotal < 2) {
-                    continue;
-                }
+                if (columnCount > 3) {
+                    var columnGroups = buildColumnGroupsByWeight(columnWeights);
+                    var partTotal = columnGroups.length;
+                    if (Number.isFinite(partTotal) && partTotal >= 2) {
+                        var splitRoot = document.createElement("div");
+                        splitRoot.className = "table-split";
+                        splitRoot.setAttribute("data-table-split", "1");
 
-                var splitRoot = document.createElement("div");
-                splitRoot.className = "table-split";
-                splitRoot.setAttribute("data-table-split", "1");
+                        var baseCaption = "";
+                        if (table.caption) {
+                            baseCaption = String(table.caption.textContent || "").trim();
+                        }
 
-                var baseCaption = "";
-                if (table.caption) {
-                    baseCaption = String(table.caption.textContent || "").trim();
-                }
+                        for (var part = 0; part < partTotal; part++) {
+                            var group = columnGroups[part];
+                            if (!group || !Number.isFinite(group.start) || !Number.isFinite(group.end) || group.end <= group.start) {
+                                continue;
+                            }
 
-                for (var part = 0; part < partTotal; part++) {
-                    var group = columnGroups[part];
-                    if (!group || !Number.isFinite(group.start) || !Number.isFinite(group.end) || group.end <= group.start) {
-                        continue;
+                            var startCol = group.start;
+                            var endCol = group.end;
+                            var splitTable = buildSplitTable(table, startCol, endCol);
+                            if (!splitTable) {
+                                continue;
+                            }
+
+                            var splitWeights = columnWeights.slice(startCol, endCol);
+                            var splitPercents = computeColumnPercents(splitWeights);
+                            applyColumnPercents(splitTable, splitPercents);
+
+                            var item = document.createElement("section");
+                            item.className = "table-split-item";
+
+                            var label = document.createElement("p");
+                            label.className = "table-split-label";
+                            label.textContent = buildPartLabel(baseCaption, part, partTotal, startCol, endCol);
+
+                            item.appendChild(label);
+                            item.appendChild(splitTable);
+                            splitRoot.appendChild(item);
+                        }
+
+                        if (splitRoot.children && splitRoot.children.length > 0) {
+                            try {
+                                table.parentNode.insertBefore(splitRoot, table);
+                                table.parentNode.removeChild(table);
+                            } catch (e) {}
+                            continue;
+                        }
                     }
-
-                    var startCol = group.start;
-                    var endCol = group.end;
-                    var splitTable = buildSplitTable(table, startCol, endCol);
-                    if (!splitTable) {
-                        continue;
-                    }
-
-                    var item = document.createElement("section");
-                    item.className = "table-split-item";
-
-                    var label = document.createElement("p");
-                    label.className = "table-split-label";
-                    label.textContent = buildPartLabel(baseCaption, part, partTotal, startCol, endCol);
-
-                    item.appendChild(label);
-                    item.appendChild(splitTable);
-                    splitRoot.appendChild(item);
                 }
 
-                if (!splitRoot.children || splitRoot.children.length === 0) {
-                    continue;
-                }
-
-                try {
-                    table.parentNode.insertBefore(splitRoot, table);
-                    table.parentNode.removeChild(table);
-                } catch (e) {}
+                var tablePercents = computeColumnPercents(columnWeights);
+                applyColumnPercents(table, tablePercents);
             }
         }
     })();

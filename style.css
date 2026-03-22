@@ -8951,6 +8951,7 @@ html.login-modal-open .login-modal {
 
 :is(.article-content, .comment-content) table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     margin: 1.1rem 0;
     border-top: 2px solid rgba(42, 42, 40, 0.72);
@@ -8990,8 +8991,8 @@ html.login-modal-open .login-modal {
 :is(.article-content, .comment-content) .table-split-item > table th,
 :is(.article-content, .comment-content) .table-split-item > table td {
     white-space: normal;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 :is(.article-content, .comment-content) .table-scroll {
