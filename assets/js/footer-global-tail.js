@@ -1325,6 +1325,21 @@
                         return;
                     }
 
+                    // Keep heatmap embed links free from global internal-link
+                    // enhancement so its own popover style remains intact.
+                    try {
+                        if (
+                            a.closest &&
+                            (a.closest(".heatmap-embed-shortcode") || a.closest(".landing-heatmap-pop"))
+                        ) {
+                            if (a.classList) {
+                                a.classList.remove("link-mail", "link-internal", "link-external");
+                            }
+                            clearTipForAnchor(a);
+                            return;
+                        }
+                    } catch (e) {}
+
                     var text = ((a.textContent || "") + "").trim();
                     if (!text) {
                         return;

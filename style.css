@@ -1498,6 +1498,28 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     padding: 0.35rem 0;
 }
 
+.heatmap-embed-shortcode {
+    --landing-heatmap-dot-size: 12px;
+    --landing-heatmap-gap: 3px;
+    --landing-heatmap-cols: 20;
+    --landing-heatmap-width: calc((var(--landing-heatmap-dot-size) * var(--landing-heatmap-cols)) + (var(--landing-heatmap-gap) * (var(--landing-heatmap-cols) - 1)));
+    --landing-heatmap-height: calc((var(--landing-heatmap-dot-size) * 7) + (var(--landing-heatmap-gap) * 6));
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+}
+
+.heatmap-embed-shortcode .landing-heatmap-grid {
+    margin: 0;
+    justify-content: flex-start;
+}
+
+.heatmap-embed-shortcode .landing-heatmap-item:hover,
+.heatmap-embed-shortcode .landing-heatmap-item:focus-within {
+    z-index: 30;
+}
+
 .landing-insights-footer {
     --landing-heatmap-dot-size: 12px;
     --landing-heatmap-gap: 3px;
@@ -1586,6 +1608,22 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     pointer-events: none;
     z-index: 20;
     transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+/* Override generic article figcaption styles for heatmap tooltip popovers. */
+.landing-heatmap-item > .landing-heatmap-pop {
+    margin: 0;
+    width: max-content;
+    max-width: min(18.5rem, 78vw);
+    text-align: left;
+    font-family: var(--font-ui);
+    font-size: 0.74rem;
+    line-height: 1.45;
+    font-weight: 400;
+    color: var(--day-white);
+    writing-mode: horizontal-tb;
+    text-orientation: mixed;
+    white-space: normal;
 }
 
 .landing-heatmap-item:hover::after,
@@ -8197,6 +8235,44 @@ html.login-modal-open .login-modal {
     background-image: none !important;
     -webkit-mask-image: none !important;
     mask-image: none !important;
+}
+
+/* Keep heatmap embed links in their native tooltip style without internal-link icon/tooltip overlays. */
+.article-content .heatmap-embed-shortcode .landing-heatmap-link::before,
+.article-content .heatmap-embed-shortcode .landing-heatmap-link::after,
+.comment-content .heatmap-embed-shortcode .landing-heatmap-link::before,
+.comment-content .heatmap-embed-shortcode .landing-heatmap-link::after {
+    content: none !important;
+    background-image: none !important;
+    background-color: transparent !important;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+}
+
+/* Keep heatmap tooltip links inheriting popup foreground color in all states. */
+:is(.article-content, .comment-content) .landing-heatmap-pop .landing-heatmap-link,
+:is(.article-content, .comment-content) .landing-heatmap-pop .landing-heatmap-link:visited,
+:is(.article-content, .comment-content) .landing-heatmap-pop .landing-heatmap-link:hover,
+:is(.article-content, .comment-content) .landing-heatmap-pop .landing-heatmap-link:focus-visible {
+    color: inherit;
+}
+
+/* Keep embed heatmap popup spacing consistent with landing tooltip spacing. */
+:is(.article-content, .comment-content) .landing-heatmap-pop .landing-heatmap-date {
+    margin: 0;
+}
+
+:is(.article-content, .comment-content) .landing-heatmap-pop p {
+    margin: 0.35rem 0 0;
+}
+
+:is(.article-content, .comment-content) .landing-heatmap-pop .landing-heatmap-list {
+    margin: 0.3rem 0 0;
+    padding-left: 0.95rem;
+}
+
+:is(.article-content, .comment-content) .landing-heatmap-pop .landing-heatmap-list li {
+    margin: 0;
 }
 
 .article-content .comment-embed-shortcode a.comment-author-home,

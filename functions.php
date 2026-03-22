@@ -7454,7 +7454,7 @@ function extractEmbedShortcodePayload(string $raw): ?array
     $parts = preg_split('/\s+/u', $raw, 2) ?: [];
     $name = strtolower(trim((string) ($parts[0] ?? '')));
     $args = trim((string) ($parts[1] ?? ''));
-    if ($name === '' || $args === '') {
+    if ($name === '') {
         return null;
     }
 
@@ -7498,15 +7498,20 @@ function applyEmbedShortcodesOnMarkup(string $markup): string
         return $markup;
     }
 
-    $pattern = '/\{\%\s*([A-Za-z][A-Za-z0-9_-]*)\s+([\s\S]*?)\s*\%\}/u';
+    $pattern = '/\{\%\s*([A-Za-z][A-Za-z0-9_-]*)(?:\s+([\s\S]*?))?\s*\%\}/u';
     $result = preg_replace_callback($pattern, static function (array $matches): string {
         $name = strtolower(trim((string) ($matches[1] ?? '')));
-        $args = (string) ($matches[2] ?? '');
-        if ($name === '' || trim($args) === '') {
+        $args = trim((string) ($matches[2] ?? ''));
+        if ($name === '') {
             return (string) ($matches[0] ?? '');
         }
 
-        $rendered = renderEmbedShortcode($name . ' ' . $args);
+        $payload = $name;
+        if ($args !== '') {
+            $payload .= ' ' . $args;
+        }
+
+        $rendered = renderEmbedShortcode($payload);
         return $rendered !== '' ? $rendered : (string) ($matches[0] ?? '');
     }, $markup);
 
@@ -8096,6 +8101,253 @@ function renderBilibiliEmbedShortcode(string $args): string
         . '</div>';
 }
 
+function buildHeatmapEmbedData(int $days = 140): array
+{
+    static $cache = [];
+
+    $days = max(1, min(365, (int) $days));
+    if (isset($cache[$days]) && is_array($cache[$days])) {
+        return $cache[$days];
+    }
+
+    $todayStartTs = strtotime(date('Y-m-d 00:00:00'));
+    if ($todayStartTs === false) {
+        $todayStartTs = time();
+    }
+
+    $startTs = $todayStartTs - (($days - 1) * 86400);
+    $endTs = $todayStartTs + 86399;
+
+    $series = [];
+    for ($i = 0; $i < $days; $i++) {
+        $dayTs = $startTs + ($i * 86400);
+        $dayKey = date('Y-m-d', $dayTs);
+        $series[$dayKey] = [
+            'dateLabel' => date('Y年n月j日', $dayTs),
+            'notes' => [],
+            'memos' => [],
+            'others' => [],
+            'total' => 0,
+        ];
+    }
+
+    $blogSlug = 'posts';
+    $memoSlug = 'notes';
+    $categoryByMid = [];
+    $postsRootMid = 0;
+    $memosRootMid = 0;
+
+    try {
+        $categoryWidgetId = 'Widget_Metas_Category_List@embed_heatmap_categories_' . $days;
+        \Typecho\Widget::widget($categoryWidgetId, null, null, false)->to($categories);
+        if ($categories && $categories->have()) {
+            while ($categories->next()) {
+                $mid = (int) ($categories->mid ?? 0);
+                if ($mid <= 0) {
+                    continue;
+                }
+
+                $slug = (string) ($categories->slug ?? '');
+                $categoryByMid[$mid] = [
+                    'mid' => $mid,
+                    'parent' => (int) ($categories->parent ?? 0),
+                    'slug' => $slug,
+                ];
+
+                if ($slug === $blogSlug || $slug === 'posts') {
+                    $postsRootMid = $mid;
+                } elseif ($slug === $memoSlug || $slug === 'notes') {
+                    $memosRootMid = $mid;
+                }
+            }
+        }
+    } catch (\Throwable $e) {
+        $categoryByMid = [];
+        $postsRootMid = 0;
+        $memosRootMid = 0;
+    }
+
+    $posts = null;
+    try {
+        $postWidgetId = 'Widget_Contents_Post_Recent@embed_heatmap_posts_' . $days;
+        \Typecho\Widget::widget($postWidgetId, 'pageSize=9999', null, false)->to($posts);
+    } catch (\Throwable $e) {
+        $posts = null;
+    }
+
+    if ($posts && $posts->have()) {
+        while ($posts->next()) {
+            $created = (int) ($posts->created ?? 0);
+            if ($created <= 0 || $created < $startTs || $created > $endTs) {
+                continue;
+            }
+
+            $bucket = 'others';
+            $postCategories = [];
+            try {
+                $postCategories = is_array($posts->categories) ? $posts->categories : [];
+            } catch (\Throwable $e) {
+                $postCategories = [];
+            }
+
+            foreach ($postCategories as $cat) {
+                $mid = (int) ($cat['mid'] ?? 0);
+                if ($mid <= 0 || !isset($categoryByMid[$mid])) {
+                    continue;
+                }
+
+                $catInfo = $categoryByMid[$mid];
+                $catMid = (int) ($catInfo['mid'] ?? 0);
+                $catParent = (int) ($catInfo['parent'] ?? 0);
+                $catSlug = (string) ($catInfo['slug'] ?? '');
+
+                if (
+                    ($memosRootMid > 0 && ($catMid === $memosRootMid || $catParent === $memosRootMid))
+                    || $catSlug === $memoSlug
+                    || $catSlug === 'notes'
+                ) {
+                    $bucket = 'memos';
+                    break;
+                }
+
+                if (
+                    ($postsRootMid > 0 && ($catMid === $postsRootMid || $catParent === $postsRootMid))
+                    || $catSlug === $blogSlug
+                    || $catSlug === 'posts'
+                ) {
+                    $bucket = 'notes';
+                }
+            }
+
+            $dayKey = date('Y-m-d', $created);
+            if (!isset($series[$dayKey])) {
+                continue;
+            }
+
+            $itemTitle = trim((string) ($posts->title ?? ''));
+            if ($itemTitle === '') {
+                $itemTitle = _t('无标题');
+            }
+
+            $itemUrl = trim((string) ($posts->permalink ?? ''));
+            if ($itemUrl === '') {
+                continue;
+            }
+
+            $series[$dayKey][$bucket][] = [
+                'title' => $itemTitle,
+                'url' => $itemUrl,
+            ];
+            $series[$dayKey]['total'] += 1;
+        }
+    }
+
+    $series = array_values($series);
+    $columns = (int) ceil(max(1, count($series)) / 7);
+    if ($columns < 1) {
+        $columns = 1;
+    }
+
+    $cache[$days] = [
+        'days' => $days,
+        'columns' => $columns,
+        'series' => $series,
+    ];
+
+    return $cache[$days];
+}
+
+function renderHeatmapEmbedShortcode(string $args): string
+{
+    $args = trim(strip_tags(html_entity_decode($args, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+    $days = 140;
+    if ($args !== '' && preg_match('/\b(\d{1,4})\b/u', $args, $match) === 1) {
+        $days = (int) ($match[1] ?? $days);
+    }
+
+    $heatmap = buildHeatmapEmbedData($days);
+    $series = is_array($heatmap['series'] ?? null) ? $heatmap['series'] : [];
+    if (empty($series)) {
+        return '';
+    }
+
+    $columns = max(1, (int) ($heatmap['columns'] ?? 1));
+    $dayCount = max(1, (int) ($heatmap['days'] ?? $days));
+    $previewLimit = 3;
+
+    $html = '<section class="heatmap-embed-shortcode" data-embed-type="heatmap" style="margin:1rem 0;--landing-heatmap-cols:' . $columns . ';">';
+    $html .= '<section class="landing-heatmap-grid" aria-label="' . escape(sprintf(_t('最近 %d 天内容热力图'), $dayCount)) . '">';
+
+    foreach ($series as $day) {
+        $dayTotal = (int) ($day['total'] ?? 0);
+        $dotClass = 'is-empty';
+        if ($dayTotal >= 3) {
+            $dotClass = 'is-level-3';
+        } elseif ($dayTotal === 2) {
+            $dotClass = 'is-level-2';
+        } elseif ($dayTotal === 1) {
+            $dotClass = 'is-level-1';
+        }
+
+        $dayNotes = is_array($day['notes'] ?? null) ? $day['notes'] : [];
+        $dayMemos = is_array($day['memos'] ?? null) ? $day['memos'] : [];
+        $dayOthers = is_array($day['others'] ?? null) ? $day['others'] : [];
+
+        $html .= '<figure class="landing-heatmap-item">';
+        $html .= '<i class="landing-heatmap-dot ' . escape($dotClass) . '" aria-hidden="true"></i>';
+        $html .= '<figcaption class="landing-heatmap-pop">';
+        $html .= '<time class="landing-heatmap-date">' . escape((string) ($day['dateLabel'] ?? '')) . '</time>';
+
+        if ($dayTotal <= 0) {
+            $html .= '<p class="landing-heatmap-empty">' . escape(_t('无字')) . '</p>';
+        } else {
+            if (!empty($dayNotes)) {
+                $html .= '<p class="landing-heatmap-kind">' . escape(sprintf(_t('博文 %d 篇：'), count($dayNotes))) . '</p>';
+                $html .= '<ul class="landing-heatmap-list">';
+                foreach (array_slice($dayNotes, 0, $previewLimit) as $item) {
+                    $html .= '<li><a class="landing-heatmap-link" href="' . escape((string) ($item['url'] ?? '')) . '">' . escape((string) ($item['title'] ?? '')) . '</a></li>';
+                }
+                if (count($dayNotes) > $previewLimit) {
+                    $html .= '<li class="landing-heatmap-more">' . escape(sprintf(_t('另有 %d 篇'), count($dayNotes) - $previewLimit)) . '</li>';
+                }
+                $html .= '</ul>';
+            }
+
+            if (!empty($dayMemos)) {
+                $html .= '<p class="landing-heatmap-kind">' . escape(sprintf(_t('手记 %d 则：'), count($dayMemos))) . '</p>';
+                $html .= '<ul class="landing-heatmap-list">';
+                foreach (array_slice($dayMemos, 0, $previewLimit) as $item) {
+                    $html .= '<li><a class="landing-heatmap-link" href="' . escape((string) ($item['url'] ?? '')) . '">' . escape((string) ($item['title'] ?? '')) . '</a></li>';
+                }
+                if (count($dayMemos) > $previewLimit) {
+                    $html .= '<li class="landing-heatmap-more">' . escape(sprintf(_t('另有 %d 则'), count($dayMemos) - $previewLimit)) . '</li>';
+                }
+                $html .= '</ul>';
+            }
+
+            if (!empty($dayOthers)) {
+                $html .= '<p class="landing-heatmap-kind">' . escape(sprintf(_t('内容 %d 条：'), count($dayOthers))) . '</p>';
+                $html .= '<ul class="landing-heatmap-list">';
+                foreach (array_slice($dayOthers, 0, $previewLimit) as $item) {
+                    $html .= '<li><a class="landing-heatmap-link" href="' . escape((string) ($item['url'] ?? '')) . '">' . escape((string) ($item['title'] ?? '')) . '</a></li>';
+                }
+                if (count($dayOthers) > $previewLimit) {
+                    $html .= '<li class="landing-heatmap-more">' . escape(sprintf(_t('另有 %d 条'), count($dayOthers) - $previewLimit)) . '</li>';
+                }
+                $html .= '</ul>';
+            }
+        }
+
+        $html .= '</figcaption>';
+        $html .= '</figure>';
+    }
+
+    $html .= '</section>';
+    $html .= '</section>';
+
+    return $html;
+}
+
 function renderEmbedShortcode(string $rawPayload): string
 {
     $payload = extractEmbedShortcodePayload($rawPayload);
@@ -8105,8 +8357,12 @@ function renderEmbedShortcode(string $rawPayload): string
 
     $name = (string) ($payload['name'] ?? '');
     $args = (string) ($payload['args'] ?? '');
-    if ($name === '' || $args === '') {
+    if ($name === '') {
         return '';
+    }
+
+    if ($name === 'heatmap') {
+        return renderHeatmapEmbedShortcode($args);
     }
 
     if ($name === 'comment') {
