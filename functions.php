@@ -1802,6 +1802,261 @@ function hansjackMaimemoRecordsStoreLimit(int $plannedCount = 0): int
     return max(1000, min(12000, $plannedCount + 200));
 }
 
+function hansjackMaimemoIncrementalBudget(Options $options): int
+{
+    if (hansjackHighLoadDegradeEnabled($options)) {
+        return 4;
+    }
+
+    return 8;
+}
+
+function hansjackMaimemoRangeTsMin(): int
+{
+    return 946684800; // 2000-01-01T00:00:00Z
+}
+
+function hansjackMaimemoRangeTsMax(): int
+{
+    return 4102444800; // 2100-01-01T00:00:00Z
+}
+
+function hansjackMaimemoNormalizeRangeQueue($queue): array
+{
+    $result = [];
+    if (!is_array($queue)) {
+        return $result;
+    }
+
+    $globalMin = hansjackMaimemoRangeTsMin();
+    $globalMax = hansjackMaimemoRangeTsMax();
+
+    foreach ($queue as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $start = max($globalMin, (int) ($row['start'] ?? 0));
+        $end = min($globalMax, (int) ($row['end'] ?? 0));
+        if ($start <= 0 || $end <= 0 || $start > $end) {
+            continue;
+        }
+        $result[] = [
+            'start' => $start,
+            'end' => $end,
+        ];
+        if (count($result) >= 256) {
+            break;
+        }
+    }
+
+    return $result;
+}
+
+function hansjackMaimemoBuildRangePayload(int $startTs, int $endTs): array
+{
+    $startTs = max(hansjackMaimemoRangeTsMin(), $startTs);
+    $endTs = min(hansjackMaimemoRangeTsMax(), $endTs);
+
+    return [
+        'next_study_date' => [
+            'start' => hansjackMaimemoIsoUtcFromTimestamp($startTs),
+            'end' => hansjackMaimemoIsoUtcFromTimestamp($endTs),
+        ],
+    ];
+}
+
+function hansjackMaimemoQueryRecordsCountByRange(string $token, int $startTs, int $endTs): array
+{
+    $payload = hansjackMaimemoBuildRangePayload($startTs, $endTs);
+    $payload['as_count'] = true;
+
+    $resp = hansjackMaimemoRequestJson('query_study_records', $token, $payload);
+    $status = (int) ($resp['status'] ?? 0);
+    $json = is_array($resp['json'] ?? null) ? $resp['json'] : [];
+    $root = is_array($json['data'] ?? null) ? $json['data'] : $json;
+    $success = !array_key_exists('success', $json) || !empty($json['success']);
+    $ok = (
+        $status >= 200
+        && $status < 300
+        && $success
+        && array_key_exists('count', $root)
+        && is_numeric($root['count'])
+    );
+
+    if (!$ok) {
+        return [
+            'ok' => false,
+            'count' => 0,
+            'error' => hansjackMaimemoApiErrorText($resp),
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'count' => max(0, (int) ($root['count'] ?? 0)),
+        'error' => '',
+    ];
+}
+
+function hansjackMaimemoQueryRecordsByRange(string $token, int $startTs, int $endTs, int $limit): array
+{
+    $payload = hansjackMaimemoBuildRangePayload($startTs, $endTs);
+    $payload['as_count'] = false;
+    $payload['limit'] = max(1, min(1000, $limit));
+
+    $resp = hansjackMaimemoRequestJson('query_study_records', $token, $payload);
+    $status = (int) ($resp['status'] ?? 0);
+    $json = is_array($resp['json'] ?? null) ? $resp['json'] : [];
+    $root = is_array($json['data'] ?? null) ? $json['data'] : $json;
+    $success = !array_key_exists('success', $json) || !empty($json['success']);
+    $ok = (
+        $status >= 200
+        && $status < 300
+        && $success
+        && array_key_exists('records', $root)
+        && is_array($root['records'])
+    );
+
+    if (!$ok) {
+        return [
+            'ok' => false,
+            'records' => [],
+            'error' => hansjackMaimemoApiErrorText($resp),
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'records' => hansjackMaimemoNormalizeRecords($root['records'] ?? [], $limit),
+        'error' => '',
+    ];
+}
+
+function hansjackMaimemoCollectRecordsIncremental(
+    string $token,
+    array $seedRecords,
+    array $seedQueue,
+    bool $seedComplete,
+    int $recordsLimit,
+    int $storeLimit,
+    int $budget,
+    int $plannedCount
+): array {
+    $records = hansjackMaimemoNormalizeRecords($seedRecords, $storeLimit);
+    $queue = hansjackMaimemoNormalizeRangeQueue($seedQueue);
+    $complete = $seedComplete;
+    $budget = max(1, min(24, $budget));
+    $plannedCount = max(0, $plannedCount);
+
+    if ($plannedCount > 0 && count($records) >= $plannedCount) {
+        return [
+            'records' => $records,
+            'queue' => [],
+            'complete' => true,
+            'error' => '',
+        ];
+    }
+
+    if (empty($queue) && !$complete) {
+        $queue[] = [
+            'start' => hansjackMaimemoRangeTsMin(),
+            'end' => hansjackMaimemoRangeTsMax(),
+        ];
+    }
+
+    $error = '';
+    $recordsLimit = max(1, min(1000, $recordsLimit));
+
+    while ($budget > 0 && !empty($queue)) {
+        $range = array_shift($queue);
+        if (!is_array($range)) {
+            continue;
+        }
+
+        $start = max(hansjackMaimemoRangeTsMin(), (int) ($range['start'] ?? 0));
+        $end = min(hansjackMaimemoRangeTsMax(), (int) ($range['end'] ?? 0));
+        if ($start <= 0 || $end <= 0 || $start > $end) {
+            continue;
+        }
+
+        $countResp = hansjackMaimemoQueryRecordsCountByRange($token, $start, $end);
+        $budget -= 1;
+        if (empty($countResp['ok'])) {
+            $error = trim((string) ($countResp['error'] ?? ''));
+            array_unshift($queue, ['start' => $start, 'end' => $end]);
+            break;
+        }
+
+        $rangeCount = max(0, (int) ($countResp['count'] ?? 0));
+        if ($rangeCount <= 0) {
+            continue;
+        }
+
+        if ($rangeCount <= $recordsLimit || $start >= $end) {
+            if ($budget <= 0) {
+                array_unshift($queue, ['start' => $start, 'end' => $end]);
+                break;
+            }
+
+            $recordsResp = hansjackMaimemoQueryRecordsByRange($token, $start, $end, $recordsLimit);
+            $budget -= 1;
+            if (empty($recordsResp['ok'])) {
+                $error = trim((string) ($recordsResp['error'] ?? ''));
+                array_unshift($queue, ['start' => $start, 'end' => $end]);
+                break;
+            }
+
+            $records = hansjackMaimemoMergeRecords(
+                $records,
+                is_array($recordsResp['records'] ?? null) ? $recordsResp['records'] : [],
+                $storeLimit
+            );
+            continue;
+        }
+
+        $mid = $start + intdiv(($end - $start), 2);
+        if ($mid <= $start || $mid >= $end) {
+            if ($budget <= 0) {
+                array_unshift($queue, ['start' => $start, 'end' => $end]);
+                break;
+            }
+
+            $recordsResp = hansjackMaimemoQueryRecordsByRange($token, $start, $end, $recordsLimit);
+            $budget -= 1;
+            if (empty($recordsResp['ok'])) {
+                $error = trim((string) ($recordsResp['error'] ?? ''));
+                array_unshift($queue, ['start' => $start, 'end' => $end]);
+                break;
+            }
+
+            $records = hansjackMaimemoMergeRecords(
+                $records,
+                is_array($recordsResp['records'] ?? null) ? $recordsResp['records'] : [],
+                $storeLimit
+            );
+            continue;
+        }
+
+        // FIFO 队列，优先处理较近时间区间。
+        array_unshift($queue, ['start' => $mid + 1, 'end' => $end]);
+        array_unshift($queue, ['start' => $start, 'end' => $mid]);
+    }
+
+    $queue = hansjackMaimemoNormalizeRangeQueue($queue);
+    $complete = empty($queue);
+    if ($plannedCount > 0 && count($records) >= $plannedCount) {
+        $complete = true;
+        $queue = [];
+    }
+
+    return [
+        'records' => $records,
+        'queue' => $queue,
+        'complete' => $complete,
+        'error' => $error,
+    ];
+}
+
 function hansjackMaimemoMergeRecords(array $baseRecords, array $appendRecords, int $storeLimit = 12000): array
 {
     $storeLimit = max(1000, min(20000, $storeLimit));
@@ -1846,7 +2101,7 @@ function hansjackMaimemoNormalizeRecords($records, int $limit = 1000): array
         return [];
     }
 
-    $limit = max(1, min(1000, $limit));
+    $limit = max(1, min(20000, $limit));
     $normalized = [];
 
     foreach ($records as $row) {
@@ -2078,20 +2333,36 @@ function hansjackMaimemoStudyPayload(Options $options): array
     $cacheUpdatedAt = max(0, (int) ($cache['updatedAt'] ?? 0));
     $cacheProgress = hansjackMaimemoNormalizeProgress($cache['progress'] ?? []);
     $cacheItems = hansjackMaimemoNormalizeTodayItems($cache['today_items'] ?? [], 200);
-    $cacheRecords = hansjackMaimemoNormalizeRecords($cache['records'] ?? [], $recordsLimit);
-    $cacheRecordsCursorTs = max(0, (int) ($cache['records_cursor_ts'] ?? 0));
-    $cacheRecordsComplete = !empty($cache['records_complete']);
+    $cacheRecordsRaw = is_array($cache['records'] ?? null) ? $cache['records'] : [];
     $cacheRecordsStatsRaw = is_array($cache['records_stats'] ?? null) ? $cache['records_stats'] : [];
     $cachePlannedCount = max(0, (int) ($cacheRecordsStatsRaw['planned_count'] ?? ($cache['planned_count'] ?? 0)));
+    $cacheRecordsStoreLimit = hansjackMaimemoRecordsStoreLimit(max($cachePlannedCount, count($cacheRecordsRaw)));
+    $cacheRecords = hansjackMaimemoNormalizeRecords($cacheRecordsRaw, $cacheRecordsStoreLimit);
+    $cacheRecordsCursorTs = max(0, (int) ($cache['records_cursor_ts'] ?? 0));
+    $cacheRecordsQueue = hansjackMaimemoNormalizeRangeQueue($cache['records_queue'] ?? []);
+    $cacheRecordsComplete = !empty($cache['records_complete']);
+    if (
+        $cacheDate === $today
+        && empty($cacheRecordsQueue)
+        && !$cacheRecordsComplete
+        && $cacheRecordsCursorTs > 0
+        && !empty($cacheRecords)
+    ) {
+        $queueStart = max(hansjackMaimemoRangeTsMin(), $cacheRecordsCursorTs);
+        if ($queueStart <= hansjackMaimemoRangeTsMax()) {
+            // 兼容旧版 cursor，迁移为区间队列增量模式。
+            $cacheRecordsQueue[] = [
+                'start' => $queueStart,
+                'end' => hansjackMaimemoRangeTsMax(),
+            ];
+        }
+    }
+    if ($cachePlannedCount > 0 && count($cacheRecords) >= $cachePlannedCount) {
+        $cacheRecordsComplete = true;
+        $cacheRecordsQueue = [];
+    }
     $cacheRecordsStats = hansjackMaimemoBuildRecordsStats($cacheRecords, $cachePlannedCount);
     $cacheMessage = trim((string) ($cache['message'] ?? ''));
-    $cacheRecordsCount = count($cacheRecords);
-    $cacheRecordsLikelyComplete = (
-        $cacheRecordsCount <= 0
-        || $cacheRecordsComplete
-        || ($cachePlannedCount > 0 && $cacheRecordsCount >= $cachePlannedCount)
-        || ($cacheRecordsCount > 0 && $cacheRecordsCount < $recordsLimit)
-    );
 
     $cacheHasData = (
         !empty($cacheItems)
@@ -2100,12 +2371,12 @@ function hansjackMaimemoStudyPayload(Options $options): array
         || (int) ($cacheRecordsStats['planned_count'] ?? 0) > 0
         || (int) ($cacheRecordsStats['records_count'] ?? 0) > 0
     );
+    $cacheHasSnapshot = $cacheHasData || $cacheMessage !== '';
     $cacheIsToday = ($cacheDate === $today);
     $cacheFresh = $cacheIsToday
-        && $cacheHasData
+        && $cacheHasSnapshot
         && $cacheUpdatedAt > 0
-        && ($now - $cacheUpdatedAt) <= $ttl
-        && $cacheRecordsLikelyComplete;
+        && ($now - $cacheUpdatedAt) <= $ttl;
 
     if ($cacheFresh) {
         $base['ok'] = true;
@@ -2128,47 +2399,21 @@ function hansjackMaimemoStudyPayload(Options $options): array
     $recordsCountResp = hansjackMaimemoRequestJson('query_study_records', $token, [
         'as_count' => true,
     ]);
-    $recordsCursorTs = 0;
-    if ($cacheIsToday && !empty($cacheRecords) && !$cacheRecordsComplete) {
-        $recordsCursorTs = $cacheRecordsCursorTs;
-        if ($recordsCursorTs <= 0) {
-            $recordsCursorTs = hansjackMaimemoMaxNextStudyTs($cacheRecords);
-            if ($recordsCursorTs > 0) {
-                $recordsCursorTs += 1;
-            }
-        }
-    }
-
-    $recordsRequestPayload = [
-        'as_count' => false,
-        'limit' => $recordsLimit,
-    ];
-    if ($recordsCursorTs > 0) {
-        $recordsRequestPayload['next_study_date'] = [
-            'start' => hansjackMaimemoIsoUtcFromTimestamp($recordsCursorTs),
-        ];
-    }
-
-    $recordsResp = hansjackMaimemoRequestJson('query_study_records', $token, $recordsRequestPayload);
 
     $progressStatus = (int) ($progressResp['status'] ?? 0);
     $itemsStatus = (int) ($itemsResp['status'] ?? 0);
     $recordsCountStatus = (int) ($recordsCountResp['status'] ?? 0);
-    $recordsStatus = (int) ($recordsResp['status'] ?? 0);
     $progressJson = is_array($progressResp['json'] ?? null) ? $progressResp['json'] : [];
     $itemsJson = is_array($itemsResp['json'] ?? null) ? $itemsResp['json'] : [];
     $recordsCountJson = is_array($recordsCountResp['json'] ?? null) ? $recordsCountResp['json'] : [];
-    $recordsJson = is_array($recordsResp['json'] ?? null) ? $recordsResp['json'] : [];
 
     $progressRoot = is_array($progressJson['data'] ?? null) ? $progressJson['data'] : $progressJson;
     $itemsRoot = is_array($itemsJson['data'] ?? null) ? $itemsJson['data'] : $itemsJson;
     $recordsCountRoot = is_array($recordsCountJson['data'] ?? null) ? $recordsCountJson['data'] : $recordsCountJson;
-    $recordsRoot = is_array($recordsJson['data'] ?? null) ? $recordsJson['data'] : $recordsJson;
 
     $progressSuccess = !array_key_exists('success', $progressJson) || !empty($progressJson['success']);
     $itemsSuccess = !array_key_exists('success', $itemsJson) || !empty($itemsJson['success']);
     $recordsCountSuccess = !array_key_exists('success', $recordsCountJson) || !empty($recordsCountJson['success']);
-    $recordsSuccess = !array_key_exists('success', $recordsJson) || !empty($recordsJson['success']);
 
     $progressOk = (
         $progressStatus >= 200
@@ -2191,67 +2436,59 @@ function hansjackMaimemoStudyPayload(Options $options): array
         && array_key_exists('count', $recordsCountRoot)
         && is_numeric($recordsCountRoot['count'])
     );
-    $recordsOk = (
-        $recordsStatus >= 200
-        && $recordsStatus < 300
-        && $recordsSuccess
-        && array_key_exists('records', $recordsRoot)
-        && is_array($recordsRoot['records'])
-    );
 
     $liveProgress = $progressOk ? hansjackMaimemoNormalizeProgress($progressRoot['progress'] ?? []) : $cacheProgress;
     $liveItems = $itemsOk ? hansjackMaimemoNormalizeTodayItems($itemsRoot['today_items'] ?? [], 200) : $cacheItems;
-    $recordsChunk = $recordsOk ? hansjackMaimemoNormalizeRecords($recordsRoot['records'] ?? [], $recordsLimit) : [];
-    $recordsChunkCount = count($recordsChunk);
-
-    $recordsStoreLimit = hansjackMaimemoRecordsStoreLimit(max(
-        $cachePlannedCount,
-        (int) ($recordsCountRoot['count'] ?? 0)
-    ));
-    if ($cacheIsToday && $recordsCursorTs > 0) {
-        $liveRecords = $recordsOk
-            ? hansjackMaimemoMergeRecords($cacheRecords, $recordsChunk, $recordsStoreLimit)
-            : $cacheRecords;
-    } else {
-        $liveRecords = $recordsOk ? $recordsChunk : $cacheRecords;
-    }
-
     $livePlannedCount = $recordsCountOk ? max(0, (int) ($recordsCountRoot['count'] ?? 0)) : 0;
-    if ($livePlannedCount <= 0 && array_key_exists('count', $recordsRoot) && is_numeric($recordsRoot['count'])) {
-        $livePlannedCount = max(0, (int) ($recordsRoot['count'] ?? 0));
-    }
     if ($livePlannedCount <= 0) {
-        $livePlannedCount = max(0, (int) ($cacheRecordsStats['planned_count'] ?? 0), count($liveRecords));
+        $livePlannedCount = max(0, (int) ($cacheRecordsStats['planned_count'] ?? 0), count($cacheRecords));
     }
 
-    $liveRecordsCursorTs = $cacheRecordsCursorTs;
-    $liveRecordsComplete = $cacheRecordsComplete;
-    if ($recordsOk) {
-        $chunkMaxTs = hansjackMaimemoMaxNextStudyTs($recordsChunk);
-        if ($chunkMaxTs > 0) {
-            $liveRecordsCursorTs = $chunkMaxTs + 1;
-        } elseif ($recordsCursorTs > 0) {
-            $liveRecordsCursorTs = $recordsCursorTs;
+    $recordsStoreLimit = hansjackMaimemoRecordsStoreLimit(max($livePlannedCount, count($cacheRecords)));
+    $seedRecords = $cacheIsToday ? $cacheRecords : [];
+    $seedQueue = $cacheIsToday ? $cacheRecordsQueue : [];
+    $seedComplete = $cacheIsToday ? $cacheRecordsComplete : false;
+    if ($seedComplete && $livePlannedCount > 0 && count($seedRecords) < $livePlannedCount) {
+        $seedComplete = false;
+    }
+    if (
+        $cacheIsToday
+        && empty($seedQueue)
+        && !$seedComplete
+        && $cacheRecordsCursorTs > 0
+        && !empty($seedRecords)
+    ) {
+        $queueStart = max(hansjackMaimemoRangeTsMin(), $cacheRecordsCursorTs);
+        if ($queueStart <= hansjackMaimemoRangeTsMax()) {
+            $seedQueue[] = [
+                'start' => $queueStart,
+                'end' => hansjackMaimemoRangeTsMax(),
+            ];
         }
+    }
 
-        $liveRecordsComplete = false;
-        if ($livePlannedCount > 0) {
-            if (count($liveRecords) >= $livePlannedCount) {
-                $liveRecordsComplete = true;
-            } elseif ($recordsChunkCount <= 0) {
-                $liveRecordsComplete = false;
-            }
-        } else {
-            if ($recordsChunkCount <= 0 || $recordsChunkCount < $recordsLimit) {
-                $liveRecordsComplete = true;
-            }
-        }
-
-        if ($recordsCursorTs > 0 && $liveRecordsCursorTs > 0 && $liveRecordsCursorTs <= $recordsCursorTs) {
-            $liveRecordsComplete = ($livePlannedCount > 0)
-                ? (count($liveRecords) >= $livePlannedCount)
-                : true;
-        }
+    $collectResult = hansjackMaimemoCollectRecordsIncremental(
+        $token,
+        $seedRecords,
+        $seedQueue,
+        $seedComplete,
+        $recordsLimit,
+        $recordsStoreLimit,
+        hansjackMaimemoIncrementalBudget($options),
+        $livePlannedCount
+    );
+    $recordsCollectError = trim((string) ($collectResult['error'] ?? ''));
+    $liveRecords = hansjackMaimemoNormalizeRecords($collectResult['records'] ?? [], $recordsStoreLimit);
+    $liveRecordsQueue = hansjackMaimemoNormalizeRangeQueue($collectResult['queue'] ?? []);
+    $liveRecordsComplete = !empty($collectResult['complete']);
+    if ($livePlannedCount > 0 && count($liveRecords) >= $livePlannedCount) {
+        $liveRecordsComplete = true;
+        $liveRecordsQueue = [];
+    }
+    $liveRecordsCursorTs = 0;
+    $liveRecordsMaxTs = hansjackMaimemoMaxNextStudyTs($liveRecords);
+    if ($liveRecordsMaxTs > 0) {
+        $liveRecordsCursorTs = $liveRecordsMaxTs + 1;
     }
 
     $liveRecordsStats = hansjackMaimemoBuildRecordsStats($liveRecords, $livePlannedCount);
@@ -2265,7 +2502,7 @@ function hansjackMaimemoStudyPayload(Options $options): array
     );
 
     $message = '';
-    if (!$progressOk || !$itemsOk || !$recordsCountOk || !$recordsOk) {
+    if (!$progressOk || !$itemsOk || !$recordsCountOk || $recordsCollectError !== '') {
         $errors = [];
         if (!$progressOk) {
             $progressError = hansjackMaimemoApiErrorText($progressResp);
@@ -2285,11 +2522,8 @@ function hansjackMaimemoStudyPayload(Options $options): array
                 $errors[] = _t('记录总量接口：%s', $recordsCountError);
             }
         }
-        if (!$recordsOk) {
-            $recordsError = hansjackMaimemoApiErrorText($recordsResp);
-            if ($recordsError !== '') {
-                $errors[] = _t('记录明细接口：%s', $recordsError);
-            }
+        if ($recordsCollectError !== '') {
+            $errors[] = _t('记录明细接口：%s', $recordsCollectError);
         }
         if (!empty($errors)) {
             $message = implode('；', $errors);
@@ -2305,7 +2539,7 @@ function hansjackMaimemoStudyPayload(Options $options): array
         $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($liveProgress['study_time'] ?? 0));
         $base['updatedAt'] = $now;
         $base['updatedAtText'] = hansjackFormatTimestampByOptions($options, $now);
-        $base['source'] = ($progressOk && $itemsOk && $recordsCountOk && $recordsOk) ? 'api' : 'api-partial';
+        $base['source'] = ($progressOk && $itemsOk && $recordsCountOk && $recordsCollectError === '') ? 'api' : 'api-partial';
         $base['message'] = $message;
 
         hansjackMaimemoWriteCache([
@@ -2314,7 +2548,9 @@ function hansjackMaimemoStudyPayload(Options $options): array
             'progress' => $liveProgress,
             'today_items' => $liveItems,
             'records' => $liveRecords,
+            'planned_count' => $livePlannedCount,
             'records_cursor_ts' => $liveRecordsCursorTs,
+            'records_queue' => $liveRecordsQueue,
             'records_complete' => $liveRecordsComplete,
             'records_stats' => $liveRecordsStats,
             'message' => $message,
@@ -2323,7 +2559,7 @@ function hansjackMaimemoStudyPayload(Options $options): array
         return $base;
     }
 
-    if ($cacheIsToday && $cacheHasData) {
+    if ($cacheIsToday && $cacheHasSnapshot) {
         $base['ok'] = true;
         $base['progress'] = $cacheProgress;
         $base['today_items'] = $cacheItems;
