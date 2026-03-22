@@ -324,7 +324,7 @@ function themeConfig($form)
         null,
         '',
         _t('墨墨开放 API Token'),
-        _t('请求 Header 会使用 `Authorization: <Token>`。留空则无法请求学习进度。')
+        _t('请求 Header 会自动补全为 `Authorization: Bearer <Token>`。留空则无法请求学习进度。')
     );
     $form->addInput($maimemoApiToken);
 
@@ -1304,6 +1304,16 @@ function hansjackMaimemoStudyCacheTtl(Options $options): int
     return 300;
 }
 
+function hansjackMaimemoRecordsFetchLimit(Options $options): int
+{
+    // 墨墨接口单次 limit 上限为 1000，降级模式下适当降低采样量。
+    if (hansjackHighLoadDegradeEnabled($options)) {
+        return 600;
+    }
+
+    return 1000;
+}
+
 function hansjackMaimemoStudyCacheFilePath(): string
 {
     return __DIR__
@@ -1311,9 +1321,155 @@ function hansjackMaimemoStudyCacheFilePath(): string
         . DIRECTORY_SEPARATOR . 'maimemo-study.json';
 }
 
-function hansjackMaimemoTodayDate(): string
+function hansjackMaimemoRateLimitFilePath(): string
 {
-    return date('Y-m-d');
+    return __DIR__
+        . DIRECTORY_SEPARATOR . 'cache'
+        . DIRECTORY_SEPARATOR . 'maimemo-rate-limit.json';
+}
+
+function hansjackMaimemoAcquireRequestSlot(): array
+{
+    $limits = [
+        ['seconds' => 10, 'max' => 20],
+        ['seconds' => 60, 'max' => 40],
+        ['seconds' => 5 * 60 * 60, 'max' => 2000],
+    ];
+
+    $path = hansjackMaimemoRateLimitFilePath();
+    if (!hansjackEnsureDir(dirname($path))) {
+        return [
+            'ok' => true,
+            'retry_after' => 0,
+            'message' => '',
+        ];
+    }
+
+    $fp = @fopen($path, 'c+');
+    if (!is_resource($fp)) {
+        return [
+            'ok' => true,
+            'retry_after' => 0,
+            'message' => '',
+        ];
+    }
+
+    $now = time();
+    $allow = true;
+    $retryAfter = 0;
+    $message = '';
+    $timestamps = [];
+
+    if (@flock($fp, LOCK_EX)) {
+        rewind($fp);
+        $raw = stream_get_contents($fp);
+        if (is_string($raw) && trim($raw) !== '') {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                $storedTimestamps = is_array($decoded['timestamps'] ?? null) ? $decoded['timestamps'] : [];
+                foreach ($storedTimestamps as $item) {
+                    $ts = (int) $item;
+                    if ($ts > 0) {
+                        $timestamps[] = $ts;
+                    }
+                }
+            }
+        }
+
+        $maxWindow = 5 * 60 * 60;
+        $minTs = $now - $maxWindow + 1;
+        $filtered = [];
+        foreach ($timestamps as $ts) {
+            if ($ts >= $minTs) {
+                $filtered[] = $ts;
+            }
+        }
+        $timestamps = $filtered;
+
+        foreach ($limits as $limit) {
+            $windowSeconds = max(1, (int) ($limit['seconds'] ?? 1));
+            $windowMax = max(1, (int) ($limit['max'] ?? 1));
+            $windowStart = $now - $windowSeconds + 1;
+            $count = 0;
+            $firstTs = 0;
+
+            foreach ($timestamps as $ts) {
+                if ($ts >= $windowStart) {
+                    $count += 1;
+                    if ($firstTs <= 0 || $ts < $firstTs) {
+                        $firstTs = $ts;
+                    }
+                }
+            }
+
+            if ($count >= $windowMax) {
+                $allow = false;
+                $wait = max(1, ($firstTs + $windowSeconds) - $now + 1);
+                $retryAfter = max($retryAfter, $wait);
+            }
+        }
+
+        if ($allow) {
+            $timestamps[] = $now;
+            if (count($timestamps) > 2200) {
+                $timestamps = array_slice($timestamps, -2200);
+            }
+        } else {
+            $message = _t('触发墨墨接口请求频控（10 秒 20 次 / 60 秒 40 次 / 5 小时 2000 次），请 %d 秒后重试。', max(1, $retryAfter));
+        }
+
+        $store = [
+            'version' => 1,
+            'updatedAt' => $now,
+            'timestamps' => array_values($timestamps),
+        ];
+        $json = json_encode($store, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (is_string($json)) {
+            rewind($fp);
+            if (@ftruncate($fp, 0)) {
+                @fwrite($fp, $json);
+                @fflush($fp);
+            }
+        }
+
+        @flock($fp, LOCK_UN);
+    }
+
+    @fclose($fp);
+
+    return [
+        'ok' => $allow,
+        'retry_after' => max(0, (int) $retryAfter),
+        'message' => $message,
+    ];
+}
+
+function hansjackOptionsTimezoneOffset(Options $options): int
+{
+    $tz = 0;
+    try {
+        $tz = (int) ($options->timezone ?? 0);
+    } catch (\Throwable $e) {
+        $tz = 0;
+    }
+
+    return $tz;
+}
+
+function hansjackFormatTimestampByOptions(Options $options, int $timestamp, string $format = 'Y-m-d H:i:s'): string
+{
+    $timestamp = max(0, (int) $timestamp);
+    if ($timestamp <= 0) {
+        return '';
+    }
+
+    $tz = hansjackOptionsTimezoneOffset($options);
+    return gmdate($format, $timestamp + $tz);
+}
+
+function hansjackMaimemoTodayDate(Options $options): string
+{
+    return hansjackFormatTimestampByOptions($options, time(), 'Y-m-d');
 }
 
 function hansjackMaimemoNormalizeProgress($progress): array
@@ -1373,7 +1529,7 @@ function hansjackMaimemoNormalizeTodayItems($items, int $limit = 120): array
         $fallbackOrder = max($fallbackOrder + 1, $order + 1);
 
         $firstResponse = strtoupper(trim((string) ($item['first_response'] ?? '')));
-        if (!preg_match('/^[A-Z_]+$/', $firstResponse)) {
+        if (!preg_match('/^[A-Z0-9_]+$/', $firstResponse)) {
             $firstResponse = '';
         }
 
@@ -1489,6 +1645,28 @@ function hansjackMaimemoRequestJson(string $endpoint, string $token, array $payl
         return ['status' => 0, 'body' => '', 'json' => []];
     }
 
+    $slot = hansjackMaimemoAcquireRequestSlot();
+    if (empty($slot['ok'])) {
+        $retryAfter = max(1, (int) ($slot['retry_after'] ?? 1));
+        $message = trim((string) ($slot['message'] ?? ''));
+        if ($message === '') {
+            $message = _t('触发墨墨接口请求频控，请 %d 秒后重试。', $retryAfter);
+        }
+
+        return [
+            'status' => 429,
+            'body' => '',
+            'json' => [
+                'success' => false,
+                'message' => $message,
+                'data' => [
+                    'message' => $message,
+                    'retry_after' => $retryAfter,
+                ],
+            ],
+        ];
+    }
+
     $authToken = trim($token);
     if (!preg_match('/^Bearer\s+/i', $authToken)) {
         $authToken = 'Bearer ' . $authToken;
@@ -1564,10 +1742,308 @@ function hansjackMaimemoApiErrorText(array $response): string
     return '';
 }
 
+function hansjackMaimemoIsoToTimestamp(string $iso): int
+{
+    $value = trim($iso);
+    if ($value === '') {
+        return 0;
+    }
+
+    $ts = strtotime($value);
+    if ($ts === false) {
+        return 0;
+    }
+
+    return max(0, (int) $ts);
+}
+
+function hansjackMaimemoShortDateLabel(int $ts): string
+{
+    if ($ts <= 0) {
+        return _t('未知');
+    }
+
+    return date('n/j', $ts);
+}
+
+function hansjackMaimemoIsoUtcFromTimestamp(int $ts): string
+{
+    $ts = max(0, (int) $ts);
+    if ($ts <= 0) {
+        return '';
+    }
+
+    return gmdate('Y-m-d\TH:i:s\Z', $ts);
+}
+
+function hansjackMaimemoMaxNextStudyTs(array $records): int
+{
+    $maxTs = 0;
+    foreach ($records as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $nextTs = max(0, (int) ($row['next_study_ts'] ?? 0));
+        if ($nextTs > $maxTs) {
+            $maxTs = $nextTs;
+        }
+    }
+
+    return $maxTs;
+}
+
+function hansjackMaimemoRecordsStoreLimit(int $plannedCount = 0): int
+{
+    $plannedCount = max(0, $plannedCount);
+    if ($plannedCount <= 0) {
+        return 12000;
+    }
+
+    return max(1000, min(12000, $plannedCount + 200));
+}
+
+function hansjackMaimemoMergeRecords(array $baseRecords, array $appendRecords, int $storeLimit = 12000): array
+{
+    $storeLimit = max(1000, min(20000, $storeLimit));
+    $merged = [];
+
+    $inject = static function (array $row) use (&$merged): void {
+        $vocId = trim((string) ($row['voc_id'] ?? ''));
+        $spelling = trim((string) ($row['voc_spelling'] ?? ''));
+        $nextTs = max(0, (int) ($row['next_study_ts'] ?? 0));
+        $response = strtoupper(trim((string) ($row['last_response'] ?? '')));
+
+        $key = $vocId !== ''
+            ? ('id:' . $vocId)
+            : ('row:' . $spelling . '|' . $nextTs . '|' . $response);
+
+        $merged[$key] = $row;
+    };
+
+    foreach ($baseRecords as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $inject($row);
+    }
+
+    foreach ($appendRecords as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $inject($row);
+    }
+
+    $mergedList = array_values($merged);
+    $mergedList = hansjackMaimemoNormalizeRecords($mergedList, $storeLimit);
+
+    return $mergedList;
+}
+
+function hansjackMaimemoNormalizeRecords($records, int $limit = 1000): array
+{
+    if (!is_array($records)) {
+        return [];
+    }
+
+    $limit = max(1, min(1000, $limit));
+    $normalized = [];
+
+    foreach ($records as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+
+        $vocId = trim((string) ($row['voc_id'] ?? ''));
+        $vocSpelling = trim((string) ($row['voc_spelling'] ?? ''));
+        $nextStudyDate = trim((string) ($row['next_study_date'] ?? ''));
+        $lastResponse = trim((string) ($row['last_response'] ?? ''));
+        $studyCount = max(0, (int) ($row['study_count'] ?? 0));
+        $tags = trim((string) ($row['tags'] ?? ''));
+
+        $nextStudyTs = hansjackMaimemoIsoToTimestamp($nextStudyDate);
+
+        $normalized[] = [
+            'voc_id' => $vocId,
+            'voc_spelling' => $vocSpelling,
+            'next_study_date' => $nextStudyDate,
+            'next_study_ts' => $nextStudyTs,
+            'last_response' => $lastResponse,
+            'study_count' => $studyCount,
+            'tags' => $tags,
+        ];
+
+        if (count($normalized) >= $limit) {
+            break;
+        }
+    }
+
+    usort($normalized, static function (array $a, array $b): int {
+        $aTs = (int) ($a['next_study_ts'] ?? 0);
+        $bTs = (int) ($b['next_study_ts'] ?? 0);
+        if ($aTs === $bTs) {
+            return strcmp((string) ($a['voc_spelling'] ?? ''), (string) ($b['voc_spelling'] ?? ''));
+        }
+        if ($aTs <= 0) {
+            return 1;
+        }
+        if ($bTs <= 0) {
+            return -1;
+        }
+        return $aTs <=> $bTs;
+    });
+
+    return $normalized;
+}
+
+function hansjackMaimemoBuildRecordsStats(array $records, int $plannedCount = 0): array
+{
+    $plannedCount = max(0, $plannedCount);
+    $recordCount = count($records);
+    $dateBuckets = [];
+    $statusBuckets = [];
+
+    foreach ($records as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+
+        $nextTs = max(0, (int) ($row['next_study_ts'] ?? 0));
+        if ($nextTs > 0) {
+            $dateKey = date('Y-m-d', $nextTs);
+            if (!isset($dateBuckets[$dateKey])) {
+                $dateBuckets[$dateKey] = [
+                    'date' => $dateKey,
+                    'label' => hansjackMaimemoShortDateLabel($nextTs),
+                    'count' => 0,
+                ];
+            }
+            $dateBuckets[$dateKey]['count'] += 1;
+        }
+
+        $responseCode = strtoupper(trim((string) ($row['last_response'] ?? '')));
+        if (strpos($responseCode, 'STUDY_RESPONSE_') === 0) {
+            $responseCode = substr($responseCode, strlen('STUDY_RESPONSE_'));
+        }
+        if ($responseCode === '') {
+            $responseCode = 'UNSPECIFIED';
+        }
+
+        if (!isset($statusBuckets[$responseCode])) {
+            $statusBuckets[$responseCode] = [
+                'code' => $responseCode,
+                'label' => hansjackMaimemoResponseLabel($responseCode),
+                'count' => 0,
+            ];
+        }
+        $statusBuckets[$responseCode]['count'] += 1;
+    }
+
+    if ($plannedCount <= 0) {
+        $plannedCount = max(0, $recordCount);
+    }
+
+    ksort($dateBuckets);
+    $dateList = array_values($dateBuckets);
+    if (count($dateList) > 7) {
+        $dateList = array_slice($dateList, 0, 7);
+    }
+
+    $maxDateCount = 0;
+    foreach ($dateList as $item) {
+        $maxDateCount = max($maxDateCount, (int) ($item['count'] ?? 0));
+    }
+    if ($maxDateCount <= 0) {
+        $maxDateCount = 1;
+    }
+
+    $nextBuckets = [];
+    foreach ($dateList as $item) {
+        $count = max(0, (int) ($item['count'] ?? 0));
+        $nextBuckets[] = [
+            'date' => (string) ($item['date'] ?? ''),
+            'label' => (string) ($item['label'] ?? ''),
+            'count' => $count,
+            'percent' => round(($count / $maxDateCount) * 100, 2),
+        ];
+    }
+
+    $statusList = array_values($statusBuckets);
+    usort($statusList, static function (array $a, array $b): int {
+        $aCount = (int) ($a['count'] ?? 0);
+        $bCount = (int) ($b['count'] ?? 0);
+        if ($aCount === $bCount) {
+            return strcmp((string) ($a['label'] ?? ''), (string) ($b['label'] ?? ''));
+        }
+        return $bCount <=> $aCount;
+    });
+
+    $statusTotal = 0;
+    foreach ($statusList as $row) {
+        $statusTotal += max(0, (int) ($row['count'] ?? 0));
+    }
+
+    $palette = [
+        '#2a2a28',
+        '#4c6ef5',
+        '#2f9e44',
+        '#f08c00',
+        '#d6336c',
+        '#0c8599',
+        '#5f3dc4',
+        '#495057',
+    ];
+
+    $legend = [];
+    $stops = [];
+    $start = 0.0;
+    $paletteIndex = 0;
+    foreach ($statusList as $row) {
+        $count = max(0, (int) ($row['count'] ?? 0));
+        if ($count <= 0) {
+            continue;
+        }
+
+        $color = $palette[$paletteIndex % count($palette)];
+        $paletteIndex++;
+
+        $percent = ($statusTotal > 0) ? round(($count / $statusTotal) * 100, 2) : 0.0;
+        $angle = ($statusTotal > 0) ? (($count / $statusTotal) * 360.0) : 0.0;
+        $end = $start + $angle;
+
+        $stops[] = $color . ' ' . number_format($start, 2, '.', '') . 'deg ' . number_format($end, 2, '.', '') . 'deg';
+        $start = $end;
+
+        $legend[] = [
+            'code' => (string) ($row['code'] ?? ''),
+            'label' => (string) ($row['label'] ?? ''),
+            'count' => $count,
+            'percent' => $percent,
+            'color' => $color,
+        ];
+    }
+
+    $pieGradient = 'conic-gradient(rgba(117, 117, 117, 0.28) 0deg 360deg)';
+    if (!empty($stops)) {
+        $pieGradient = 'conic-gradient(' . implode(', ', $stops) . ')';
+    }
+
+    return [
+        'planned_count' => $plannedCount,
+        'records_count' => $recordCount,
+        'next_buckets' => $nextBuckets,
+        'next_bucket_max' => $maxDateCount,
+        'status_total' => $statusTotal,
+        'status_legend' => $legend,
+        'status_pie_gradient' => $pieGradient,
+    ];
+}
+
 function hansjackMaimemoStudyPayload(Options $options): array
 {
     $enabled = hansjackMaimemoStudyEnabled($options);
-    $today = hansjackMaimemoTodayDate();
+    $today = hansjackMaimemoTodayDate($options);
+    $recordsLimit = hansjackMaimemoRecordsFetchLimit($options);
     $base = [
         'enabled' => $enabled,
         'tokenConfigured' => false,
@@ -1575,6 +2051,8 @@ function hansjackMaimemoStudyPayload(Options $options): array
         'date' => $today,
         'progress' => hansjackMaimemoNormalizeProgress([]),
         'today_items' => [],
+        'records' => [],
+        'records_stats' => hansjackMaimemoBuildRecordsStats([], 0),
         'study_time_text' => hansjackMaimemoStudyTimeText(0),
         'updatedAt' => 0,
         'updatedAtText' => '',
@@ -1600,26 +2078,44 @@ function hansjackMaimemoStudyPayload(Options $options): array
     $cacheUpdatedAt = max(0, (int) ($cache['updatedAt'] ?? 0));
     $cacheProgress = hansjackMaimemoNormalizeProgress($cache['progress'] ?? []);
     $cacheItems = hansjackMaimemoNormalizeTodayItems($cache['today_items'] ?? [], 200);
+    $cacheRecords = hansjackMaimemoNormalizeRecords($cache['records'] ?? [], $recordsLimit);
+    $cacheRecordsCursorTs = max(0, (int) ($cache['records_cursor_ts'] ?? 0));
+    $cacheRecordsComplete = !empty($cache['records_complete']);
+    $cacheRecordsStatsRaw = is_array($cache['records_stats'] ?? null) ? $cache['records_stats'] : [];
+    $cachePlannedCount = max(0, (int) ($cacheRecordsStatsRaw['planned_count'] ?? ($cache['planned_count'] ?? 0)));
+    $cacheRecordsStats = hansjackMaimemoBuildRecordsStats($cacheRecords, $cachePlannedCount);
     $cacheMessage = trim((string) ($cache['message'] ?? ''));
+    $cacheRecordsCount = count($cacheRecords);
+    $cacheRecordsLikelyComplete = (
+        $cacheRecordsCount <= 0
+        || $cacheRecordsComplete
+        || ($cachePlannedCount > 0 && $cacheRecordsCount >= $cachePlannedCount)
+        || ($cacheRecordsCount > 0 && $cacheRecordsCount < $recordsLimit)
+    );
 
     $cacheHasData = (
         !empty($cacheItems)
         || (int) ($cacheProgress['total'] ?? 0) > 0
         || (int) ($cacheProgress['finished'] ?? 0) > 0
+        || (int) ($cacheRecordsStats['planned_count'] ?? 0) > 0
+        || (int) ($cacheRecordsStats['records_count'] ?? 0) > 0
     );
     $cacheIsToday = ($cacheDate === $today);
     $cacheFresh = $cacheIsToday
         && $cacheHasData
         && $cacheUpdatedAt > 0
-        && ($now - $cacheUpdatedAt) <= $ttl;
+        && ($now - $cacheUpdatedAt) <= $ttl
+        && $cacheRecordsLikelyComplete;
 
     if ($cacheFresh) {
         $base['ok'] = true;
         $base['progress'] = $cacheProgress;
         $base['today_items'] = $cacheItems;
+        $base['records'] = $cacheRecords;
+        $base['records_stats'] = $cacheRecordsStats;
         $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($cacheProgress['study_time'] ?? 0));
         $base['updatedAt'] = $cacheUpdatedAt;
-        $base['updatedAtText'] = date('Y-m-d H:i:s', $cacheUpdatedAt);
+        $base['updatedAtText'] = hansjackFormatTimestampByOptions($options, $cacheUpdatedAt);
         $base['source'] = 'cache';
         $base['message'] = $cacheMessage;
         return $base;
@@ -1629,17 +2125,50 @@ function hansjackMaimemoStudyPayload(Options $options): array
     $itemsResp = hansjackMaimemoRequestJson('get_today_items', $token, [
         'limit' => 120,
     ]);
+    $recordsCountResp = hansjackMaimemoRequestJson('query_study_records', $token, [
+        'as_count' => true,
+    ]);
+    $recordsCursorTs = 0;
+    if ($cacheIsToday && !empty($cacheRecords) && !$cacheRecordsComplete) {
+        $recordsCursorTs = $cacheRecordsCursorTs;
+        if ($recordsCursorTs <= 0) {
+            $recordsCursorTs = hansjackMaimemoMaxNextStudyTs($cacheRecords);
+            if ($recordsCursorTs > 0) {
+                $recordsCursorTs += 1;
+            }
+        }
+    }
+
+    $recordsRequestPayload = [
+        'as_count' => false,
+        'limit' => $recordsLimit,
+    ];
+    if ($recordsCursorTs > 0) {
+        $recordsRequestPayload['next_study_date'] = [
+            'start' => hansjackMaimemoIsoUtcFromTimestamp($recordsCursorTs),
+        ];
+    }
+
+    $recordsResp = hansjackMaimemoRequestJson('query_study_records', $token, $recordsRequestPayload);
 
     $progressStatus = (int) ($progressResp['status'] ?? 0);
     $itemsStatus = (int) ($itemsResp['status'] ?? 0);
+    $recordsCountStatus = (int) ($recordsCountResp['status'] ?? 0);
+    $recordsStatus = (int) ($recordsResp['status'] ?? 0);
     $progressJson = is_array($progressResp['json'] ?? null) ? $progressResp['json'] : [];
     $itemsJson = is_array($itemsResp['json'] ?? null) ? $itemsResp['json'] : [];
+    $recordsCountJson = is_array($recordsCountResp['json'] ?? null) ? $recordsCountResp['json'] : [];
+    $recordsJson = is_array($recordsResp['json'] ?? null) ? $recordsResp['json'] : [];
 
     $progressRoot = is_array($progressJson['data'] ?? null) ? $progressJson['data'] : $progressJson;
     $itemsRoot = is_array($itemsJson['data'] ?? null) ? $itemsJson['data'] : $itemsJson;
+    $recordsCountRoot = is_array($recordsCountJson['data'] ?? null) ? $recordsCountJson['data'] : $recordsCountJson;
+    $recordsRoot = is_array($recordsJson['data'] ?? null) ? $recordsJson['data'] : $recordsJson;
 
     $progressSuccess = !array_key_exists('success', $progressJson) || !empty($progressJson['success']);
     $itemsSuccess = !array_key_exists('success', $itemsJson) || !empty($itemsJson['success']);
+    $recordsCountSuccess = !array_key_exists('success', $recordsCountJson) || !empty($recordsCountJson['success']);
+    $recordsSuccess = !array_key_exists('success', $recordsJson) || !empty($recordsJson['success']);
 
     $progressOk = (
         $progressStatus >= 200
@@ -1655,18 +2184,88 @@ function hansjackMaimemoStudyPayload(Options $options): array
         && array_key_exists('today_items', $itemsRoot)
         && is_array($itemsRoot['today_items'])
     );
+    $recordsCountOk = (
+        $recordsCountStatus >= 200
+        && $recordsCountStatus < 300
+        && $recordsCountSuccess
+        && array_key_exists('count', $recordsCountRoot)
+        && is_numeric($recordsCountRoot['count'])
+    );
+    $recordsOk = (
+        $recordsStatus >= 200
+        && $recordsStatus < 300
+        && $recordsSuccess
+        && array_key_exists('records', $recordsRoot)
+        && is_array($recordsRoot['records'])
+    );
 
     $liveProgress = $progressOk ? hansjackMaimemoNormalizeProgress($progressRoot['progress'] ?? []) : $cacheProgress;
     $liveItems = $itemsOk ? hansjackMaimemoNormalizeTodayItems($itemsRoot['today_items'] ?? [], 200) : $cacheItems;
+    $recordsChunk = $recordsOk ? hansjackMaimemoNormalizeRecords($recordsRoot['records'] ?? [], $recordsLimit) : [];
+    $recordsChunkCount = count($recordsChunk);
+
+    $recordsStoreLimit = hansjackMaimemoRecordsStoreLimit(max(
+        $cachePlannedCount,
+        (int) ($recordsCountRoot['count'] ?? 0)
+    ));
+    if ($cacheIsToday && $recordsCursorTs > 0) {
+        $liveRecords = $recordsOk
+            ? hansjackMaimemoMergeRecords($cacheRecords, $recordsChunk, $recordsStoreLimit)
+            : $cacheRecords;
+    } else {
+        $liveRecords = $recordsOk ? $recordsChunk : $cacheRecords;
+    }
+
+    $livePlannedCount = $recordsCountOk ? max(0, (int) ($recordsCountRoot['count'] ?? 0)) : 0;
+    if ($livePlannedCount <= 0 && array_key_exists('count', $recordsRoot) && is_numeric($recordsRoot['count'])) {
+        $livePlannedCount = max(0, (int) ($recordsRoot['count'] ?? 0));
+    }
+    if ($livePlannedCount <= 0) {
+        $livePlannedCount = max(0, (int) ($cacheRecordsStats['planned_count'] ?? 0), count($liveRecords));
+    }
+
+    $liveRecordsCursorTs = $cacheRecordsCursorTs;
+    $liveRecordsComplete = $cacheRecordsComplete;
+    if ($recordsOk) {
+        $chunkMaxTs = hansjackMaimemoMaxNextStudyTs($recordsChunk);
+        if ($chunkMaxTs > 0) {
+            $liveRecordsCursorTs = $chunkMaxTs + 1;
+        } elseif ($recordsCursorTs > 0) {
+            $liveRecordsCursorTs = $recordsCursorTs;
+        }
+
+        $liveRecordsComplete = false;
+        if ($livePlannedCount > 0) {
+            if (count($liveRecords) >= $livePlannedCount) {
+                $liveRecordsComplete = true;
+            } elseif ($recordsChunkCount <= 0) {
+                $liveRecordsComplete = false;
+            }
+        } else {
+            if ($recordsChunkCount <= 0 || $recordsChunkCount < $recordsLimit) {
+                $liveRecordsComplete = true;
+            }
+        }
+
+        if ($recordsCursorTs > 0 && $liveRecordsCursorTs > 0 && $liveRecordsCursorTs <= $recordsCursorTs) {
+            $liveRecordsComplete = ($livePlannedCount > 0)
+                ? (count($liveRecords) >= $livePlannedCount)
+                : true;
+        }
+    }
+
+    $liveRecordsStats = hansjackMaimemoBuildRecordsStats($liveRecords, $livePlannedCount);
 
     $liveHasData = (
         !empty($liveItems)
         || (int) ($liveProgress['total'] ?? 0) > 0
         || (int) ($liveProgress['finished'] ?? 0) > 0
+        || (int) ($liveRecordsStats['planned_count'] ?? 0) > 0
+        || (int) ($liveRecordsStats['records_count'] ?? 0) > 0
     );
 
     $message = '';
-    if (!$progressOk || !$itemsOk) {
+    if (!$progressOk || !$itemsOk || !$recordsCountOk || !$recordsOk) {
         $errors = [];
         if (!$progressOk) {
             $progressError = hansjackMaimemoApiErrorText($progressResp);
@@ -1680,6 +2279,18 @@ function hansjackMaimemoStudyPayload(Options $options): array
                 $errors[] = _t('单词接口：%s', $itemsError);
             }
         }
+        if (!$recordsCountOk) {
+            $recordsCountError = hansjackMaimemoApiErrorText($recordsCountResp);
+            if ($recordsCountError !== '') {
+                $errors[] = _t('记录总量接口：%s', $recordsCountError);
+            }
+        }
+        if (!$recordsOk) {
+            $recordsError = hansjackMaimemoApiErrorText($recordsResp);
+            if ($recordsError !== '') {
+                $errors[] = _t('记录明细接口：%s', $recordsError);
+            }
+        }
         if (!empty($errors)) {
             $message = implode('；', $errors);
         }
@@ -1689,10 +2300,12 @@ function hansjackMaimemoStudyPayload(Options $options): array
         $base['ok'] = true;
         $base['progress'] = $liveProgress;
         $base['today_items'] = $liveItems;
+        $base['records'] = $liveRecords;
+        $base['records_stats'] = $liveRecordsStats;
         $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($liveProgress['study_time'] ?? 0));
         $base['updatedAt'] = $now;
-        $base['updatedAtText'] = date('Y-m-d H:i:s', $now);
-        $base['source'] = ($progressOk && $itemsOk) ? 'api' : 'api-partial';
+        $base['updatedAtText'] = hansjackFormatTimestampByOptions($options, $now);
+        $base['source'] = ($progressOk && $itemsOk && $recordsCountOk && $recordsOk) ? 'api' : 'api-partial';
         $base['message'] = $message;
 
         hansjackMaimemoWriteCache([
@@ -1700,6 +2313,10 @@ function hansjackMaimemoStudyPayload(Options $options): array
             'updatedAt' => $now,
             'progress' => $liveProgress,
             'today_items' => $liveItems,
+            'records' => $liveRecords,
+            'records_cursor_ts' => $liveRecordsCursorTs,
+            'records_complete' => $liveRecordsComplete,
+            'records_stats' => $liveRecordsStats,
             'message' => $message,
         ]);
 
@@ -1710,9 +2327,11 @@ function hansjackMaimemoStudyPayload(Options $options): array
         $base['ok'] = true;
         $base['progress'] = $cacheProgress;
         $base['today_items'] = $cacheItems;
+        $base['records'] = $cacheRecords;
+        $base['records_stats'] = $cacheRecordsStats;
         $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($cacheProgress['study_time'] ?? 0));
         $base['updatedAt'] = $cacheUpdatedAt;
-        $base['updatedAtText'] = ($cacheUpdatedAt > 0) ? date('Y-m-d H:i:s', $cacheUpdatedAt) : '';
+        $base['updatedAtText'] = hansjackFormatTimestampByOptions($options, $cacheUpdatedAt);
         $base['source'] = 'cache-stale';
         $base['message'] = $message !== '' ? $message : _t('接口暂不可用，已展示今日缓存数据。');
         return $base;
@@ -4749,6 +5368,7 @@ function hansjackThemeCacheTargetPaths(): array
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'series',
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'presence-status.json',
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'maimemo-study.json',
+        __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'maimemo-rate-limit.json',
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'internal-link-meta.json',
     ];
 }
@@ -4867,7 +5487,7 @@ function hansjackThemeCachePanelHtml(Options $options): string
     }
 
     $html = '<div class="hansjack-cache-panel">';
-    $html .= '<div>' . _t('目标缓存：page-cache、post-guess、series、presence-status、maimemo-study、internal-link-meta。') . '</div>';
+    $html .= '<div>' . _t('目标缓存：page-cache、post-guess、series、presence-status、maimemo-study、maimemo-rate-limit、internal-link-meta。') . '</div>';
 
     if ($message !== '') {
         $html .= '<div style="margin-top:6px;color:' . escape($messageColor) . ';">' . escape($message) . '</div>';

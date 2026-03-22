@@ -2102,6 +2102,189 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     line-height: 1.46;
 }
 
+.landing-study-metrics {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.landing-study-metric {
+    margin: 0;
+    min-width: 0;
+    border-radius: 4px;
+    border: 2px dashed var(--line-day);
+    background: rgba(17, 17, 17, 0.02);
+    padding: 0.72rem 0.76rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.48rem;
+}
+
+.landing-study-metric-head {
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.landing-study-metric-kicker {
+    margin: 0;
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    line-height: 1.32;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.landing-study-metric-value {
+    margin: 0;
+    min-width: 0;
+    font-family: var(--font-main);
+    font-size: clamp(1.28rem, 1.7vw, 1.52rem);
+    line-height: 1.15;
+    word-break: break-word;
+}
+
+.landing-study-metric-meta {
+    margin: 0;
+    color: var(--muted-day);
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    line-height: 1.35;
+}
+
+.landing-study-bars {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.36rem;
+}
+
+.landing-study-bar {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.landing-study-bar-label {
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.landing-study-bar-track {
+    position: relative;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(17, 17, 17, 0.1);
+    overflow: hidden;
+}
+
+.landing-study-bar-fill {
+    display: block;
+    height: 100%;
+    min-width: 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(17, 17, 17, 0.82), rgba(17, 17, 17, 0.58));
+}
+
+.landing-study-bar-value {
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    line-height: 1.25;
+    color: var(--muted-day);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.landing-study-bar.is-peak .landing-study-bar-value {
+    font-weight: 700;
+}
+
+.landing-study-pie-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.landing-study-pie {
+    position: relative;
+    width: 92px;
+    height: 92px;
+    flex: 0 0 92px;
+    border-radius: 50%;
+    border: none;
+}
+
+.landing-study-pie::after {
+    content: "";
+    position: absolute;
+    inset: 24px;
+    border-radius: 50%;
+    background: var(--day-bg);
+}
+
+.landing-study-pie-legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.34rem;
+}
+
+.landing-study-pie-item {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 0.4rem;
+}
+
+.landing-study-pie-item-main {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.landing-study-pie-dot {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 8px;
+    border-radius: 50%;
+}
+
+.landing-study-pie-label {
+    min-width: 0;
+    font-family: var(--font-ui);
+    font-size: 0.74rem;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.landing-study-pie-value {
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    line-height: 1.25;
+    color: var(--muted-day);
+    white-space: nowrap;
+}
+
 @media (max-width: 1280px) {
     .landing-study-carousel {
         --landing-study-visible: 3;
@@ -2120,6 +2303,55 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     .landing-study-card.links-step {
         padding: 0.66rem 0.68rem;
     }
+
+    .landing-study-metrics {
+        grid-template-columns: 1fr;
+        gap: 0.62rem;
+    }
+
+    .landing-study-metric {
+        padding: 0.64rem 0.66rem;
+        gap: 0.42rem;
+    }
+
+    .landing-study-metric-kicker {
+        font-size: 0.68rem;
+        letter-spacing: 0.05em;
+    }
+
+    .landing-study-metric-value {
+        font-size: 1.12rem;
+    }
+
+    .landing-study-bar {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        column-gap: 0.32rem;
+        row-gap: 0;
+    }
+
+    .landing-study-bar-label {
+        font-size: 0.68rem;
+        max-width: 3.6rem;
+    }
+
+    .landing-study-bar-value {
+        font-size: 0.68rem;
+    }
+
+    .landing-study-pie {
+        width: 78px;
+        height: 78px;
+        flex-basis: 78px;
+    }
+
+    .landing-study-pie::after {
+        inset: 20px;
+    }
+
+    .landing-study-pie-label,
+    .landing-study-pie-value {
+        font-size: 0.68rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -2130,6 +2362,24 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 
     .landing-study-card-word {
         font-size: 0.98rem;
+    }
+
+    .landing-study-metrics {
+        gap: 0.55rem;
+    }
+
+    .landing-study-metric {
+        padding: 0.58rem 0.6rem;
+    }
+
+    .landing-study-pie {
+        width: 70px;
+        height: 70px;
+        flex-basis: 70px;
+    }
+
+    .landing-study-pie::after {
+        inset: 18px;
     }
 }
 
@@ -10528,6 +10778,9 @@ html.login-modal-open .login-modal {
     html:not(.theme-light) .landing-study-record-tip,
     html:not(.theme-light) .landing-study-card-order,
     html:not(.theme-light) .landing-study-card-feedback,
+    html:not(.theme-light) .landing-study-metric-meta,
+    html:not(.theme-light) .landing-study-bar-value,
+    html:not(.theme-light) .landing-study-pie-value,
     html:not(.theme-light) .landing-study-empty,
     html:not(.theme-light) .landing-study-note {
         color: var(--muted-night);
@@ -10546,8 +10799,25 @@ html.login-modal-open .login-modal {
         background: rgba(255, 255, 255, 0.02);
     }
 
+    html:not(.theme-light) .landing-study-metric {
+        border-color: var(--line-night);
+        background: rgba(255, 255, 255, 0.02);
+    }
+
     html:not(.theme-light) .landing-study-tag {
         border-color: rgba(221, 221, 219, 0.38);
+    }
+
+    html:not(.theme-light) .landing-study-bar-track {
+        background: rgba(221, 221, 219, 0.15);
+    }
+
+    html:not(.theme-light) .landing-study-bar-fill {
+        background: linear-gradient(90deg, rgba(221, 221, 219, 0.86), rgba(221, 221, 219, 0.54));
+    }
+
+    html:not(.theme-light) .landing-study-pie::after {
+        background: var(--night-bg);
     }
 
     html:not(.theme-light) .landing-study-carousel {
@@ -10842,6 +11112,9 @@ html.theme-dark .landing-study-progress-meta,
 html.theme-dark .landing-study-record-tip,
 html.theme-dark .landing-study-card-order,
 html.theme-dark .landing-study-card-feedback,
+html.theme-dark .landing-study-metric-meta,
+html.theme-dark .landing-study-bar-value,
+html.theme-dark .landing-study-pie-value,
 html.theme-dark .landing-study-empty,
 html.theme-dark .landing-study-note {
     color: var(--muted-night);
@@ -10860,8 +11133,25 @@ html.theme-dark .landing-study-card.links-step {
     background: rgba(255, 255, 255, 0.02);
 }
 
+html.theme-dark .landing-study-metric {
+    border-color: var(--line-night);
+    background: rgba(255, 255, 255, 0.02);
+}
+
 html.theme-dark .landing-study-tag {
     border-color: rgba(221, 221, 219, 0.38);
+}
+
+html.theme-dark .landing-study-bar-track {
+    background: rgba(221, 221, 219, 0.15);
+}
+
+html.theme-dark .landing-study-bar-fill {
+    background: linear-gradient(90deg, rgba(221, 221, 219, 0.86), rgba(221, 221, 219, 0.54));
+}
+
+html.theme-dark .landing-study-pie::after {
+    background: var(--night-bg);
 }
 
 html.theme-dark .landing-study-carousel {
