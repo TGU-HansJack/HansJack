@@ -71,6 +71,30 @@ $landingStudyPayload = [
     'message' => '',
 ];
 if ($this->is('index')) {
+    $landingTimezoneOffset = function_exists('hansjackOptionsTimezoneOffset')
+        ? hansjackOptionsTimezoneOffset($this->options)
+        : 0;
+    $landingFormatByTz = static function (string $format, int $timestamp) use ($landingTimezoneOffset): string {
+        if ($timestamp <= 0) {
+            return '';
+        }
+
+        return gmdate($format, $timestamp + $landingTimezoneOffset);
+    };
+    $landingLocalDateToTimestamp = static function (string $localDateYmd) use ($landingTimezoneOffset): int {
+        $date = trim($localDateYmd);
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return time();
+        }
+
+        $utcMidnight = strtotime($date . ' 00:00:00 UTC');
+        if ($utcMidnight === false) {
+            return time();
+        }
+
+        return (int) $utcMidnight - $landingTimezoneOffset;
+    };
+
     $landingCountChars = static function (string $text): int {
         $plain = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
         $plainNoSpace = (string) preg_replace('/\\s+/u', '', $plain);
@@ -125,18 +149,16 @@ if ($this->is('index')) {
     $landingStudyEnabled = !empty($landingStudyPayload['enabled']);
 
     $heatmapDayCount = max(1, (int) $landingHeatmapDays);
-    $todayStartTs = strtotime(date('Y-m-d 00:00:00'));
-    if ($todayStartTs === false) {
-        $todayStartTs = time();
-    }
+    $todayLocalYmd = $landingFormatByTz('Y-m-d', time());
+    $todayStartTs = $landingLocalDateToTimestamp($todayLocalYmd);
     $heatmapStartTs = $todayStartTs - (($heatmapDayCount - 1) * 86400);
     $heatmapEndTs = $todayStartTs + 86399;
 
     for ($i = 0; $i < $heatmapDayCount; $i++) {
         $dayTs = $heatmapStartTs + ($i * 86400);
-        $dayKey = date('Y-m-d', $dayTs);
+        $dayKey = $landingFormatByTz('Y-m-d', $dayTs);
         $landingHeatmapSeries[$dayKey] = [
-            'dateLabel' => date('Y年n月j日', $dayTs),
+            'dateLabel' => $landingFormatByTz('Y年n月j日', $dayTs),
             'notes' => [],
             'memos' => [],
             'others' => [],
@@ -282,9 +304,9 @@ if ($this->is('index')) {
                     'created' => $created,
                     'title' => $latestTitle,
                     'url' => (string) ($landingPosts->permalink ?? ''),
-                    'datetime' => date('c', $created),
-                    'timeLabel' => date('Y/m/d-H:i:s', $created),
-                    'timeTitle' => date('Y年n月j日 H:i:s', $created),
+                    'datetime' => $landingFormatByTz('c', $created),
+                    'timeLabel' => $landingFormatByTz('Y/m/d-H:i:s', $created),
+                    'timeTitle' => $landingFormatByTz('Y年n月j日 H:i:s', $created),
                     'tags' => $latestTags,
                 ];
             }
@@ -330,7 +352,7 @@ if ($this->is('index')) {
                 continue;
             }
 
-            $dayKey = date('Y-m-d', $created);
+            $dayKey = $landingFormatByTz('Y-m-d', $created);
             if (!isset($landingHeatmapSeries[$dayKey])) {
                 continue;
             }
@@ -385,14 +407,14 @@ if ($this->is('index')) {
         $landingMemosPageUrl = '';
     }
 
-    $landingMemoryDateLabel = static function (int $timestamp): string {
+    $landingMemoryDateLabel = static function (int $timestamp) use ($landingFormatByTz): string {
         if ($timestamp <= 0) {
             return '';
         }
 
         $weekdayMap = ['日', '一', '二', '三', '四', '五', '六'];
-        $weekday = $weekdayMap[(int) date('w', $timestamp)] ?? '';
-        $base = date('Y年n月j日', $timestamp);
+        $weekday = $weekdayMap[(int) $landingFormatByTz('w', $timestamp)] ?? '';
+        $base = $landingFormatByTz('Y年n月j日', $timestamp);
         if ($weekday === '') {
             return $base;
         }
@@ -518,21 +540,6 @@ if ($this->is('index')) {
             }
             $commentTargetUrl = trim((string) ($landingRecentComments->permalink ?? ''));
 
-            if (count($landingLetters) < $landingLettersLimit) {
-                $landingLetters[] = [
-                    'id' => $commentCoid,
-                    'contentHtml' => $commentContentHtml,
-                    'author' => $commentAuthor,
-                    'authorUrl' => $commentAuthorUrl,
-                    'avatar' => $commentAvatarUrl,
-                    'dateIso' => $commentCreated > 0 ? date('c', $commentCreated) : '',
-                    'dateTime' => $commentCreated > 0 ? date('Y/m/d H:i:s', $commentCreated) : '',
-                    'timeWord' => $commentTimeWord,
-                    'postTitle' => $commentTargetTitle,
-                    'postUrl' => $commentTargetUrl,
-                ];
-            }
-
             $isMemoryComment = false;
             $commentCid = (int) ($landingRecentComments->cid ?? 0);
             if ($landingMemosPageCid > 0 && $commentCid > 0) {
@@ -546,16 +553,42 @@ if ($this->is('index')) {
                 );
             }
 
-            if ($isMemoryComment && count($landingMemories) < $landingMemoriesLimit) {
+            if ($isMemoryComment) {
+                if (count($landingMemories) >= $landingMemoriesLimit) {
+                    if (count($landingLetters) >= $landingLettersLimit) {
+                        break;
+                    }
+                    continue;
+                }
+
                 $landingMemories[] = [
                     'id' => $commentCoid,
                     'contentHtml' => $commentContentHtml,
                     'author' => $commentAuthor,
                     'authorUrl' => $commentAuthorUrl,
                     'avatar' => $commentAvatarUrl,
-                    'dateIso' => $commentCreated > 0 ? date('c', $commentCreated) : '',
-                    'dateTime' => $commentCreated > 0 ? date('Y/m/d H:i:s', $commentCreated) : '',
+                    'dateIso' => $commentCreated > 0 ? $landingFormatByTz('c', $commentCreated) : '',
+                    'dateTime' => $commentCreated > 0 ? $landingFormatByTz('Y/m/d H:i:s', $commentCreated) : '',
                     'dateLabel' => $landingMemoryDateLabel($commentCreated),
+                    'timeWord' => $commentTimeWord,
+                    'postTitle' => $commentTargetTitle,
+                    'postUrl' => $commentTargetUrl,
+                ];
+                if (count($landingLetters) >= $landingLettersLimit && count($landingMemories) >= $landingMemoriesLimit) {
+                    break;
+                }
+                continue;
+            }
+
+            if (count($landingLetters) < $landingLettersLimit) {
+                $landingLetters[] = [
+                    'id' => $commentCoid,
+                    'contentHtml' => $commentContentHtml,
+                    'author' => $commentAuthor,
+                    'authorUrl' => $commentAuthorUrl,
+                    'avatar' => $commentAvatarUrl,
+                    'dateIso' => $commentCreated > 0 ? $landingFormatByTz('c', $commentCreated) : '',
+                    'dateTime' => $commentCreated > 0 ? $landingFormatByTz('Y/m/d H:i:s', $commentCreated) : '',
                     'timeWord' => $commentTimeWord,
                     'postTitle' => $commentTargetTitle,
                     'postUrl' => $commentTargetUrl,
@@ -715,14 +748,14 @@ if ($this->is('index')) {
     usort($landingTimelineCandidates, static function (array $a, array $b): int {
         return ((int) ($b['created'] ?? 0)) <=> ((int) ($a['created'] ?? 0));
     });
-    $landingCurrentYear = (int) date('Y');
+    $landingCurrentYear = (int) $landingFormatByTz('Y', time());
     $landingCurrentYearPostCount = 0;
     foreach ($landingTimelineCandidates as $timelineItem) {
         $timelineCreated = (int) ($timelineItem['created'] ?? 0);
         if ($timelineCreated <= 0) {
             continue;
         }
-        if ((int) date('Y', $timelineCreated) === $landingCurrentYear) {
+        if ((int) $landingFormatByTz('Y', $timelineCreated) === $landingCurrentYear) {
             $landingCurrentYearPostCount++;
         }
     }
@@ -743,7 +776,7 @@ if ($this->is('index')) {
         12 => '十二月',
     ];
 
-    $landingReadSeasonMeta = static function (int $timestamp) use ($landingSeasonNames, $landingMonthNames): array {
+    $landingReadSeasonMeta = static function (int $timestamp) use ($landingSeasonNames, $landingMonthNames, $landingFormatByTz): array {
         if ($timestamp <= 0) {
             return [
                 'order' => 0,
@@ -754,8 +787,8 @@ if ($this->is('index')) {
             ];
         }
 
-        $year = (int) date('Y', $timestamp);
-        $month = (int) date('n', $timestamp);
+        $year = (int) $landingFormatByTz('Y', $timestamp);
+        $month = (int) $landingFormatByTz('n', $timestamp);
         $seasonIdx = 0;
         $seasonYear = $year;
 
