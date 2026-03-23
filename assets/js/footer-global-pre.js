@@ -6720,3 +6720,507 @@
 
         bootstrap();
     })();
+
+/* block 13 */
+(function () {
+        var controlKey = "__hansjackStudyWordPopupControl";
+        var previous = window[controlKey];
+        if (previous && typeof previous.teardown === "function") {
+            try {
+                previous.teardown();
+            } catch (e) {}
+        }
+
+        var boundCards = [];
+        var pjaxBound = false;
+        var keydownBound = false;
+        var modalRoot = null;
+        var modalBackdrop = null;
+        var modalClose = null;
+        var modalTitle = null;
+        var modalBody = null;
+        var panelNode = null;
+        var activeCard = null;
+        var lastFocused = null;
+        var isOpen = false;
+
+        var dictionaryUrl = "";
+        var dictionaryMap = null;
+        var dictionaryPromise = null;
+
+        function normalizeWord(value) {
+            return String(value || "")
+                .trim()
+                .toLowerCase();
+        }
+
+        function getDictionaryUrl() {
+            if (dictionaryUrl !== "") {
+                return dictionaryUrl;
+            }
+            var holder = document.querySelector("[data-study-dict-url]");
+            if (!holder) {
+                return "";
+            }
+            dictionaryUrl = String(holder.getAttribute("data-study-dict-url") || "").trim();
+            return dictionaryUrl;
+        }
+
+        function parseDictionaryCsv(raw) {
+            var map = Object.create(null);
+            if (typeof raw !== "string" || raw === "") {
+                return map;
+            }
+
+            var field = "";
+            var row = [];
+            var inQuotes = false;
+            var i = 0;
+            var len = raw.length;
+
+            function flushRow() {
+                if (!row || row.length === 0) {
+                    row = [];
+                    return;
+                }
+                var key = normalizeWord(row[0]);
+                if (!key) {
+                    row = [];
+                    return;
+                }
+                var valueRaw = row.length > 1 ? row.slice(1).join(",") : "";
+                var value = String(valueRaw || "")
+                    .replace(/\r\n/g, "\n")
+                    .replace(/\r/g, "\n")
+                    .trim();
+                if (value !== "" && !map[key]) {
+                    map[key] = value;
+                }
+                row = [];
+            }
+
+            while (i < len) {
+                var ch = raw.charAt(i);
+
+                if (inQuotes) {
+                    if (ch === '"') {
+                        if (i + 1 < len && raw.charAt(i + 1) === '"') {
+                            field += '"';
+                            i += 2;
+                            continue;
+                        }
+                        inQuotes = false;
+                        i += 1;
+                        continue;
+                    }
+                    field += ch;
+                    i += 1;
+                    continue;
+                }
+
+                if (ch === '"') {
+                    inQuotes = true;
+                    i += 1;
+                    continue;
+                }
+                if (ch === ",") {
+                    row.push(field);
+                    field = "";
+                    i += 1;
+                    continue;
+                }
+                if (ch === "\n" || ch === "\r") {
+                    row.push(field);
+                    field = "";
+                    if (ch === "\r" && i + 1 < len && raw.charAt(i + 1) === "\n") {
+                        i += 1;
+                    }
+                    flushRow();
+                    i += 1;
+                    continue;
+                }
+
+                field += ch;
+                i += 1;
+            }
+
+            if (field !== "" || row.length > 0) {
+                row.push(field);
+                flushRow();
+            }
+
+            return map;
+        }
+
+        function loadDictionary() {
+            if (dictionaryMap) {
+                return Promise.resolve(dictionaryMap);
+            }
+            if (dictionaryPromise) {
+                return dictionaryPromise;
+            }
+
+            var url = getDictionaryUrl();
+            if (!url || !window.fetch) {
+                return Promise.reject(new Error("dictionary unavailable"));
+            }
+
+            dictionaryPromise = window
+                .fetch(url, {
+                    method: "GET",
+                    credentials: "same-origin",
+                    cache: "force-cache"
+                })
+                .then(function (response) {
+                    if (!response || !response.ok) {
+                        throw new Error("dictionary request failed");
+                    }
+                    return response.text();
+                })
+                .then(function (text) {
+                    dictionaryMap = parseDictionaryCsv(text);
+                    return dictionaryMap;
+                })
+                .catch(function (error) {
+                    dictionaryPromise = null;
+                    throw error;
+                });
+
+            return dictionaryPromise;
+        }
+
+        function ensureModal() {
+            if (modalRoot) {
+                return true;
+            }
+            if (!document || !document.body) {
+                return false;
+            }
+
+            var root = document.createElement("div");
+            root.className = "study-word-modal";
+            root.hidden = true;
+            root.setAttribute("aria-hidden", "true");
+            root.setAttribute("role", "dialog");
+            root.setAttribute("aria-modal", "true");
+            root.setAttribute("aria-label", "单词释义");
+
+            var backdrop = document.createElement("button");
+            backdrop.type = "button";
+            backdrop.className = "study-word-modal-backdrop";
+            backdrop.setAttribute("aria-label", "关闭释义弹窗");
+
+            var panel = document.createElement("div");
+            panel.className = "study-word-modal-panel";
+
+            var head = document.createElement("div");
+            head.className = "study-word-modal-head";
+
+            var title = document.createElement("h3");
+            title.className = "study-word-modal-title";
+            title.textContent = "单词释义";
+
+            var close = document.createElement("button");
+            close.type = "button";
+            close.className = "study-word-modal-close";
+            close.setAttribute("aria-label", "关闭");
+            close.textContent = "×";
+
+            var body = document.createElement("p");
+            body.className = "study-word-modal-body is-muted";
+            body.textContent = "正在加载释义…";
+
+            head.appendChild(title);
+            head.appendChild(close);
+            panel.appendChild(head);
+            panel.appendChild(body);
+            root.appendChild(backdrop);
+            root.appendChild(panel);
+
+            backdrop.addEventListener("click", function (event) {
+                if (event && event.preventDefault) {
+                    event.preventDefault();
+                }
+                closeModal(true);
+            });
+            close.addEventListener("click", function (event) {
+                if (event && event.preventDefault) {
+                    event.preventDefault();
+                }
+                closeModal(true);
+            });
+
+            document.body.appendChild(root);
+
+            modalRoot = root;
+            modalBackdrop = backdrop;
+            modalClose = close;
+            modalTitle = title;
+            modalBody = body;
+            panelNode = panel;
+            return true;
+        }
+
+        function setModalContent(word, text, isMuted) {
+            if (!modalTitle || !modalBody) {
+                return;
+            }
+            var cleanWord = String(word || "").trim();
+            modalTitle.textContent = cleanWord !== "" ? cleanWord + " 释义" : "单词释义";
+            modalBody.textContent = String(text || "").trim();
+            modalBody.classList.toggle("is-muted", !!isMuted);
+            if (panelNode && typeof panelNode.scrollTop === "number") {
+                panelNode.scrollTop = 0;
+            }
+        }
+
+        function openModal(word, text, isMuted) {
+            if (!ensureModal()) {
+                return;
+            }
+            setModalContent(word, text, isMuted);
+            modalRoot.hidden = false;
+            modalRoot.setAttribute("aria-hidden", "false");
+            document.documentElement.classList.add("study-word-modal-open");
+            isOpen = true;
+            try {
+                lastFocused = document.activeElement || null;
+            } catch (e) {
+                lastFocused = null;
+            }
+            window.setTimeout(function () {
+                if (!isOpen || !modalClose) {
+                    return;
+                }
+                try {
+                    modalClose.focus();
+                } catch (e) {}
+            }, 0);
+        }
+
+        function closeModal(restoreFocus) {
+            if (!modalRoot || modalRoot.hidden) {
+                return;
+            }
+            modalRoot.hidden = true;
+            modalRoot.setAttribute("aria-hidden", "true");
+            document.documentElement.classList.remove("study-word-modal-open");
+            isOpen = false;
+
+            if (!restoreFocus) {
+                return;
+            }
+            var target = activeCard || lastFocused;
+            if (!target || typeof target.focus !== "function") {
+                return;
+            }
+            window.setTimeout(function () {
+                try {
+                    target.focus();
+                } catch (e) {}
+            }, 0);
+        }
+
+        function getCardWord(card) {
+            if (!card) {
+                return "";
+            }
+            var fromAttr = String(card.getAttribute("data-study-word") || "").trim();
+            if (fromAttr !== "") {
+                return fromAttr;
+            }
+            var wordNode = card.querySelector(".landing-study-card-word");
+            if (!wordNode) {
+                return "";
+            }
+            return String(wordNode.textContent || "").trim();
+        }
+
+        function showWordMeaning(card) {
+            if (!card) {
+                return;
+            }
+            var word = getCardWord(card);
+            if (word === "") {
+                return;
+            }
+
+            activeCard = card;
+            openModal(word, "正在加载释义…", true);
+
+            loadDictionary()
+                .then(function (map) {
+                    if (activeCard !== card || !isOpen) {
+                        return;
+                    }
+                    var key = normalizeWord(word);
+                    var meaning = map && key ? map[key] : "";
+                    if (meaning) {
+                        setModalContent(word, meaning, false);
+                        return;
+                    }
+                    setModalContent(word, "词库中未找到该单词释义。", true);
+                })
+                .catch(function () {
+                    if (activeCard !== card || !isOpen) {
+                        return;
+                    }
+                    setModalContent(word, "词库加载失败，请稍后重试。", true);
+                });
+        }
+
+        function bindCard(card) {
+            if (!card || card.getAttribute("data-study-popup-bound") === "1") {
+                return;
+            }
+
+            card.setAttribute("data-study-popup-bound", "1");
+            card.setAttribute("role", "button");
+            card.setAttribute("aria-haspopup", "dialog");
+            if (!card.hasAttribute("tabindex")) {
+                card.setAttribute("tabindex", "0");
+            }
+
+            var pointerStartX = 0;
+            var pointerStartY = 0;
+            var pointerMoved = false;
+
+            function onPointerDown(event) {
+                pointerMoved = false;
+                pointerStartX = event && typeof event.clientX === "number" ? event.clientX : 0;
+                pointerStartY = event && typeof event.clientY === "number" ? event.clientY : 0;
+            }
+
+            function onPointerMove(event) {
+                var x = event && typeof event.clientX === "number" ? event.clientX : pointerStartX;
+                var y = event && typeof event.clientY === "number" ? event.clientY : pointerStartY;
+                var dx = Math.abs(x - pointerStartX);
+                var dy = Math.abs(y - pointerStartY);
+                if (dx > 8 || dy > 8) {
+                    pointerMoved = true;
+                }
+            }
+
+            function onClick(event) {
+                if (pointerMoved) {
+                    pointerMoved = false;
+                    return;
+                }
+                if (event && event.preventDefault) {
+                    event.preventDefault();
+                }
+                showWordMeaning(card);
+            }
+
+            function onKeydown(event) {
+                var key = event && (event.key || event.code);
+                if (key !== "Enter" && key !== " " && key !== "Spacebar") {
+                    return;
+                }
+                if (event && event.preventDefault) {
+                    event.preventDefault();
+                }
+                showWordMeaning(card);
+            }
+
+            card.addEventListener("pointerdown", onPointerDown);
+            card.addEventListener("pointermove", onPointerMove);
+            card.addEventListener("click", onClick);
+            card.addEventListener("keydown", onKeydown);
+
+            boundCards.push({
+                card: card,
+                pointerdown: onPointerDown,
+                pointermove: onPointerMove,
+                click: onClick,
+                keydown: onKeydown
+            });
+        }
+
+        function teardownCards() {
+            if (!boundCards || boundCards.length === 0) {
+                return;
+            }
+            boundCards.forEach(function (item) {
+                if (!item || !item.card) {
+                    return;
+                }
+                var card = item.card;
+                card.removeEventListener("pointerdown", item.pointerdown);
+                card.removeEventListener("pointermove", item.pointermove);
+                card.removeEventListener("click", item.click);
+                card.removeEventListener("keydown", item.keydown);
+                card.removeAttribute("data-study-popup-bound");
+                card.removeAttribute("role");
+                card.removeAttribute("aria-haspopup");
+                card.removeAttribute("tabindex");
+            });
+            boundCards = [];
+        }
+
+        function bootstrap() {
+            closeModal(false);
+            teardownCards();
+            dictionaryUrl = "";
+            var cards = Array.prototype.slice.call(document.querySelectorAll("[data-study-card]"));
+            if (!cards || cards.length === 0) {
+                return;
+            }
+            cards.forEach(bindCard);
+        }
+
+        function onKeydownGlobal(event) {
+            if (!isOpen) {
+                return;
+            }
+            var key = event && (event.key || event.code);
+            if (key !== "Escape" && key !== "Esc") {
+                return;
+            }
+            if (event && event.preventDefault) {
+                event.preventDefault();
+            }
+            closeModal(true);
+        }
+
+        function teardownAll() {
+            closeModal(false);
+            teardownCards();
+            if (pjaxBound) {
+                window.removeEventListener("hansjack:pjax:after", bootstrap);
+                pjaxBound = false;
+            }
+            if (keydownBound) {
+                window.removeEventListener("keydown", onKeydownGlobal, true);
+                keydownBound = false;
+            }
+            if (modalRoot && modalRoot.parentNode) {
+                modalRoot.parentNode.removeChild(modalRoot);
+            }
+            modalRoot = null;
+            modalBackdrop = null;
+            modalClose = null;
+            modalTitle = null;
+            modalBody = null;
+            panelNode = null;
+            activeCard = null;
+            lastFocused = null;
+            isOpen = false;
+        }
+
+        if (!pjaxBound) {
+            window.addEventListener("hansjack:pjax:after", bootstrap);
+            pjaxBound = true;
+        }
+        if (!keydownBound) {
+            window.addEventListener("keydown", onKeydownGlobal, true);
+            keydownBound = true;
+        }
+
+        window[controlKey] = {
+            refresh: bootstrap,
+            teardown: teardownAll
+        };
+
+        bootstrap();
+    })();

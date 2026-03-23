@@ -1330,7 +1330,12 @@ if ($this->is('index')) {
             }
             $studyWordsCount = count($studyRenderableItems);
             ?>
-            <section class="landing-study" role="region" aria-label="<?php _e('今日学习进度'); ?>">
+            <section
+                class="landing-study"
+                role="region"
+                aria-label="<?php _e('今日学习进度'); ?>"
+                data-study-dict-url="<?php echo escape(assetUrl($this->options, 'assets/dictionary/word.csv')); ?>"
+            >
                 <div class="landing-study-main">
                     <div class="landing-study-head">
                         <h2 class="landing-letter-memory-title"><?php _e('今日学习进度'); ?></h2>
@@ -1381,7 +1386,11 @@ if ($this->is('index')) {
                                         $studyFirstResponse = trim((string) ($studyItem['first_response'] ?? ''));
                                         $studyFirstResponseLabel = hansjackMaimemoResponseLabel($studyFirstResponse);
                                         ?>
-                                        <li class="landing-study-card links-step" data-study-card>
+                                        <li
+                                            class="landing-study-card links-step"
+                                            data-study-card
+                                            data-study-word="<?php echo escape($studyWord); ?>"
+                                        >
                                             <div class="landing-study-card-head">
                                                 <span class="landing-study-card-order">#<?php echo (int) $studyOrder; ?></span>
                                                 <span class="landing-study-card-tags">

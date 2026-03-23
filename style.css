@@ -2109,6 +2109,20 @@ html.theme-dark .landing-social-link:focus-visible {
     padding: 0.72rem 0.76rem;
 }
 
+.landing-study-card[data-study-card] {
+    cursor: pointer;
+    transition: background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.landing-study-card[data-study-card]:hover {
+    background: rgba(17, 17, 17, 0.05);
+}
+
+.landing-study-card[data-study-card]:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
 .landing-study-card-head {
     min-width: 0;
     display: flex;
@@ -2176,6 +2190,99 @@ html.theme-dark .landing-social-link:focus-visible {
     font-family: var(--font-ui);
     font-size: 0.84rem;
     line-height: 1.46;
+}
+
+.study-word-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.study-word-modal[hidden] {
+    display: none;
+}
+
+html.study-word-modal-open,
+html.study-word-modal-open body {
+    overflow: hidden;
+}
+
+.study-word-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    background: rgba(17, 17, 17, 0.45);
+    cursor: pointer;
+}
+
+.study-word-modal-panel {
+    position: relative;
+    z-index: 1;
+    width: min(720px, calc(100vw - 2rem));
+    max-height: min(78vh, 640px);
+    border: 2px solid var(--day-black);
+    border-radius: 4px;
+    background: var(--day-bg);
+    color: var(--day-text);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.study-word-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.7rem 0.84rem;
+    border-bottom: 1px solid var(--line-day);
+}
+
+.study-word-modal-title {
+    margin: 0;
+    min-width: 0;
+    font-family: var(--font-main);
+    font-size: 1.02rem;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.study-word-modal-close {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    padding: 0.1rem 0.2rem;
+    font-family: var(--font-ui);
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.study-word-modal-close:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.study-word-modal-body {
+    margin: 0;
+    padding: 0.78rem 0.84rem 0.88rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: var(--font-main);
+    font-size: 0.95rem;
+    line-height: 1.62;
+}
+
+.study-word-modal-body.is-muted {
+    color: var(--muted-day);
+    font-family: var(--font-ui);
 }
 
 .landing-study-metrics {
@@ -11050,6 +11157,10 @@ html.login-modal-open .login-modal {
         background: rgba(255, 255, 255, 0.02);
     }
 
+    html:not(.theme-light) .landing-study-card[data-study-card]:hover {
+        background: rgba(255, 255, 255, 0.06);
+    }
+
     html:not(.theme-light) .landing-study-metric {
         border-color: var(--line-night);
         background: rgba(255, 255, 255, 0.02);
@@ -11077,6 +11188,24 @@ html.login-modal-open .login-modal {
 
     html:not(.theme-light) .landing-study-carousel::-webkit-scrollbar-thumb {
         background: rgba(221, 221, 219, 0.35);
+    }
+
+    html:not(.theme-light) .study-word-modal-backdrop {
+        background: rgba(0, 0, 0, 0.56);
+    }
+
+    html:not(.theme-light) .study-word-modal-panel {
+        border-color: var(--night-white);
+        background: var(--night-bg);
+        color: var(--night-text);
+    }
+
+    html:not(.theme-light) .study-word-modal-head {
+        border-bottom-color: var(--line-night);
+    }
+
+    html:not(.theme-light) .study-word-modal-body.is-muted {
+        color: var(--muted-night);
     }
 
     html:not(.theme-light) .tl-scroll-divider {
@@ -11384,6 +11513,10 @@ html.theme-dark .landing-study-card.links-step {
     background: rgba(255, 255, 255, 0.02);
 }
 
+html.theme-dark .landing-study-card[data-study-card]:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
 html.theme-dark .landing-study-metric {
     border-color: var(--line-night);
     background: rgba(255, 255, 255, 0.02);
@@ -11411,6 +11544,24 @@ html.theme-dark .landing-study-carousel {
 
 html.theme-dark .landing-study-carousel::-webkit-scrollbar-thumb {
     background: rgba(221, 221, 219, 0.35);
+}
+
+html.theme-dark .study-word-modal-backdrop {
+    background: rgba(0, 0, 0, 0.56);
+}
+
+html.theme-dark .study-word-modal-panel {
+    border-color: var(--night-white);
+    background: var(--night-bg);
+    color: var(--night-text);
+}
+
+html.theme-dark .study-word-modal-head {
+    border-bottom-color: var(--line-night);
+}
+
+html.theme-dark .study-word-modal-body.is-muted {
+    color: var(--muted-night);
 }
 
 html.theme-dark .tl-scroll-divider {
