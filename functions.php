@@ -3540,6 +3540,14 @@ function handlePresenceStatusRequest(Archive $archive): void
 function themeInit(Archive $archive)
 {
     hansjackEnsureSitemapRoute();
+    try {
+        if (!empty($archive->parameter->isFeed)) {
+            $archive->parameter->pageSize = 20;
+        }
+    } catch (\Throwable $e) {
+        // Ignore feed pageSize override failures.
+    }
+
     handleLiveVersionRequest($archive);
     handleSeriesListRequest($archive);
     handlePresenceStatusRequest($archive);
@@ -4648,6 +4656,139 @@ function feedXPathString(\DOMXPath $xp, string $expr, ?\DOMNode $ctx = null): st
     return trim((string) $raw);
 }
 
+function feedCurrentPageFromQuery(): int
+{
+    $raw = $_GET['page'] ?? 1;
+    $page = (int) $raw;
+    return max(1, $page);
+}
+
+function feedPaginationBaseUrl(string $url): string
+{
+    $url = trim($url);
+    if ($url === '') {
+        return '#';
+    }
+
+    $parts = parse_url($url);
+    if (!is_array($parts)) {
+        return $url;
+    }
+
+    $query = [];
+    if (!empty($parts['query'])) {
+        parse_str((string) $parts['query'], $query);
+        if (is_array($query)) {
+            unset($query['page']);
+        } else {
+            $query = [];
+        }
+    }
+    $queryString = http_build_query($query);
+
+    $base = '';
+    if (!empty($parts['scheme'])) {
+        $base .= (string) $parts['scheme'] . '://';
+    }
+    if (!empty($parts['user'])) {
+        $base .= (string) $parts['user'];
+        if (isset($parts['pass']) && $parts['pass'] !== '') {
+            $base .= ':' . (string) $parts['pass'];
+        }
+        $base .= '@';
+    }
+    if (!empty($parts['host'])) {
+        $base .= (string) $parts['host'];
+    }
+    if (!empty($parts['port'])) {
+        $base .= ':' . (int) $parts['port'];
+    }
+
+    $path = (string) ($parts['path'] ?? '');
+    if ($path === '') {
+        $path = '/';
+    }
+    $base .= $path;
+
+    if ($queryString !== '') {
+        $base .= '?' . $queryString;
+    }
+
+    if (!empty($parts['fragment'])) {
+        $base .= '#' . (string) $parts['fragment'];
+    }
+
+    return $base;
+}
+
+function feedBuildPageUrl(string $baseUrl, int $page): string
+{
+    $page = max(1, $page);
+    return '#page=' . $page;
+}
+
+function feedRenderPagerHtml(int $currentPage, int $totalPage, string $baseUrl): string
+{
+    $totalPage = max(1, $totalPage);
+    $currentPage = max(1, min($totalPage, $currentPage));
+    if ($totalPage <= 1) {
+        return '';
+    }
+
+    $prevHtml = '<span class="posts-pager-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></span>';
+    $nextHtml = '<span class="posts-pager-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>';
+
+    $html = '<ol class="page-navigator posts-pager" data-feed-total-page="' . $totalPage . '">';
+    if ($currentPage > 1) {
+        $html .= '<li class="prev" data-feed-nav="prev"><a href="'
+            . feedHtmlEscape(feedBuildPageUrl($baseUrl, $currentPage - 1))
+            . '" data-feed-page-link="' . ($currentPage - 1) . '">' . $prevHtml . '</a></li>';
+    } else {
+        $html .= '<li class="prev is-disabled" data-feed-nav="prev"><span aria-disabled="true" tabindex="-1">' . $prevHtml . '</span></li>';
+    }
+
+    for ($i = 1; $i <= $totalPage; $i++) {
+        $pageUrl = feedBuildPageUrl($baseUrl, $i);
+        $class = ($i === $currentPage) ? ' class="current"' : '';
+        $html .= '<li' . $class . ' data-feed-page="' . $i . '"><a href="'
+            . feedHtmlEscape($pageUrl)
+            . '" data-feed-page-link="' . $i . '">' . $i . '</a></li>';
+    }
+
+    if ($currentPage < $totalPage) {
+        $html .= '<li class="next" data-feed-nav="next"><a href="'
+            . feedHtmlEscape(feedBuildPageUrl($baseUrl, $currentPage + 1))
+            . '" data-feed-page-link="' . ($currentPage + 1) . '">' . $nextHtml . '</a></li>';
+    } else {
+        $html .= '<li class="next is-disabled" data-feed-nav="next"><span aria-disabled="true" tabindex="-1">' . $nextHtml . '</span></li>';
+    }
+    $html .= '</ol>';
+
+    return $html;
+}
+
+function feedFormatDisplayDatetime(string $value, string $fallback = '未知'): string
+{
+    $raw = trim($value);
+    if ($raw === '') {
+        return $fallback;
+    }
+
+    try {
+        $dt = new \DateTimeImmutable($raw);
+        return $dt->format('Y/m/d-H:i:s');
+    } catch (\Throwable $e) {
+        // Fallback to strtotime parsing.
+    }
+
+    $timestamp = strtotime($raw);
+    if ($timestamp !== false && $timestamp > 0) {
+        return date('Y/m/d-H:i:s', (int) $timestamp);
+    }
+
+    return $raw;
+}
+
 /**
  * Parse RSS/Atom XML string and render readable HTML (no browser XSLT dependency).
  */
@@ -4818,14 +4959,31 @@ function renderFeedHtmlFromXml(string $xml): string
     $siteLinkSafe = feedSafeUrl($siteLink);
     $feedUrlSafe = feedSafeUrl($feedUrl, $siteLinkSafe);
 
+    $feedMaxItems = 20;
+    if (count($items) > $feedMaxItems) {
+        $items = array_slice($items, 0, $feedMaxItems);
+    }
+
+    $feedPerPage = 10;
+    $totalItems = count($items);
+    $totalPage = max(1, (int) ceil($totalItems / $feedPerPage));
+    $currentPage = 1;
+
     $titleEsc = feedHtmlEscape($siteTitle);
     $siteDescEsc = feedHtmlEscape($siteDesc);
     $siteLinkEsc = feedHtmlEscape($siteLinkSafe);
     $feedUrlEsc = feedHtmlEscape($feedUrlSafe);
-    $lastUpdateEsc = feedHtmlEscape($lastUpdate);
+    $lastUpdateEsc = feedHtmlEscape(feedFormatDisplayDatetime($lastUpdate, '未知'));
+    $pagerHtml = '';
+    if ($totalItems > 0 && $totalPage > 1) {
+        $pagerHtml = feedRenderPagerHtml($currentPage, $totalPage, '');
+    }
 
     $itemHtml = '';
     foreach ($items as $index => $item) {
+        $index = (int) $index;
+        $itemPage = (int) floor($index / max(1, $feedPerPage)) + 1;
+        $hiddenAttr = ($itemPage === $currentPage) ? '' : ' style="display:none"';
         $titleRaw = trim((string) ($item['title'] ?? ''));
         if ($titleRaw === '') {
             $titleRaw = '未命名文章';
@@ -4864,7 +5022,10 @@ function renderFeedHtmlFromXml(string $xml): string
 
         $itemHtml .= '<li class="posts-item"'
             . ' data-post-original-index="' . (int) $index . '"'
-            . $createdAttr . '>';
+            . ' data-feed-page="' . $itemPage . '"'
+            . $createdAttr
+            . $hiddenAttr
+            . '>';
         $itemHtml .= '<div class="posts-item-left">';
         $itemHtml .= '<a class="posts-title" href="' . $itemUrl . '">' . $itemTitle . '</a>';
         $itemHtml .= '<time class="posts-date"' . $datetimeAttr . '>' . $itemTime . '</time>';
@@ -4888,20 +5049,171 @@ function renderFeedHtmlFromXml(string $xml): string
         $themeStyleTag = '<link rel="stylesheet" href="' . feedHtmlEscape($themeStyleHref) . '">';
     }
 
+    $feedInlineStyle = 'body{margin:0}'
+        . '.feed-page{padding:1.1rem 0 1.8rem}'
+        . '.feed-head{margin-bottom:.75rem}'
+        . '.feed-head h1{margin:0 0 .3rem;font-size:clamp(1.38rem,2.7vw,2rem);line-height:1.25}'
+        . '.feed-head p{margin:0;color:var(--muted-day)}'
+        . '.feed-note{margin-bottom:1rem}'
+        . '.article-content blockquote.feed-note-card{margin:0;padding:0 0 0 .75rem;border-left:2px solid rgba(17,17,17,.16);background:transparent;border-radius:0;font-style:normal;box-sizing:border-box;text-align:left}'
+        . '.article-content blockquote.feed-note-card p{margin:0;font-size:clamp(.8rem,.95vw,.9rem);line-height:1.56}'
+        . '.feed-note-title{color:var(--muted-day);font-family:var(--font-ui);font-size:.76rem;font-weight:600;letter-spacing:.06em}'
+        . '.feed-note-desc{margin-top:.36rem}'
+        . '.feed-note-url{margin-top:.4rem;display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .42rem}'
+        . '.feed-note-url code{display:inline-flex;align-items:center;max-width:min(100%,56ch);padding:.08rem .42rem;border-radius:4px;border:1px solid var(--line-day);background:transparent;color:var(--muted-day);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,\"Liberation Mono\",\"Courier New\",monospace;font-size:.74rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}'
+        . '.feed-foot{margin-top:1.1rem;font-family:var(--font-ui);font-size:.84rem;color:var(--muted-day)}'
+        . '.feed-foot p{margin:.22rem 0}'
+        . 'html.theme-dark .article-content blockquote.feed-note-card{border-left-color:rgba(221,221,219,.3);background:transparent}'
+        . 'html.theme-dark .feed-note-title,html.theme-dark .feed-foot{color:var(--muted-night)}'
+        . 'html.theme-dark .feed-note-url code{border-color:var(--line-night);background:transparent;color:var(--muted-night)}'
+        . '@media (max-width:980px){.feed-page{padding:1rem 0 1.35rem}.feed-note-url code{max-width:100%}}';
+
+    $feedNoteHtml = '<blockquote class="feed-note-card"><p class="feed-note-title">本页面是内容订阅源。</p><p class="feed-note-desc">您可以在任何支持的阅读器中添加当前地址来订阅此内容，以便及时获取最新更新。</p><p class="feed-note-url">订阅地址: <code id="feed-url">'
+        . $feedUrlEsc
+        . '</code></p></blockquote>';
+
+    $feedPaginationScript = <<<'JS'
+(function () {
+    var pager = document.querySelector('.posts-pager');
+    if (!pager) {
+        return;
+    }
+
+    var itemNodes = document.querySelectorAll('.posts-list .posts-item[data-feed-page]');
+    if (!itemNodes || !itemNodes.length) {
+        return;
+    }
+
+    var items = Array.prototype.slice.call(itemNodes);
+    var totalPage = parseInt(pager.getAttribute('data-feed-total-page') || '1', 10);
+    if (!Number.isFinite(totalPage) || totalPage < 1) {
+        totalPage = 1;
+    }
+
+    var prevLi = pager.querySelector('li[data-feed-nav="prev"]');
+    var nextLi = pager.querySelector('li[data-feed-nav="next"]');
+
+    function parsePageFromHash() {
+        var hash = window.location.hash || '';
+        var match = hash.match(/page=(\d+)/i);
+        if (!match) {
+            return 1;
+        }
+        var page = parseInt(match[1], 10);
+        if (!Number.isFinite(page) || page < 1) {
+            return 1;
+        }
+        return page;
+    }
+
+    function clampPage(page) {
+        if (!Number.isFinite(page) || page < 1) {
+            page = 1;
+        }
+        if (page > totalPage) {
+            page = totalPage;
+        }
+        return page;
+    }
+
+    function navIconHtml(li) {
+        if (!li) {
+            return '';
+        }
+        var icon = li.querySelector('.posts-pager-icon');
+        return icon ? icon.outerHTML : '';
+    }
+
+    function setNavState(li, roleClass, targetPage, disabled) {
+        if (!li) {
+            return;
+        }
+        var iconHtml = navIconHtml(li);
+        li.className = roleClass + (disabled ? ' is-disabled' : '');
+        if (disabled) {
+            li.innerHTML = '<span aria-disabled="true" tabindex="-1">' + iconHtml + '</span>';
+            return;
+        }
+        li.innerHTML = '<a href="#page=' + String(targetPage) + '" data-feed-page-link="' + String(targetPage) + '">' + iconHtml + '</a>';
+    }
+
+    function updateItems(page) {
+        for (var i = 0; i < items.length; i++) {
+            var node = items[i];
+            var itemPage = parseInt(node.getAttribute('data-feed-page') || '1', 10);
+            node.style.display = itemPage === page ? '' : 'none';
+        }
+    }
+
+    function updatePager(page) {
+        var pageItems = pager.querySelectorAll('li[data-feed-page]');
+        for (var i = 0; i < pageItems.length; i++) {
+            var li = pageItems[i];
+            var itemPage = parseInt(li.getAttribute('data-feed-page') || '1', 10);
+            if (itemPage === page) {
+                li.classList.add('current');
+            } else {
+                li.classList.remove('current');
+            }
+        }
+
+        setNavState(prevLi, 'prev', page - 1, page <= 1);
+        setNavState(nextLi, 'next', page + 1, page >= totalPage);
+    }
+
+    function applyPage(page, syncHash) {
+        page = clampPage(page);
+        updateItems(page);
+        updatePager(page);
+
+        if (syncHash) {
+            var nextHash = '#page=' + String(page);
+            if (window.location.hash !== nextHash) {
+                window.location.hash = nextHash;
+            }
+        }
+    }
+
+    pager.addEventListener('click', function (event) {
+        var target = event.target;
+        while (target && target !== pager && target.tagName !== 'A') {
+            target = target.parentNode;
+        }
+        if (!target || target === pager) {
+            return;
+        }
+
+        var rawPage = target.getAttribute('data-feed-page-link');
+        if (!rawPage) {
+            return;
+        }
+
+        event.preventDefault();
+        applyPage(parseInt(rawPage, 10), true);
+    });
+
+    window.addEventListener('hashchange', function () {
+        applyPage(parsePageFromHash(), false);
+    });
+
+    applyPage(parsePageFromHash(), false);
+})();
+JS;
+
     return '<!DOCTYPE html><html lang="zh-CN"><head>'
         . '<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<title>' . $titleEsc . ' · 订阅源</title>'
         . $themeStyleTag
-        . '<style>body{margin:0}.feed-page{padding:1.1rem 0 1.8rem}.feed-head{margin-bottom:.75rem}.feed-head h1{margin:0 0 .3rem;font-size:clamp(1.38rem,2.7vw,2rem);line-height:1.25}.feed-head p{margin:0;color:var(--muted-day)}.feed-note{margin-bottom:1rem}.copy-btn{position:relative;margin-left:.35rem;border:1px solid #2a2a28;border-radius:4px;background:#2a2a28;color:#fffffd;font-family:var(--font-ui);font-size:.78rem;line-height:1;padding:.25rem .5rem;cursor:pointer}.copy-btn:hover,.copy-btn:focus-visible{border-color:#1f1f1d;background:#1f1f1d}.copy-btn::after{content:attr(data-copy-tip);position:absolute;left:50%;bottom:calc(100% + 6px);transform:translate(-50%,4px);padding:.14rem .42rem;border-radius:4px;background:var(--nav-block-bg);color:var(--nav-block-fg);font-family:var(--font-ui);font-size:.72rem;line-height:1.2;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .14s ease,transform .14s ease,visibility .14s ease}.copy-btn.is-tip::after{opacity:1;visibility:visible;transform:translate(-50%,0)}.feed-foot{margin-top:1.1rem;font-family:var(--font-ui);font-size:.84rem;color:var(--muted-day)}.feed-foot p{margin:.22rem 0}@media (max-width:980px){.feed-page{padding:1rem 0 1.35rem}}</style>'
+        . '<style>' . $feedInlineStyle . '</style>'
         . '</head><body class="page-posts"><div class="shell">'
         . '<main class="main feed-page" role="main"><section class="posts" aria-label="订阅文章列表">'
         . '<div class="feed-head"><h1><a href="' . $siteLinkEsc . '">' . $titleEsc . '</a></h1><p>' . $siteDescEsc . '</p></div>'
-        . '<div class="posts-main"><div class="article-content feed-note"><blockquote><p>本页面是内容订阅源。</p><p>您可以在任何支持的阅读器中添加当前地址来订阅此内容，以便及时获取最新更新。</p><p>订阅地址: <code id="feed-url">'
-        . $feedUrlEsc . '</code><button type="button" class="copy-btn" data-copy-tip="" onclick="copyFeedUrl()">复制</button></p></blockquote></div>'
+        . '<div class="posts-main"><div class="article-content feed-note">' . $feedNoteHtml . '</div>'
         . '<ul class="posts-list" aria-label="文章">' . $itemHtml . '</ul>'
+        . $pagerHtml
         . '<footer class="feed-foot"><p>这是订阅源页面。访问 <a href="' . $siteLinkEsc . '">' . $titleEsc
         . '</a> 以获得完整的网站体验。</p><p>最后更新: ' . $lastUpdateEsc
-        . '</p></footer></div></section></main></div><script>function showCopyTip(message){var btn=document.querySelector(".copy-btn");if(!btn){return;}btn.setAttribute("data-copy-tip",message||"已复制");btn.classList.add("is-tip");var timer=Number(btn.getAttribute("data-copy-tip-timer")||"0");if(timer){window.clearTimeout(timer);}var next=window.setTimeout(function(){btn.classList.remove("is-tip");btn.setAttribute("data-copy-tip","");btn.removeAttribute("data-copy-tip-timer");},1400);btn.setAttribute("data-copy-tip-timer",String(next));}function fallbackCopyText(text){var ok=false;var el=document.createElement("textarea");el.value=text;el.setAttribute("readonly","readonly");el.style.position="fixed";el.style.opacity="0";el.style.pointerEvents="none";document.body.appendChild(el);el.focus();el.select();try{ok=document.execCommand("copy");}catch(e){ok=false;}document.body.removeChild(el);return ok;}function copyFeedUrl(){var node=document.getElementById("feed-url");var text=node?(node.textContent||""):"";if(!text){showCopyTip("未获取到订阅地址");return;}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){showCopyTip("已复制");}).catch(function(){showCopyTip(fallbackCopyText(text)?"已复制":"复制失败");});return;}showCopyTip(fallbackCopyText(text)?"已复制":"复制失败");}</script></body></html>';
+        . '</p></footer></div></section></main></div><script>' . $feedPaginationScript . '</script></body></html>';
 }
 
 function handleSitemapRequest(Archive $archive): void
