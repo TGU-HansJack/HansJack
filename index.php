@@ -1407,6 +1407,19 @@ if ($this->is('index')) {
                         <?php endif; ?>
                     </div>
 
+                    <div class="tl-scroll-footer">
+                        <span class="tl-scroll-footer-left">
+                            <?php _e('数据来自 '); ?>
+                            <a
+                                href="https://open.maimemo.com/document#/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="live-toast-link"
+                            ><?php _e('墨墨背单词 API'); ?></a>
+                        </span>
+                        <span class="tl-scroll-footer-right"><?php echo escape(_t('已获取%s数据', number_format((int) $studyWordsCount))); ?></span>
+                    </div>
+
                     <?php if ($studyMessage !== ''): ?>
                         <p class="landing-study-note"><?php echo escape($studyMessage); ?></p>
                     <?php elseif (!$studyOk): ?>
