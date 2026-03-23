@@ -1395,9 +1395,11 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     object-fit: contain;
     object-position: center;
     border-radius: 50%;
+    border: 0.5px solid rgba(117, 117, 117, 0.28);
     display: block;
     position: relative;
     z-index: 1;
+    box-shadow: 3px 5px 12px rgba(42, 42, 40, 0.18);
 }
 
 .landing-activity-badge {
@@ -11588,6 +11590,11 @@ html.theme-dark .login-modal-qq {
 html.theme-dark .landing-avatar {
     border: none;
     background: transparent;
+}
+
+html.theme-dark .landing-avatar > img {
+    border-color: rgba(221, 221, 219, 0.28);
+    box-shadow: 3px 5px 12px rgba(0, 0, 0, 0.38);
 }
 
 html.theme-dark .nav {
