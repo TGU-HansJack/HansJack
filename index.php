@@ -1371,45 +1371,148 @@ if ($this->is('index')) {
                         <?php endif; ?>
 
                         <?php if (!empty($studyRenderableItems)): ?>
-                            <div class="landing-study-carousel" data-study-carousel data-study-interval="2000">
-                                <ol class="landing-study-cards" data-study-carousel-track>
-                                    <?php $studyCardIndex = 1; ?>
-                                    <?php foreach ($studyRenderableItems as $studyItem): ?>
-                                        <?php
-                                        $studyWord = trim((string) ($studyItem['voc_spelling'] ?? ''));
-                                        $studyOrder = (int) ($studyItem['order'] ?? 0);
-                                        if ($studyOrder <= 0) {
-                                            $studyOrder = $studyCardIndex;
-                                        }
-                                        $studyIsNew = !empty($studyItem['is_new']);
-                                        $studyIsFinished = !empty($studyItem['is_finished']);
-                                        $studyFirstResponse = trim((string) ($studyItem['first_response'] ?? ''));
-                                        $studyFirstResponseLabel = hansjackMaimemoResponseLabel($studyFirstResponse);
-                                        ?>
-                                        <li
-                                            class="landing-study-card links-step"
-                                            data-study-card
-                                            data-study-word="<?php echo escape($studyWord); ?>"
+                            <div class="landing-study-shell" data-study-shell>
+                                <div class="landing-study-controls">
+                                    <button
+                                        class="landing-study-nav-btn is-prev"
+                                        type="button"
+                                        aria-label="<?php _e('查看上一张学习卡片'); ?>"
+                                        data-study-prev
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m14 16-4-4 4-4"/></svg>
+                                    </button>
+
+                                    <div class="landing-study-controls-right">
+                                        <button
+                                            class="landing-study-nav-btn is-drawer-open"
+                                            type="button"
+                                            aria-label="<?php _e('展开全部学习卡片'); ?>"
+                                            aria-expanded="false"
+                                            data-study-drawer-open
                                         >
-                                            <div class="landing-study-card-head">
-                                                <span class="landing-study-card-order">#<?php echo (int) $studyOrder; ?></span>
-                                                <span class="landing-study-card-tags">
-                                                    <?php if ($studyIsNew): ?>
-                                                        <span class="landing-study-tag is-new"><?php _e('新学'); ?></span>
-                                                    <?php endif; ?>
-                                                    <?php if ($studyIsFinished): ?>
-                                                        <span class="landing-study-tag is-finished"><?php _e('已完成'); ?></span>
-                                                    <?php endif; ?>
-                                                </span>
-                                            </div>
-                                            <p class="landing-study-card-word"><?php echo escape($studyWord); ?></p>
-                                            <?php if ($studyFirstResponseLabel !== ''): ?>
-                                                <p class="landing-study-card-feedback"><?php echo escape(_t('首次反馈：%s', $studyFirstResponseLabel)); ?></p>
-                                            <?php endif; ?>
-                                        </li>
-                                        <?php $studyCardIndex++; ?>
-                                    <?php endforeach; ?>
-                                </ol>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="m9 16 3-3 3 3"/></svg>
+                                        </button>
+                                        <button
+                                            class="landing-study-nav-btn is-next"
+                                            type="button"
+                                            aria-label="<?php _e('查看下一张学习卡片'); ?>"
+                                            data-study-next
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m10 8 4 4-4 4"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="landing-study-carousel-shell">
+                                    <div class="landing-study-carousel-frame" data-study-carousel-frame>
+                                        <div class="landing-study-carousel" data-study-carousel data-study-interval="2000">
+                                            <ol class="landing-study-cards" data-study-carousel-track>
+                                                <?php $studyCardIndex = 1; ?>
+                                                <?php foreach ($studyRenderableItems as $studyItem): ?>
+                                                    <?php
+                                                    $studyWord = trim((string) ($studyItem['voc_spelling'] ?? ''));
+                                                    $studyOrder = (int) ($studyItem['order'] ?? 0);
+                                                    if ($studyOrder <= 0) {
+                                                        $studyOrder = $studyCardIndex;
+                                                    }
+                                                    $studyIsNew = !empty($studyItem['is_new']);
+                                                    $studyIsFinished = !empty($studyItem['is_finished']);
+                                                    $studyFirstResponse = trim((string) ($studyItem['first_response'] ?? ''));
+                                                    $studyFirstResponseLabel = hansjackMaimemoResponseLabel($studyFirstResponse);
+                                                    ?>
+                                                    <li
+                                                        class="landing-study-card links-step"
+                                                        data-study-card
+                                                        data-study-word="<?php echo escape($studyWord); ?>"
+                                                    >
+                                                        <div class="landing-study-card-head">
+                                                            <span class="landing-study-card-order">#<?php echo (int) $studyOrder; ?></span>
+                                                            <span class="landing-study-card-tags">
+                                                                <?php if ($studyIsNew): ?>
+                                                                    <span class="landing-study-tag is-new"><?php _e('新学'); ?></span>
+                                                                <?php endif; ?>
+                                                                <?php if ($studyIsFinished): ?>
+                                                                    <span class="landing-study-tag is-finished"><?php _e('已完成'); ?></span>
+                                                                <?php endif; ?>
+                                                            </span>
+                                                        </div>
+                                                        <p class="landing-study-card-word"><?php echo escape($studyWord); ?></p>
+                                                        <?php if ($studyFirstResponseLabel !== ''): ?>
+                                                            <p class="landing-study-card-feedback"><?php echo escape(_t('首次反馈：%s', $studyFirstResponseLabel)); ?></p>
+                                                        <?php endif; ?>
+                                                    </li>
+                                                    <?php $studyCardIndex++; ?>
+                                                <?php endforeach; ?>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    class="landing-study-drawer-backdrop"
+                                    type="button"
+                                    aria-label="<?php _e('关闭全部学习卡片'); ?>"
+                                    aria-hidden="true"
+                                    data-study-drawer-backdrop
+                                    hidden
+                                ></button>
+
+                                <div class="landing-study-drawer" data-study-drawer hidden aria-hidden="true">
+                                    <div class="landing-study-drawer-inner">
+                                        <div class="landing-study-drawer-head">
+                                            <p class="landing-study-drawer-title"><?php _e('全部学习卡片'); ?></p>
+                                            <button
+                                                class="landing-study-nav-btn is-drawer-close"
+                                                type="button"
+                                                aria-label="<?php _e('收起全部学习卡片'); ?>"
+                                                data-study-drawer-close
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                            </button>
+                                        </div>
+
+                                        <div class="landing-study-drawer-body">
+                                            <ol class="landing-study-drawer-cards">
+                                                <?php $studyDrawerCardIndex = 1; ?>
+                                                <?php foreach ($studyRenderableItems as $studyItem): ?>
+                                                    <?php
+                                                    $studyWord = trim((string) ($studyItem['voc_spelling'] ?? ''));
+                                                    $studyOrder = (int) ($studyItem['order'] ?? 0);
+                                                    if ($studyOrder <= 0) {
+                                                        $studyOrder = $studyDrawerCardIndex;
+                                                    }
+                                                    $studyIsNew = !empty($studyItem['is_new']);
+                                                    $studyIsFinished = !empty($studyItem['is_finished']);
+                                                    $studyFirstResponse = trim((string) ($studyItem['first_response'] ?? ''));
+                                                    $studyFirstResponseLabel = hansjackMaimemoResponseLabel($studyFirstResponse);
+                                                    ?>
+                                                    <li
+                                                        class="landing-study-card links-step"
+                                                        data-study-card
+                                                        data-study-word="<?php echo escape($studyWord); ?>"
+                                                    >
+                                                        <div class="landing-study-card-head">
+                                                            <span class="landing-study-card-order">#<?php echo (int) $studyOrder; ?></span>
+                                                            <span class="landing-study-card-tags">
+                                                                <?php if ($studyIsNew): ?>
+                                                                    <span class="landing-study-tag is-new"><?php _e('新学'); ?></span>
+                                                                <?php endif; ?>
+                                                                <?php if ($studyIsFinished): ?>
+                                                                    <span class="landing-study-tag is-finished"><?php _e('已完成'); ?></span>
+                                                                <?php endif; ?>
+                                                            </span>
+                                                        </div>
+                                                        <p class="landing-study-card-word"><?php echo escape($studyWord); ?></p>
+                                                        <?php if ($studyFirstResponseLabel !== ''): ?>
+                                                            <p class="landing-study-card-feedback"><?php echo escape(_t('首次反馈：%s', $studyFirstResponseLabel)); ?></p>
+                                                        <?php endif; ?>
+                                                    </li>
+                                                    <?php $studyDrawerCardIndex++; ?>
+                                                <?php endforeach; ?>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         <?php else: ?>
                             <p class="landing-study-empty"><?php _e('今天还没有学习记录，请先打开墨墨 App 完成当日初始化。'); ?></p>
