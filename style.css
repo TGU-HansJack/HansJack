@@ -6487,11 +6487,19 @@ html:not(.theme-light) .article-copyright-license-link {
         align-items: start;
     }
 
+    .article-layout.is-has-toc .article-content {
+        grid-column: 1 / 2;
+        grid-row: 1;
+    }
+
     .article-layout.is-has-toc .article-copyright {
         grid-column: 1 / 2;
+        grid-row: 2;
     }
 
     .article-layout.is-has-toc .article-aside {
+        grid-column: 2 / 3;
+        grid-row: 1 / span 2;
         display: flex;
         flex-direction: column;
         gap: 1.1rem;
