@@ -1387,11 +1387,7 @@ function hansjackMaimemoApiToken(Options $options): string
 
 function hansjackMaimemoStudyCacheTtl(Options $options): int
 {
-    if (hansjackHighLoadDegradeEnabled($options)) {
-        return 900;
-    }
-
-    return 300;
+    return 60 * 60;
 }
 
 function hansjackMaimemoRecordsFetchLimit(Options $options): int
@@ -2418,6 +2414,7 @@ function hansjackMaimemoStudyPayload(Options $options): array
     $cache = hansjackMaimemoReadCache();
     $cacheDate = trim((string) ($cache['date'] ?? ''));
     $cacheUpdatedAt = max(0, (int) ($cache['updatedAt'] ?? 0));
+    $cacheHoldUntil = max(0, (int) ($cache['holdUntil'] ?? 0));
     $cacheProgress = hansjackMaimemoNormalizeProgress($cache['progress'] ?? []);
     $cacheItems = hansjackMaimemoNormalizeTodayItems($cache['today_items'] ?? [], 200);
     $cacheMessage = trim((string) ($cache['message'] ?? ''));
@@ -2443,6 +2440,19 @@ function hansjackMaimemoStudyPayload(Options $options): array
         $base['updatedAtText'] = hansjackFormatTimestampByOptions($options, $cacheUpdatedAt);
         $base['source'] = 'cache';
         $base['message'] = $cacheMessage;
+        return $base;
+    }
+
+    // Avoid repeated synchronous refresh triggers when a stale snapshot exists.
+    if ($cacheIsToday && $cacheHasSnapshot && $cacheHoldUntil > $now) {
+        $base['ok'] = true;
+        $base['progress'] = $cacheProgress;
+        $base['today_items'] = $cacheItems;
+        $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($cacheProgress['study_time'] ?? 0));
+        $base['updatedAt'] = $cacheUpdatedAt;
+        $base['updatedAtText'] = hansjackFormatTimestampByOptions($options, $cacheUpdatedAt);
+        $base['source'] = 'cache-stale';
+        $base['message'] = $cacheMessage !== '' ? $cacheMessage : _t('缓存冷却中，暂不触发刷新。');
         return $base;
     }
 
@@ -2519,6 +2529,7 @@ function hansjackMaimemoStudyPayload(Options $options): array
         hansjackMaimemoWriteCache([
             'date' => $today,
             'updatedAt' => $now,
+            'holdUntil' => 0,
             'progress' => $liveProgress,
             'today_items' => $liveItems,
             'message' => $message,
@@ -2528,6 +2539,15 @@ function hansjackMaimemoStudyPayload(Options $options): array
     }
 
     if ($cacheIsToday && $cacheHasSnapshot) {
+        hansjackMaimemoWriteCache([
+            'date' => $today,
+            'updatedAt' => max(0, $cacheUpdatedAt),
+            'holdUntil' => $now + $ttl,
+            'progress' => $cacheProgress,
+            'today_items' => $cacheItems,
+            'message' => $message !== '' ? $message : _t('接口暂不可用，已展示今日缓存数据。'),
+        ]);
+
         $base['ok'] = true;
         $base['progress'] = $cacheProgress;
         $base['today_items'] = $cacheItems;
@@ -2542,6 +2562,17 @@ function hansjackMaimemoStudyPayload(Options $options): array
     if ($message === '') {
         $message = _t('暂时无法获取学习数据，请稍后重试。');
     }
+
+    // Write a short-circuit snapshot so repeated page refresh won't keep triggering API fetch.
+    hansjackMaimemoWriteCache([
+        'date' => $today,
+        'updatedAt' => $now,
+        'holdUntil' => $now + $ttl,
+        'progress' => $base['progress'],
+        'today_items' => $base['today_items'],
+        'message' => $message,
+    ]);
+
     $base['message'] = $message;
     return $base;
 }
