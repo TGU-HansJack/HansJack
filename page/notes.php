@@ -64,11 +64,6 @@ $pagerTemplate = [
     'prevClass' => 'prev',
     'nextClass' => 'next',
 ];
-$pageHeading = trim((string) ($this->title ?? ''));
-if ($pageHeading === '') {
-    $pageHeading = _t('手记列表');
-}
-
 $allCategories = [];
 $categoryByMid = [];
 $notesRootMid = 0;
@@ -121,7 +116,6 @@ if ($notesRootMid) {
     <section class="posts" aria-label="<?php _e('手记列表'); ?>">
         <div class="posts-layout">
             <div class="posts-main">
-                <h1 class="section-title"><?php echo escape($pageHeading); ?></h1>
                 <ul class="posts-list" aria-label="<?php _e('手记'); ?>">
                     <?php if ($posts && $posts->have()): ?>
                         <?php while ($posts->next()): ?>

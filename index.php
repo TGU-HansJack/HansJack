@@ -1836,15 +1836,10 @@ HTML;
             'prevClass' => 'prev',
             'nextClass' => 'next',
         ];
-        $listHeading = hansjackArchiveRawTitle($this);
-        if ($listHeading === '') {
-            $listHeading = _t('文章列表');
-        }
         ?>
         <section class="posts" aria-label="<?php _e('文章列表'); ?>">
             <div class="posts-layout">
                 <div class="posts-main">
-                    <h1 class="section-title"><?php echo escape($listHeading); ?></h1>
                     <?php if (!$this->is('index') && !$this->is('post') && !$this->is('category') && !$this->is('tag')): ?>
                         <h2 class="section-title"><?php $this->archiveTitle([
                                 'category' => _t('分类 %s'),

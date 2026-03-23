@@ -424,83 +424,83 @@ $this->need('header.php');
         <div class="article-layout" data-article-layout>
             <div class="article-content">
                 <?php echoArchiveContent($this); ?>
-            </div>
-            <?php
-            $copyrightLicense = trim((string) ($this->options->postCopyrightLicense ?? ''));
-            if ($copyrightLicense === '') {
-                $copyrightLicense = 'CC BY-NC-SA 4.0';
-            }
-            $copyrightLicenseUrl = trim((string) ($this->options->postCopyrightLicenseUrl ?? ''));
-            $copyrightTitle = trim((string) ($this->title ?? ''));
-            if ($copyrightTitle === '') {
-                $copyrightTitle = _t('无标题');
-            }
-            $copyrightSiteTitle = trim((string) ($this->options->title ?? ''));
-            if ($copyrightSiteTitle === '') {
-                $copyrightSiteTitle = _t('本站');
-            }
-            $copyrightPermalink = trim((string) ($this->permalink ?? ''));
-            $postSignatureSvgRaw = trim((string) ($this->options->postSignatureSvg ?? ''));
-            $postSignatureSvg = '';
-            if ($postSignatureSvgRaw !== '') {
-                $svgCleaned = (string) preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/iu', '', $postSignatureSvgRaw);
-                $svgCleaned = (string) preg_replace('/\son[a-z]+\s*=\s*(["\']).*?\1/iu', '', $svgCleaned);
-                $svgCleaned = (string) preg_replace('/\son[a-z]+\s*=\s*[^>\s]+/iu', '', $svgCleaned);
-                if (stripos($svgCleaned, '<svg') !== false) {
-                    $postSignatureSvg = trim($svgCleaned);
+                <?php
+                $copyrightLicense = trim((string) ($this->options->postCopyrightLicense ?? ''));
+                if ($copyrightLicense === '') {
+                    $copyrightLicense = 'CC BY-NC-SA 4.0';
                 }
-            }
-            ?>
-            <section class="article-copyright" aria-label="<?php _e('文章版权信息'); ?>" data-article-copyright>
-                <div class="article-copyright-main">
-                    <div class="article-copyright-info">
-                        <div class="article-copyright-title">
-                            <button
-                                type="button"
-                                class="links-copy-trigger links-copy-text article-copyright-copy-text article-copyright-copy-title"
-                                data-copy-text="<?php echo escape($copyrightTitle . ' · ' . $copyrightSiteTitle); ?>"
-                                data-copy-tip="<?php _e('点击复制信息'); ?>"
-                                data-copy-tip-default="<?php _e('点击复制信息'); ?>"
-                                aria-label="<?php _e('复制标题信息'); ?>"
-                            ><?php echo escape($copyrightTitle . ' · ' . $copyrightSiteTitle); ?></button>
-                        </div>
-                        <?php if ($copyrightPermalink !== ''): ?>
-                            <div class="article-copyright-link-row">
+                $copyrightLicenseUrl = trim((string) ($this->options->postCopyrightLicenseUrl ?? ''));
+                $copyrightTitle = trim((string) ($this->title ?? ''));
+                if ($copyrightTitle === '') {
+                    $copyrightTitle = _t('无标题');
+                }
+                $copyrightSiteTitle = trim((string) ($this->options->title ?? ''));
+                if ($copyrightSiteTitle === '') {
+                    $copyrightSiteTitle = _t('本站');
+                }
+                $copyrightPermalink = trim((string) ($this->permalink ?? ''));
+                $postSignatureSvgRaw = trim((string) ($this->options->postSignatureSvg ?? ''));
+                $postSignatureSvg = '';
+                if ($postSignatureSvgRaw !== '') {
+                    $svgCleaned = (string) preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/iu', '', $postSignatureSvgRaw);
+                    $svgCleaned = (string) preg_replace('/\son[a-z]+\s*=\s*(["\']).*?\1/iu', '', $svgCleaned);
+                    $svgCleaned = (string) preg_replace('/\son[a-z]+\s*=\s*[^>\s]+/iu', '', $svgCleaned);
+                    if (stripos($svgCleaned, '<svg') !== false) {
+                        $postSignatureSvg = trim($svgCleaned);
+                    }
+                }
+                ?>
+                <section class="article-copyright" aria-label="<?php _e('文章版权信息'); ?>" data-article-copyright>
+                    <div class="article-copyright-main">
+                        <div class="article-copyright-info">
+                            <div class="article-copyright-title">
                                 <button
                                     type="button"
-                                    class="links-copy-trigger links-copy-text article-copyright-copy-text article-copyright-link"
-                                    data-copy-text="<?php echo escape($copyrightPermalink); ?>"
-                                    data-copy-tip="<?php _e('点击复制链接'); ?>"
-                                    data-copy-tip-default="<?php _e('点击复制链接'); ?>"
-                                    aria-label="<?php _e('复制文章链接'); ?>"
-                                    data-copyright-link
-                                ><?php echo escape($copyrightPermalink); ?></button>
+                                    class="links-copy-trigger links-copy-text article-copyright-copy-text article-copyright-copy-title"
+                                    data-copy-text="<?php echo escape($copyrightTitle . ' · ' . $copyrightSiteTitle); ?>"
+                                    data-copy-tip="<?php _e('点击复制信息'); ?>"
+                                    data-copy-tip-default="<?php _e('点击复制信息'); ?>"
+                                    aria-label="<?php _e('复制标题信息'); ?>"
+                                ><?php echo escape($copyrightTitle . ' · ' . $copyrightSiteTitle); ?></button>
                             </div>
-                        <?php endif; ?>
-                        <?php if ($copyrightLicense !== ''): ?>
-                            <div class="article-copyright-license">
-                                <?php _e('本文采用'); ?>
-                                <?php if ($copyrightLicenseUrl !== ''): ?>
-                                    <a
-                                        class="article-copyright-license-link"
-                                        href="<?php echo escape($copyrightLicenseUrl); ?>"
-                                        rel="noopener noreferrer"
-                                        target="_blank"
-                                    ><?php echo escape($copyrightLicense); ?></a>
-                                <?php else: ?>
-                                    <span><?php echo escape($copyrightLicense); ?></span>
-                                <?php endif; ?>
-                                <?php _e('进行许可。'); ?>
-                            </div>
+                            <?php if ($copyrightPermalink !== ''): ?>
+                                <div class="article-copyright-link-row">
+                                    <button
+                                        type="button"
+                                        class="links-copy-trigger links-copy-text article-copyright-copy-text article-copyright-link"
+                                        data-copy-text="<?php echo escape($copyrightPermalink); ?>"
+                                        data-copy-tip="<?php _e('点击复制链接'); ?>"
+                                        data-copy-tip-default="<?php _e('点击复制链接'); ?>"
+                                        aria-label="<?php _e('复制文章链接'); ?>"
+                                        data-copyright-link
+                                    ><?php echo escape($copyrightPermalink); ?></button>
+                                </div>
+                            <?php endif; ?>
+                            <?php if ($copyrightLicense !== ''): ?>
+                                <div class="article-copyright-license">
+                                    <?php _e('本文采用'); ?>
+                                    <?php if ($copyrightLicenseUrl !== ''): ?>
+                                        <a
+                                            class="article-copyright-license-link"
+                                            href="<?php echo escape($copyrightLicenseUrl); ?>"
+                                            rel="noopener noreferrer"
+                                            target="_blank"
+                                        ><?php echo escape($copyrightLicense); ?></a>
+                                    <?php else: ?>
+                                        <span><?php echo escape($copyrightLicense); ?></span>
+                                    <?php endif; ?>
+                                    <?php _e('进行许可。'); ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <?php if ($postSignatureSvg !== ''): ?>
+                        <div class="article-copyright-signature" data-hide-print="true" aria-hidden="true">
+                            <?php echo $postSignatureSvg; ?>
+                        </div>
                         <?php endif; ?>
                     </div>
-                    <?php if ($postSignatureSvg !== ''): ?>
-                    <div class="article-copyright-signature" data-hide-print="true" aria-hidden="true">
-                        <?php echo $postSignatureSvg; ?>
-                    </div>
-                    <?php endif; ?>
-                </div>
-            </section>
+                </section>
+            </div>
             <aside class="article-aside" aria-label="<?php _e('右侧栏'); ?>">
                 <div class="article-toc">
                     <div class="article-toc-header">
@@ -1244,7 +1244,6 @@ $this->need('header.php');
 
         <?php if (!empty($guessPosts)): ?>
             <section class="article-guess" aria-label="<?php _e('猜你想看'); ?>">
-                <hr class="article-guess-divider" aria-hidden="true">
                 <div class="article-guess-inner">
                     <h2 class="article-guess-title">
                         <span class="article-guess-title-icon" aria-hidden="true">

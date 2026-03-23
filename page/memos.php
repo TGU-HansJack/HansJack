@@ -319,17 +319,12 @@ if ($pagePermalink === '') {
         $pagePermalink = '';
     }
 }
-$pageHeading = trim((string) ($this->title ?? ''));
-if ($pageHeading === '') {
-    $pageHeading = _t('回忆');
-}
 ?>
 
 <main class="main" role="main" data-memory-root>
     <section class="memory" aria-label="<?php _e('回忆'); ?>">
         <div class="posts-layout memory-layout">
             <div class="memory-main">
-                <h1 class="section-title"><?php echo escape($pageHeading); ?></h1>
                 <section id="comments" class="comments memory-comments-shell" aria-label="<?php _e('评论'); ?>"
                          data-comments-order="desc"
                          data-user-logged="<?php echo $userLoggedIn ? '1' : '0'; ?>"

@@ -800,17 +800,11 @@ $siteCopyDesc = escape($siteDescRaw !== '' ? $siteDescRaw : '欢迎交换友情�
 $siteCopyUrl = $siteUrlRaw !== '' ? escape(rtrim($siteUrlRaw, '/')) : '';
 $siteCopyFeed = $siteFeedRaw !== '' ? escape($siteFeedRaw) : '';
 $siteCopyAvatar = $siteFaviconRaw !== '' ? escape($siteFaviconRaw) : '';
-$pageHeading = trim((string) ($this->title ?? ''));
-if ($pageHeading === '') {
-    $pageHeading = _t('友情链接');
-}
-
 $this->need('header.php');
 ?>
 
 <main class="main" role="main">
     <article class="page links-page" aria-label="<?php _e('友情链接'); ?>">
-        <h1 class="section-title"><?php echo escape($pageHeading); ?></h1>
         <div class="article-content">
             <?php echoArchiveContent($this); ?>
         </div>
