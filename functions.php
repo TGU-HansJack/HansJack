@@ -10131,6 +10131,159 @@ function renderHeatmapEmbedShortcode(string $args): string
     return $html;
 }
 
+function parseEmbedShortcodeNamedArgs(string $args): array
+{
+    $decoded = trim(html_entity_decode($args, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    if ($decoded === '') {
+        return [];
+    }
+
+    $pairs = [];
+    $matched = preg_match_all(
+        '/([A-Za-z][A-Za-z0-9_-]*)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s"\']+))/u',
+        $decoded,
+        $matches,
+        PREG_SET_ORDER
+    );
+    if (!is_int($matched) || $matched <= 0 || !is_array($matches)) {
+        return $pairs;
+    }
+
+    foreach ($matches as $entry) {
+        if (!is_array($entry)) {
+            continue;
+        }
+
+        $key = strtolower(trim((string) ($entry[1] ?? '')));
+        if ($key === '') {
+            continue;
+        }
+
+        $value = '';
+        if (array_key_exists(2, $entry) && $entry[2] !== '') {
+            $value = (string) $entry[2];
+        } elseif (array_key_exists(3, $entry) && $entry[3] !== '') {
+            $value = (string) $entry[3];
+        } elseif (array_key_exists(4, $entry)) {
+            $value = (string) $entry[4];
+        }
+
+        $pairs[$key] = trim($value);
+    }
+
+    return $pairs;
+}
+
+function normalizeVegaEmbedSrcPath(string $raw): string
+{
+    $src = trim(html_entity_decode($raw, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    if ($src === '') {
+        return '';
+    }
+
+    if (preg_match('/[\x00-\x1F\x7F]/u', $src) === 1) {
+        return '';
+    }
+
+    if ($src[0] !== '/' || strpos($src, '//') === 0) {
+        return '';
+    }
+
+    if (strpos($src, '\\') !== false || strpos($src, '..') !== false || preg_match('/\s/u', $src) === 1) {
+        return '';
+    }
+
+    $parts = parse_url($src);
+    if (!is_array($parts)) {
+        return '';
+    }
+
+    if (!empty($parts['scheme']) || !empty($parts['host']) || !empty($parts['user']) || !empty($parts['pass'])) {
+        return '';
+    }
+
+    $path = (string) ($parts['path'] ?? '');
+    if ($path === '' || $path[0] !== '/') {
+        return '';
+    }
+
+    if (strpos($path, '..') !== false || strpos($path, '\\') !== false) {
+        return '';
+    }
+
+    return $src;
+}
+
+function normalizeVegaEmbedRenderer(string $raw): string
+{
+    $renderer = strtolower(trim($raw));
+    return $renderer === 'canvas' ? 'canvas' : 'svg';
+}
+
+function normalizeVegaEmbedHeight(string $raw): int
+{
+    $value = trim($raw);
+    if ($value === '' || preg_match('/^\d{1,4}$/', $value) !== 1) {
+        return 0;
+    }
+
+    $height = (int) $value;
+    if ($height <= 0) {
+        return 0;
+    }
+
+    return max(120, min(2000, $height));
+}
+
+function normalizeVegaEmbedActions(string $raw): bool
+{
+    $value = strtolower(trim($raw));
+    if ($value === '') {
+        return false;
+    }
+
+    if (in_array($value, ['1', 'true', 'yes', 'on'], true)) {
+        return true;
+    }
+
+    if (in_array($value, ['0', 'false', 'no', 'off'], true)) {
+        return false;
+    }
+
+    return false;
+}
+
+function renderVegaEmbedShortcode(string $args): string
+{
+    $named = parseEmbedShortcodeNamedArgs($args);
+    $srcRaw = (string) ($named['src'] ?? '');
+    if ($srcRaw === '') {
+        $plain = trim(html_entity_decode($args, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        if (preg_match('/^(\/[^\s]+)$/u', $plain, $match) === 1) {
+            $srcRaw = (string) ($match[1] ?? '');
+        }
+    }
+
+    $src = normalizeVegaEmbedSrcPath($srcRaw);
+    if ($src === '') {
+        return '';
+    }
+
+    $height = normalizeVegaEmbedHeight((string) ($named['height'] ?? ''));
+    $renderer = normalizeVegaEmbedRenderer((string) ($named['renderer'] ?? ''));
+    $actions = normalizeVegaEmbedActions((string) ($named['actions'] ?? ''));
+
+    $html = '<section class="vega-embed-shortcode" data-embed-type="vega" data-vega-src="' . escape($src) . '" data-vega-renderer="' . escape($renderer) . '" data-vega-actions="' . ($actions ? 'true' : 'false') . '" style="margin:1rem 0;">';
+    $stageAttrs = ' class="vega-embed-stage" data-vega-stage aria-label="' . escape(_t('Vega-Lite 图表')) . '"';
+    if ($height > 0) {
+        $stageAttrs .= ' data-vega-height="' . $height . '" style="min-height:' . $height . 'px;"';
+    }
+    $html .= '<div' . $stageAttrs . '></div>';
+    $html .= '</section>';
+
+    return $html;
+}
+
 function renderEmbedShortcode(string $rawPayload): string
 {
     $payload = extractEmbedShortcodePayload($rawPayload);
@@ -10146,6 +10299,10 @@ function renderEmbedShortcode(string $rawPayload): string
 
     if ($name === 'heatmap') {
         return renderHeatmapEmbedShortcode($args);
+    }
+
+    if ($name === 'vega') {
+        return renderVegaEmbedShortcode($args);
     }
 
     if ($name === 'comment') {

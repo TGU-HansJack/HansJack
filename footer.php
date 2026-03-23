@@ -854,6 +854,514 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
             });
         })();
     </script>
+    <script>
+        (function () {
+            var contents = Array.prototype.slice.call(document.querySelectorAll(".article-content, .comment-content"));
+            if (!contents || contents.length === 0) {
+                return;
+            }
+
+            function isVegaLiteCodeBlock(codeEl) {
+                if (!codeEl || !codeEl.getAttribute) {
+                    return false;
+                }
+
+                var className = String(codeEl.getAttribute("class") || "").toLowerCase();
+                if (
+                    className.indexOf("language-vega-lite") !== -1 ||
+                    className.indexOf("lang-vega-lite") !== -1 ||
+                    className.indexOf("language-vl") !== -1 ||
+                    className.indexOf("lang-vl") !== -1
+                ) {
+                    return true;
+                }
+
+                var language = String(
+                    codeEl.getAttribute("data-language") ||
+                    codeEl.getAttribute("data-lang") ||
+                    ""
+                ).toLowerCase();
+
+                return language === "vega-lite" || language === "vl";
+            }
+
+            function isLocalVegaSrc(path) {
+                if (!path || typeof path !== "string") {
+                    return false;
+                }
+                if (path.charAt(0) !== "/" || path.indexOf("//") === 0) {
+                    return false;
+                }
+                if (path.indexOf("..") !== -1 || path.indexOf("\\") !== -1) {
+                    return false;
+                }
+                if (/\s/.test(path)) {
+                    return false;
+                }
+                if (/[\x00-\x1F\x7F]/.test(path)) {
+                    return false;
+                }
+                return true;
+            }
+
+            function findFirstUnsafeDataUrl(spec) {
+                var visited = [];
+
+                function walk(node) {
+                    if (!node || typeof node !== "object") {
+                        return "";
+                    }
+
+                    if (visited.indexOf(node) !== -1) {
+                        return "";
+                    }
+                    visited.push(node);
+
+                    if (Array.isArray(node)) {
+                        for (var i = 0; i < node.length; i++) {
+                            var badInArray = walk(node[i]);
+                            if (badInArray) {
+                                return badInArray;
+                            }
+                        }
+                        return "";
+                    }
+
+                    if (Object.prototype.hasOwnProperty.call(node, "data")) {
+                        var dataNode = node.data;
+                        if (dataNode && typeof dataNode === "object" && !Array.isArray(dataNode)) {
+                            if (Object.prototype.hasOwnProperty.call(dataNode, "url")) {
+                                var urlValue = dataNode.url;
+                                if (typeof urlValue !== "string") {
+                                    return "[non-string]";
+                                }
+
+                                var cleanUrl = String(urlValue || "").trim();
+                                if (!isLocalVegaSrc(cleanUrl)) {
+                                    return cleanUrl || "[empty]";
+                                }
+                            }
+                        }
+                    }
+
+                    for (var key in node) {
+                        if (!Object.prototype.hasOwnProperty.call(node, key)) {
+                            continue;
+                        }
+
+                        var badInObject = walk(node[key]);
+                        if (badInObject) {
+                            return badInObject;
+                        }
+                    }
+
+                    return "";
+                }
+
+                return walk(spec);
+            }
+
+            var shortcodeTargets = [];
+            var codeTargets = [];
+            for (var c = 0; c < contents.length; c++) {
+                var content = contents[c];
+                if (!content || !content.querySelectorAll) {
+                    continue;
+                }
+
+                var embeds = content.querySelectorAll('[data-embed-type="vega"]');
+                for (var e = 0; e < embeds.length; e++) {
+                    if (embeds[e]) {
+                        shortcodeTargets.push(embeds[e]);
+                    }
+                }
+
+                var blocks = content.querySelectorAll("pre code");
+                for (var i = 0; i < blocks.length; i++) {
+                    var codeEl = blocks[i];
+                    if (!codeEl || !isVegaLiteCodeBlock(codeEl)) {
+                        continue;
+                    }
+                    codeTargets.push(codeEl);
+                }
+            }
+
+            if (shortcodeTargets.length === 0 && codeTargets.length === 0) {
+                return;
+            }
+
+            function normalizeRenderer(raw) {
+                var value = String(raw || "").trim().toLowerCase();
+                return value === "canvas" ? "canvas" : "svg";
+            }
+
+            function normalizeBoolean(raw, fallback) {
+                var value = String(raw || "").trim().toLowerCase();
+                if (!value) {
+                    return !!fallback;
+                }
+                if (value === "1" || value === "true" || value === "yes" || value === "on") {
+                    return true;
+                }
+                if (value === "0" || value === "false" || value === "no" || value === "off") {
+                    return false;
+                }
+                return !!fallback;
+            }
+
+            function normalizeHeight(raw) {
+                var value = parseInt(String(raw || "").trim(), 10);
+                if (!isFinite(value) || value <= 0) {
+                    return 0;
+                }
+                if (value < 120) {
+                    value = 120;
+                } else if (value > 2000) {
+                    value = 2000;
+                }
+                return value;
+            }
+
+            function parseStrictJsonSpec(rawText) {
+                var text = String(rawText || "").replace(/^\uFEFF/, "").trim();
+                if (!text) {
+                    return null;
+                }
+
+                try {
+                    var parsed = JSON.parse(text);
+                    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+                        return null;
+                    }
+                    return parsed;
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function cloneSpec(spec) {
+                try {
+                    return JSON.parse(JSON.stringify(spec));
+                } catch (e) {
+                    return spec;
+                }
+            }
+
+            function setStageMinHeight(stageEl, height) {
+                if (!stageEl || !stageEl.style) {
+                    return;
+                }
+                if (height > 0) {
+                    stageEl.style.minHeight = height + "px";
+                }
+            }
+
+            function ensureStageNode(hostEl) {
+                if (!hostEl || !hostEl.querySelector) {
+                    return null;
+                }
+
+                var stageEl = hostEl.querySelector("[data-vega-stage]");
+                if (stageEl) {
+                    return stageEl;
+                }
+
+                try {
+                    stageEl = document.createElement("div");
+                    stageEl.className = "vega-embed-stage";
+                    stageEl.setAttribute("data-vega-stage", "1");
+                    stageEl.setAttribute("aria-label", "Vega-Lite chart");
+                    hostEl.appendChild(stageEl);
+                    return stageEl;
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function clearError(hostEl) {
+                if (!hostEl || !hostEl.querySelector) {
+                    return;
+                }
+                var existing = hostEl.querySelector(".vega-embed-error");
+                if (existing && existing.parentNode) {
+                    try {
+                        existing.parentNode.removeChild(existing);
+                    } catch (e) {}
+                }
+                try {
+                    hostEl.removeAttribute("data-vega-status");
+                    hostEl.classList.remove("vega-embed-unavailable");
+                    hostEl.removeAttribute("data-vega-error");
+                } catch (e) {}
+            }
+
+            function appendError(hostEl, message) {
+                if (!hostEl || !hostEl.querySelector || !message) {
+                    return;
+                }
+
+                var text = String(message);
+                var errorNode = hostEl.querySelector(".vega-embed-error");
+                if (!errorNode) {
+                    try {
+                        errorNode = document.createElement("p");
+                        errorNode.className = "vega-embed-error";
+                        hostEl.appendChild(errorNode);
+                    } catch (e) {
+                        return;
+                    }
+                }
+
+                try {
+                    errorNode.textContent = text;
+                    hostEl.setAttribute("data-vega-status", "error");
+                } catch (e) {}
+            }
+
+            function markUnavailable(nodeEl, reason) {
+                if (!nodeEl || !nodeEl.classList) {
+                    return;
+                }
+                try {
+                    nodeEl.classList.add("vega-embed-unavailable");
+                    if (reason) {
+                        nodeEl.setAttribute("data-vega-error", reason);
+                    }
+                } catch (e) {}
+            }
+
+            function loadScriptOnce(src, done) {
+                var doneFn = typeof done === "function" ? done : function () {};
+                if (!src) {
+                    doneFn();
+                    return;
+                }
+
+                var key = src.replace(/[^a-z0-9]/gi, "_");
+                var selector = 'script[data-vega-js="' + key + '"]';
+                var existing = document.querySelector(selector);
+                if (existing) {
+                    if (existing.getAttribute("data-vega-loaded") === "1") {
+                        doneFn();
+                        return;
+                    }
+
+                    existing.addEventListener("load", doneFn, { once: true });
+                    existing.addEventListener("error", doneFn, { once: true });
+                    return;
+                }
+
+                var script = document.createElement("script");
+                script.src = src;
+                script.async = true;
+                script.setAttribute("data-vega-js", key);
+                script.onload = function () {
+                    script.setAttribute("data-vega-loaded", "1");
+                    doneFn();
+                };
+                script.onerror = doneFn;
+                document.head.appendChild(script);
+            }
+
+            function ensureVegaAssets(done) {
+                if (
+                    typeof window.vega !== "undefined" &&
+                    typeof window.vegaLite !== "undefined" &&
+                    typeof window.vegaEmbed === "function"
+                ) {
+                    done();
+                    return;
+                }
+
+                loadScriptOnce("<?php echo escape(assetUrl($this->options, 'assets/vendor/vega/vega.min.js')); ?>", function () {
+                    loadScriptOnce("<?php echo escape(assetUrl($this->options, 'assets/vendor/vega/vega-lite.min.js')); ?>", function () {
+                        loadScriptOnce("<?php echo escape(assetUrl($this->options, 'assets/vendor/vega/vega-embed.min.js')); ?>", done);
+                    });
+                });
+            }
+
+            var specCache = {};
+            function fetchSpecBySrc(src) {
+                if (specCache[src]) {
+                    return specCache[src];
+                }
+
+                specCache[src] = fetch(src, {
+                    credentials: "same-origin",
+                    cache: "default"
+                }).then(function (resp) {
+                    if (!resp || !resp.ok) {
+                        throw new Error("http");
+                    }
+                    return resp.text();
+                }).then(function (text) {
+                    var spec = parseStrictJsonSpec(text);
+                    if (!spec) {
+                        throw new Error("json");
+                    }
+                    return spec;
+                });
+
+                return specCache[src];
+            }
+
+            function renderIntoStage(hostEl, stageEl, spec, options) {
+                if (!hostEl || !stageEl || !spec || typeof window.vegaEmbed !== "function") {
+                    return;
+                }
+
+                clearError(hostEl);
+
+                var unsafeDataUrl = findFirstUnsafeDataUrl(spec);
+                if (unsafeDataUrl) {
+                    markUnavailable(hostEl, "data-url");
+                    appendError(hostEl, "仅允许站内数据源");
+                    return;
+                }
+
+                var nextSpec = spec;
+                var opts = options || {};
+                var height = normalizeHeight(opts.height);
+                if (height > 0) {
+                    setStageMinHeight(stageEl, height);
+                    if (typeof spec.height === "undefined" || spec.height === null || spec.height === "") {
+                        nextSpec = cloneSpec(spec);
+                        if (nextSpec && typeof nextSpec === "object") {
+                            nextSpec.height = height;
+                        }
+                    }
+                }
+
+                while (stageEl.firstChild) {
+                    stageEl.removeChild(stageEl.firstChild);
+                }
+
+                Promise.resolve(window.vegaEmbed(stageEl, nextSpec, {
+                    mode: "vega-lite",
+                    renderer: normalizeRenderer(opts.renderer),
+                    actions: normalizeBoolean(opts.actions, false)
+                })).then(function () {
+                    try {
+                        hostEl.setAttribute("data-vega-rendered", "1");
+                        hostEl.removeAttribute("data-vega-status");
+                    } catch (e) {}
+                }).catch(function () {
+                    markUnavailable(hostEl, "render");
+                    appendError(hostEl, "Vega-Lite 图表渲染失败。");
+                });
+            }
+
+            function renderShortcodeTarget(target) {
+                if (!target || target.getAttribute("data-vega-inited") === "1") {
+                    return;
+                }
+                target.setAttribute("data-vega-inited", "1");
+
+                var src = String(target.getAttribute("data-vega-src") || "").trim();
+                if (!isLocalVegaSrc(src)) {
+                    markUnavailable(target, "src");
+                    appendError(target, "Vega 图表 src 必须为站内路径。");
+                    return;
+                }
+
+                var stageEl = ensureStageNode(target);
+                if (!stageEl) {
+                    markUnavailable(target, "stage");
+                    appendError(target, "Vega 图表容器不可用。");
+                    return;
+                }
+
+                var height = normalizeHeight(
+                    target.getAttribute("data-vega-height") ||
+                    stageEl.getAttribute("data-vega-height") ||
+                    ""
+                );
+                setStageMinHeight(stageEl, height);
+
+                fetchSpecBySrc(src).then(function (spec) {
+                    renderIntoStage(target, stageEl, spec, {
+                        renderer: target.getAttribute("data-vega-renderer"),
+                        actions: target.getAttribute("data-vega-actions"),
+                        height: height
+                    });
+                }).catch(function () {
+                    markUnavailable(target, "fetch");
+                    appendError(target, "Vega 源文件无法加载或 JSON 不合法。");
+                });
+            }
+
+            function renderCodeTarget(codeEl) {
+                if (!codeEl || !codeEl.closest) {
+                    return;
+                }
+
+                var preEl = codeEl.closest("pre");
+                if (!preEl || !preEl.parentNode || preEl.getAttribute("data-vega-inited") === "1") {
+                    return;
+                }
+                preEl.setAttribute("data-vega-inited", "1");
+
+                var spec = parseStrictJsonSpec(codeEl.textContent || "");
+                if (!spec) {
+                    markUnavailable(preEl, "json");
+                    return;
+                }
+
+                var wrapper = document.createElement("section");
+                wrapper.className = "vega-embed-shortcode vega-embed-from-code";
+                wrapper.setAttribute("data-embed-type", "vega");
+                wrapper.setAttribute("data-vega-from", "code");
+                wrapper.style.margin = "1rem 0";
+
+                var stageEl = document.createElement("div");
+                stageEl.className = "vega-embed-stage";
+                stageEl.setAttribute("data-vega-stage", "1");
+                stageEl.setAttribute("aria-label", "Vega-Lite chart");
+                wrapper.appendChild(stageEl);
+
+                try {
+                    preEl.parentNode.replaceChild(wrapper, preEl);
+                } catch (e) {
+                    markUnavailable(preEl, "replace");
+                    return;
+                }
+
+                renderIntoStage(wrapper, stageEl, spec, {
+                    renderer: "svg",
+                    actions: false,
+                    height: 0
+                });
+            }
+
+            ensureVegaAssets(function () {
+                if (
+                    typeof window.vega === "undefined" ||
+                    typeof window.vegaLite === "undefined" ||
+                    typeof window.vegaEmbed !== "function"
+                ) {
+                    for (var s = 0; s < shortcodeTargets.length; s++) {
+                        markUnavailable(shortcodeTargets[s], "runtime");
+                        appendError(shortcodeTargets[s], "Vega 运行时加载失败。");
+                    }
+                    for (var k = 0; k < codeTargets.length; k++) {
+                        var pre = codeTargets[k] && codeTargets[k].closest ? codeTargets[k].closest("pre") : null;
+                        markUnavailable(pre, "runtime");
+                    }
+                    if (window.console && typeof window.console.warn === "function") {
+                        window.console.warn("[Theme] Vega runtime unavailable.");
+                    }
+                    return;
+                }
+
+                for (var i = 0; i < shortcodeTargets.length; i++) {
+                    renderShortcodeTarget(shortcodeTargets[i]);
+                }
+                for (var j = 0; j < codeTargets.length; j++) {
+                    renderCodeTarget(codeTargets[j]);
+                }
+            });
+        })();
+    </script>
     <script src="<?php echo escape(assetUrl($this->options, 'assets/vendor/medium-zoom/medium-zoom.min.js')); ?>"></script>
     <script src="<?php echo escape(assetUrlSmart($this->options, 'assets/js/content-static.js')); ?>"></script>
     <script>

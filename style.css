@@ -10849,6 +10849,65 @@ html.login-modal-open .login-modal {
     visibility: visible;
 }
 
+:is(.article-content, .comment-content) .vega-embed-shortcode {
+    margin: 1rem 0;
+    display: table;
+    width: fit-content;
+    max-width: 100%;
+}
+
+:is(.article-content, .comment-content) .vega-embed-stage {
+    display: inline-block;
+    width: auto;
+    max-width: 100%;
+    min-height: 220px;
+    border: 0;
+    border-radius: 4px;
+    padding: 0.4rem;
+    box-sizing: border-box;
+    overflow-x: auto;
+    background: transparent;
+}
+
+:is(.article-content, .comment-content) .vega-embed-stage > .vega-embed,
+:is(.article-content, .comment-content) .vega-embed-stage canvas,
+:is(.article-content, .comment-content) .vega-embed-stage svg {
+    display: block;
+    width: auto;
+    max-width: 100%;
+}
+
+:is(.article-content, .comment-content) .vega-embed-shortcode[data-vega-status="error"] .vega-embed-stage,
+:is(.article-content, .comment-content) .vega-embed-shortcode.vega-embed-unavailable .vega-embed-stage {
+    display: none !important;
+    border: 0;
+    padding: 0;
+    min-height: 0;
+    background: transparent;
+}
+
+:is(.article-content, .comment-content) .vega-embed-shortcode[data-vega-status="error"] .vega-embed-error,
+:is(.article-content, .comment-content) .vega-embed-shortcode.vega-embed-unavailable .vega-embed-error {
+    margin-top: 0;
+}
+
+:is(.article-content, .comment-content) .vega-embed-error {
+    margin: 0.5rem 0 0;
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    line-height: 1.35;
+    color: var(--muted-day);
+}
+
+:is(.article-content, .comment-content) pre.vega-embed-unavailable {
+    display: block !important;
+    border: 0;
+}
+
+:is(.article-content, .comment-content) pre.vega-embed-unavailable > code {
+    visibility: visible;
+}
+
 .page-navigator {
     list-style: none;
     margin: 0.8rem 0 0;
@@ -11789,6 +11848,14 @@ html.login-modal-open .login-modal {
 
     html:not(.theme-light) :is(.article-content, .comment-content) blockquote {
         background: rgba(240, 240, 240, 0.06);
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .vega-embed-stage {
+        background: rgba(240, 240, 240, 0.02);
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .vega-embed-error {
+        color: var(--muted-night);
     }
 
     html:not(.theme-light) :is(.article-content, .comment-content) a {
