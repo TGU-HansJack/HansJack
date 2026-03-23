@@ -1138,6 +1138,10 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
         order: -1;
     }
 
+    .landing-social {
+        justify-content: center;
+    }
+
 }
 
 .main-shell {
@@ -1310,6 +1314,60 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
     letter-spacing: 0.015em;
 }
 
+.landing-social {
+    margin-top: clamp(0.6rem, 1.8vw, 1rem);
+    display: flex;
+    align-items: center;
+    gap: 0.56rem;
+    flex-wrap: wrap;
+}
+
+.landing-social-link {
+    --social-hover-color: currentColor;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    border: 1px solid var(--line-day);
+    color: var(--muted-day);
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.landing-social-link:hover,
+.landing-social-link:focus-visible {
+    color: var(--social-hover-color);
+    border-color: color-mix(in oklab, var(--social-hover-color) 52%, var(--line-day));
+    transform: translateY(-1px);
+}
+
+.landing-social-link:focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--social-hover-color) 58%, transparent);
+    outline-offset: 2px;
+}
+
+.landing-social-icon {
+    width: 1rem;
+    height: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.landing-social-icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.landing-social-fallback {
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1;
+}
+
 .landing-right {
     flex: 0 0 auto;
     display: flex;
@@ -1418,6 +1476,16 @@ html.header-dropdown-open .nav-item:focus-within .nav-dropdown {
 
 .landing-activity-badge::after {
     content: none;
+}
+
+html.theme-dark .landing-social-link {
+    border-color: var(--line-night);
+    color: var(--muted-night);
+}
+
+html.theme-dark .landing-social-link:hover,
+html.theme-dark .landing-social-link:focus-visible {
+    border-color: color-mix(in oklab, var(--social-hover-color) 56%, var(--line-night));
 }
 
 .landing-bottom {

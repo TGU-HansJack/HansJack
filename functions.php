@@ -65,6 +65,69 @@ function themeConfig($form)
     );
     $form->addInput($landingWelcomeText);
 
+    $landingSocialBilibiliUrl = new \Typecho\Widget\Helper\Form\Element\Text(
+        'landingSocialBilibiliUrl',
+        null,
+        '',
+        _t('首页社交链接：哔哩哔哩'),
+        _t('显示在首页欢迎词下方；支持完整 URL、站内相对路径或 // 开头链接，留空则不显示。')
+    );
+    $form->addInput($landingSocialBilibiliUrl);
+
+    $landingSocialNeteaseUrl = new \Typecho\Widget\Helper\Form\Element\Text(
+        'landingSocialNeteaseUrl',
+        null,
+        '',
+        _t('首页社交链接：网易云音乐'),
+        _t('显示在首页欢迎词下方；支持完整 URL、站内相对路径或 // 开头链接，留空则不显示。')
+    );
+    $form->addInput($landingSocialNeteaseUrl);
+
+    $landingSocialGithubUrl = new \Typecho\Widget\Helper\Form\Element\Text(
+        'landingSocialGithubUrl',
+        null,
+        '',
+        _t('首页社交链接：GitHub'),
+        _t('显示在首页欢迎词下方；支持完整 URL、站内相对路径或 // 开头链接，留空则不显示。')
+    );
+    $form->addInput($landingSocialGithubUrl);
+
+    $landingSocialEmail = new \Typecho\Widget\Helper\Form\Element\Text(
+        'landingSocialEmail',
+        null,
+        '',
+        _t('首页社交链接：Email'),
+        _t('填写邮箱地址（如 name@example.com）或 mailto: 链接，留空则不显示。')
+    );
+    $form->addInput($landingSocialEmail);
+
+    $landingSocialRssUrl = new \Typecho\Widget\Helper\Form\Element\Text(
+        'landingSocialRssUrl',
+        null,
+        '',
+        _t('首页社交链接：RSS'),
+        _t('显示在首页欢迎词下方；支持完整 URL、站内相对路径或 // 开头链接，留空则不显示。')
+    );
+    $form->addInput($landingSocialRssUrl);
+
+    $landingSocialTelegramUrl = new \Typecho\Widget\Helper\Form\Element\Text(
+        'landingSocialTelegramUrl',
+        null,
+        '',
+        _t('首页社交链接：Telegram'),
+        _t('显示在首页欢迎词下方；支持完整 URL、站内相对路径或 // 开头链接，留空则不显示。')
+    );
+    $form->addInput($landingSocialTelegramUrl);
+
+    $landingSocialXUrl = new \Typecho\Widget\Helper\Form\Element\Text(
+        'landingSocialXUrl',
+        null,
+        '',
+        _t('首页社交链接：X'),
+        _t('显示在首页欢迎词下方；支持完整 URL、站内相对路径或 // 开头链接，留空则不显示。')
+    );
+    $form->addInput($landingSocialXUrl);
+
     $fontChoice = new \Typecho\Widget\Helper\Form\Element\Radio(
         'fontChoice',
         [
@@ -6937,6 +7000,7 @@ function buildThemeConfig(Options $options): array
         'brandName' => $brandName,
         'welcomeText' => text((string) ($options->landingWelcomeText ?? ($options->welcomeTitle ?? '')), ''),
         'landingHitokotoEnabled' => landingHitokotoEnabled($options),
+        'landingSocialLinks' => hansjackLandingSocialLinks($options),
         'presenceStatusEnabled' => hansjackPresenceStatusEnabled($options),
         'presenceStatusEndpoint' => hansjackPresenceStatusEndpoint($options),
         'maimemoStudyEnabled' => hansjackMaimemoStudyEnabled($options),
@@ -6948,6 +7012,133 @@ function buildThemeConfig(Options $options): array
             ['key' => 'memory', 'label' => '回忆', 'url' => $links['memory']]
         ]
     ];
+}
+
+function hansjackLandingSocialLinks(Options $options): array
+{
+    $defs = [
+        [
+            'key' => 'bilibili',
+            'label' => '哔哩哔哩',
+            'field' => 'landingSocialBilibiliUrl',
+            'hoverColor' => '#00A1D6',
+            'type' => 'url',
+        ],
+        [
+            'key' => 'netease',
+            'label' => '网易云音乐',
+            'field' => 'landingSocialNeteaseUrl',
+            'hoverColor' => '#C20C0C',
+            'type' => 'url',
+        ],
+        [
+            'key' => 'github',
+            'label' => 'Github',
+            'field' => 'landingSocialGithubUrl',
+            'hoverColor' => '#181717',
+            'type' => 'url',
+        ],
+        [
+            'key' => 'email',
+            'label' => 'Email',
+            'field' => 'landingSocialEmail',
+            'hoverColor' => '#D44638',
+            'type' => 'email',
+        ],
+        [
+            'key' => 'rss',
+            'label' => 'RSS',
+            'field' => 'landingSocialRssUrl',
+            'hoverColor' => '#FFA500',
+            'type' => 'url',
+        ],
+        [
+            'key' => 'telegram',
+            'label' => 'Telegram',
+            'field' => 'landingSocialTelegramUrl',
+            'hoverColor' => '#0088cc',
+            'type' => 'url',
+        ],
+        [
+            'key' => 'x',
+            'label' => 'X',
+            'field' => 'landingSocialXUrl',
+            'hoverColor' => 'rgba(36,46,54,1)',
+            'type' => 'url',
+        ],
+    ];
+
+    $items = [];
+    foreach ($defs as $def) {
+        $field = (string) ($def['field'] ?? '');
+        if ($field === '') {
+            continue;
+        }
+
+        $rawValue = trim((string) ($options->{$field} ?? ''));
+        $url = hansjackNormalizeLandingSocialUrl($options, $rawValue, (string) ($def['type'] ?? 'url'));
+        if ($url === '') {
+            continue;
+        }
+
+        $items[] = [
+            'key' => (string) ($def['key'] ?? ''),
+            'label' => (string) ($def['label'] ?? ''),
+            'url' => $url,
+            'hoverColor' => (string) ($def['hoverColor'] ?? ''),
+        ];
+    }
+
+    return $items;
+}
+
+function hansjackNormalizeLandingSocialUrl(Options $options, string $value, string $type = 'url'): string
+{
+    $raw = trim($value);
+    if ($raw === '') {
+        return '';
+    }
+
+    if ($type === 'email') {
+        $email = $raw;
+        if (stripos($email, 'mailto:') === 0) {
+            $email = trim((string) substr($email, 7));
+        }
+
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return '';
+        }
+
+        return 'mailto:' . $email;
+    }
+
+    if (preg_match('/\s/u', $raw) === 1) {
+        return '';
+    }
+
+    if (strpos($raw, '//') === 0) {
+        $raw = 'https:' . $raw;
+    }
+
+    if (preg_match('/^[a-z][a-z0-9+.-]*:/i', $raw) === 1) {
+        $scheme = strtolower((string) (parse_url($raw, PHP_URL_SCHEME) ?? ''));
+        if ($scheme !== 'http' && $scheme !== 'https') {
+            return '';
+        }
+        return $raw;
+    }
+
+    if (strncmp($raw, '/', 1) === 0) {
+        return Common::url(ltrim($raw, '/'), (string) $options->siteUrl);
+    }
+
+    $hostCandidate = preg_split('/[\/?#]/', $raw, 2);
+    $firstSegment = is_array($hostCandidate) ? trim((string) ($hostCandidate[0] ?? '')) : '';
+    if ($firstSegment !== '' && strpos($firstSegment, '.') !== false) {
+        return 'https://' . ltrim($raw, '/');
+    }
+
+    return Common::url(ltrim($raw, '/'), (string) $options->siteUrl);
 }
 
 function text(string $value, string $fallback = ''): string

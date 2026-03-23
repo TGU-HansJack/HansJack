@@ -46,6 +46,7 @@ $landingPresenceEndpoint = '';
 $landingPresenceState = 'offline';
 $landingPresenceTitle = _t('实时活动图标：实现了实时的系统进程和媒体信息上报。');
 $landingPresenceIcon = '';
+$landingSocialLinks = [];
 $landingStudyEnabled = false;
 $landingStudyPayload = [
     'enabled' => false,
@@ -121,6 +122,7 @@ if ($this->is('index')) {
     $blogUrl = (string) (($themeConfig['links']['blog'] ?? '') ?: '');
     $memoUrl = (string) (($themeConfig['links']['memo'] ?? '') ?: '');
     $landingHitokotoEnabled = (bool) ($themeConfig['landingHitokotoEnabled'] ?? true);
+    $landingSocialLinks = is_array($themeConfig['landingSocialLinks'] ?? null) ? $themeConfig['landingSocialLinks'] : [];
     $landingPresenceEnabled = (bool) ($themeConfig['presenceStatusEnabled'] ?? false);
 
     if ($landingPresenceEnabled) {
@@ -912,6 +914,52 @@ if ($this->is('index')) {
             <div class="landing-main">
                 <div class="landing-left">
                     <article class="landing-welcome" role="region" aria-label="<?php _e('欢迎词'); ?>"><?php echo escape($welcomeText); ?></article>
+                    <?php if (!empty($landingSocialLinks)): ?>
+                        <div class="landing-social" role="navigation" aria-label="<?php _e('社交链接'); ?>">
+                            <?php foreach ($landingSocialLinks as $social): ?>
+                                <?php
+                                $socialLabel = trim((string) ($social['label'] ?? ''));
+                                $socialUrl = trim((string) ($social['url'] ?? ''));
+                                if ($socialLabel === '' || $socialUrl === '') {
+                                    continue;
+                                }
+                                $socialKey = trim((string) ($social['key'] ?? ''));
+                                $socialHoverColor = trim((string) ($social['hoverColor'] ?? ''));
+                                $socialIsExternal = stripos($socialUrl, 'mailto:') !== 0;
+                                $socialInitial = function_exists('mb_substr')
+                                    ? (string) mb_substr($socialLabel, 0, 1, 'UTF-8')
+                                    : (string) substr($socialLabel, 0, 1);
+                                ?>
+                                <a
+                                    class="landing-social-link"
+                                    href="<?php echo escape($socialUrl); ?>"
+                                    aria-label="<?php echo escape($socialLabel); ?>"
+                                    <?php if ($socialIsExternal): ?>target="_blank" rel="noreferrer noopener"<?php endif; ?>
+                                    <?php if ($socialHoverColor !== ''): ?>style="--social-hover-color: <?php echo escape($socialHoverColor); ?>;"<?php endif; ?>
+                                >
+                                    <span class="landing-social-icon" aria-hidden="true">
+                                        <?php if ($socialKey === 'bilibili'): ?>
+                                            <svg viewBox="0 0 24 24" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg"><path d="M7.172 2.757L10.414 6h3.171l3.243-3.242a1 1 0 1 1 1.415 1.414L16.414 6H18.5A3.5 3.5 0 0 1 22 9.5v8a3.5 3.5 0 0 1-3.5 3.5h-13A3.5 3.5 0 0 1 2 17.5v-8A3.5 3.5 0 0 1 5.5 6h2.085L5.757 4.171a1 1 0 0 1 1.415-1.414ZM18.5 8h-13a1.5 1.5 0 0 0-1.493 1.355L4 9.5v8a1.5 1.5 0 0 0 1.356 1.493L5.5 19h13a1.5 1.5 0 0 0 1.493-1.356L20 17.5v-8A1.5 1.5 0 0 0 18.5 8ZM8 11a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0v-2a1 1 0 0 1 1-1Zm8 0a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0v-2a1 1 0 0 1 1-1Z" fill="currentColor"></path></svg>
+                                        <?php elseif ($socialKey === 'netease'): ?>
+                                            <svg viewBox="0 0 24 24" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg"><path d="M10.422 11.375c-.294 1.028.012 2.065.784 2.653c1.061.81 2.565.3 2.874-.995c.08-.337.103-.722.027-1.056c-.23-1.001-.521-1.988-.792-2.996c-1.33.154-2.543 1.172-2.893 2.394Zm5.548-.287c.273 1.012.285 2.017-.127 3c-1.128 2.69-4.722 3.14-6.573.826c-1.302-1.627-1.28-3.961.06-5.734c.78-1.032 1.804-1.707 3.048-2.054l.379-.104c-.084-.415-.188-.816-.243-1.224c-.176-1.317.512-2.503 1.744-3.04c1.226-.535 2.708-.216 3.53.76c.406.479.395 1.08-.025 1.464c-.412.377-.997.346-1.435-.09c-.247-.246-.51-.44-.877-.436c-.525.006-.987.418-.945.937c.037.468.172.93.3 1.386c.022.078.216.135.338.153c1.333.197 2.504.731 3.472 1.676c2.558 2.493 2.861 6.531.672 9.44c-1.529 2.032-3.61 3.169-6.127 3.409c-4.621.44-8.664-2.53-9.7-7.058C2.516 10.255 4.84 5.831 8.796 4.25c.586-.234 1.143-.031 1.371.498c.232.537-.019 1.086-.61 1.35c-2.368 1.06-3.817 2.855-4.215 5.423c-.533 3.434 1.656 6.777 5 7.722c2.723.769 5.658-.167 7.308-2.33c1.586-2.08 1.4-5.1-.427-6.874A3.978 3.978 0 0 0 15.4 9.026c.198.716.389 1.388.57 2.062Z" fill="currentColor"></path></svg>
+                                        <?php elseif ($socialKey === 'github'): ?>
+                                            <svg viewBox="0 0 24 24" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg"><path d="M12 .5C5.73.5.75 5.48.75 11.76c0 5.02 3.25 9.28 7.76 10.79.57.1.78-.25.78-.55 0-.27-.01-1.17-.02-2.12-3.16.69-3.83-1.34-3.83-1.34-.52-1.31-1.26-1.66-1.26-1.66-1.03-.7.08-.69.08-.69 1.14.08 1.74 1.17 1.74 1.17 1.01 1.74 2.65 1.24 3.29.95.1-.74.39-1.24.71-1.52-2.52-.29-5.17-1.26-5.17-5.61 0-1.24.44-2.25 1.16-3.05-.12-.29-.5-1.46.11-3.03 0 0 .95-.3 3.11 1.16.9-.25 1.87-.38 2.83-.39.96.01 1.93.13 2.83.39 2.16-1.46 3.11-1.16 3.11-1.16.62 1.57.23 2.74.11 3.03.72.8 1.16 1.81 1.16 3.05 0 4.36-2.65 5.31-5.18 5.59.4.34.76 1.02.76 2.06 0 1.49-.01 2.68-.01 3.05 0 .3.21.66.79.55 4.5-1.51 7.75-5.77 7.75-10.79C23.25 5.48 18.27.5 12 .5Z" fill="currentColor"></path></svg>
+                                        <?php elseif ($socialKey === 'email'): ?>
+                                            <svg viewBox="0 0 24 24" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg"><path d="M2 6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6Zm2 .5v.511l8 5.333 8-5.333V6.5H4Zm16 2.311-5.445 3.63L20 17.5V8.811Zm-16 0V17.5l5.445-5.059L4 8.811Zm6.838 4.53L4.86 18.5h14.28l-5.978-5.159L12 14.08l-1.162-.739Z" fill="currentColor"></path></svg>
+                                        <?php elseif ($socialKey === 'rss'): ?>
+                                            <svg viewBox="0 0 24 24" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg"><path d="M6.18 17.82a1.64 1.64 0 1 1 0-3.28 1.64 1.64 0 0 1 0 3.28Zm-1.64-8.71v2.34c3.86 0 7 3.14 7 7h2.34c0-5.15-4.19-9.34-9.34-9.34Zm0-4.09v2.34c6.12 0 11.1 4.98 11.1 11.1H18c0-7.41-6.03-13.44-13.44-13.44Z" fill="currentColor"></path></svg>
+                                        <?php elseif ($socialKey === 'telegram'): ?>
+                                            <svg viewBox="0 0 24 24" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg"><path d="M21.94 4.66c.24-.99-.6-1.8-1.53-1.44L2.8 9.73c-1.03.39-.99 1.86.06 2.18l4.5 1.37 1.72 5.33c.3.94 1.48 1.19 2.14.45l2.51-2.82 4.86 3.58c.84.62 2.03.16 2.26-.86l2.09-9.29ZM9.54 17.02l-1.02-3.16 8.79-6.54-7.77 8.32Z" fill="currentColor"></path></svg>
+                                        <?php elseif ($socialKey === 'x'): ?>
+                                            <svg viewBox="0 0 24 24" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg"><path d="M17.53 3h3.28l-7.16 8.19L22 21h-6.58l-5.15-6.01L4.97 21H1.68l7.66-8.75L2 3h6.75l4.65 5.42L17.53 3Zm-1.15 16h1.82L7.76 4.9H5.8L16.38 19Z" fill="currentColor"></path></svg>
+                                        <?php else: ?>
+                                            <span class="landing-social-fallback"><?php echo escape(strtoupper($socialInitial)); ?></span>
+                                        <?php endif; ?>
+                                    </span>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <div class="landing-right">
                     <div class="landing-avatar" aria-hidden="true">
