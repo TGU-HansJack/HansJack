@@ -136,7 +136,7 @@ $this->need('header.php');
                     $guessRefreshRequested = false;
                 }
             }
-            $guessShouldRebuild = $guessCanRefreshByAdmin && (!$guessCacheFresh || empty($guessPosts) || $guessRefreshRequested);
+            $guessShouldRebuild = $guessCanRefreshByAdmin && (!$guessCacheFresh || empty($guessPosts) || count($guessPosts) < 6 || $guessRefreshRequested);
             $guessRebuilt = false;
             $normalizeKey = static function ($value): string {
                 $text = trim((string) $value);
@@ -194,24 +194,7 @@ $this->need('header.php');
                 $guessUseRootCategoryFallback = true;
             }
 
-            $currentTagKeys = [];
-            foreach ($tags as $tag) {
-                $mid = (int) ($tag['mid'] ?? 0);
-                $slugKey = $normalizeKey((string) ($tag['slug'] ?? ''));
-                $nameKey = $normalizeKey((string) ($tag['name'] ?? ''));
-
-                if ($mid > 0) {
-                    $currentTagKeys['mid:' . $mid] = true;
-                }
-                if ($slugKey !== '') {
-                    $currentTagKeys['slug:' . $slugKey] = true;
-                }
-                if ($nameKey !== '') {
-                    $currentTagKeys['name:' . $nameKey] = true;
-                }
-            }
-
-            if ($guessShouldRebuild && !empty($currentCategoryKeys) && !empty($currentTagKeys)) {
+            if ($guessShouldRebuild && !empty($currentCategoryKeys)) {
                 $guessSource = null;
                 try {
                     $this->widget('Widget_Contents_Post_Recent@post_guess', 'pageSize=400', null, false)->to($guessSource);
@@ -225,7 +208,7 @@ $this->need('header.php');
 
                     if ($guessSource->have()) {
                         while ($guessSource->next()) {
-                            if (count($guessBuiltPosts) >= 3) {
+                            if (count($guessBuiltPosts) >= 120) {
                                 break;
                             }
 
@@ -281,25 +264,6 @@ $this->need('header.php');
                                 $guessTags = is_array($guessSource->tags) ? $guessSource->tags : [];
                             } catch (\Throwable $e) {
                                 $guessTags = [];
-                            }
-
-                            $guessTagMatched = false;
-                            foreach ($guessTags as $tag) {
-                            $tagMid = (int) ($tag['mid'] ?? 0);
-                            $tagSlugKey = $normalizeKey((string) ($tag['slug'] ?? ''));
-                            $tagNameKey = $normalizeKey((string) ($tag['name'] ?? ''));
-                                if (
-                                    ($tagMid > 0 && isset($currentTagKeys['mid:' . $tagMid])) ||
-                                    ($tagSlugKey !== '' && isset($currentTagKeys['slug:' . $tagSlugKey])) ||
-                                    ($tagNameKey !== '' && isset($currentTagKeys['name:' . $tagNameKey]))
-                                ) {
-                                    $guessTagMatched = true;
-                                    break;
-                                }
-                            }
-
-                            if (!$guessTagMatched) {
-                                continue;
                             }
 
                             $guessTitle = trim((string) ($guessSource->title ?? ''));
@@ -373,6 +337,12 @@ $this->need('header.php');
             }
             if ($guessRebuilt && $currentCid > 0) {
                 hansjackSavePostGuessCache($currentCid, $guessPosts);
+            }
+            if (count($guessPosts) > 1) {
+                shuffle($guessPosts);
+            }
+            if (count($guessPosts) > 3) {
+                $guessPosts = array_slice($guessPosts, 0, 3);
             }
             ?>
             <p class="article-meta">

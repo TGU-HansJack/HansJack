@@ -2826,6 +2826,11 @@ function hansjackPostGuessCacheTtl(): int
     return 30 * 24 * 60 * 60;
 }
 
+function hansjackPostGuessCacheVersion(): int
+{
+    return 2;
+}
+
 function hansjackPostGuessCacheFilePath(int $cid): string
 {
     $safeCid = max(0, $cid);
@@ -2899,7 +2904,7 @@ function hansjackNormalizePostGuessItems($items): array
             'originalIndex' => count($result),
         ];
 
-        if (count($result) >= 3) {
+        if (count($result) >= 60) {
             break;
         }
     }
@@ -2947,6 +2952,14 @@ function hansjackLoadPostGuessCache(int $cid): array
         return ['updated' => 0, 'items' => []];
     }
 
+    $version = (int) ($decoded['version'] ?? 0);
+    if ($version !== hansjackPostGuessCacheVersion()) {
+        return [
+            'updated' => 0,
+            'items' => hansjackNormalizePostGuessItems($decoded['items'] ?? []),
+        ];
+    }
+
     $updated = (int) ($decoded['updated'] ?? 0);
     $items = hansjackNormalizePostGuessItems($decoded['items'] ?? []);
 
@@ -2965,7 +2978,7 @@ function hansjackSavePostGuessCache(int $cid, array $items): bool
     $normalizedItems = hansjackNormalizePostGuessItems($items);
     $now = time();
     $payload = [
-        'version' => 1,
+        'version' => hansjackPostGuessCacheVersion(),
         'updated' => $now,
         'expires' => $now + hansjackPostGuessCacheTtl(),
         'items' => $normalizedItems,
