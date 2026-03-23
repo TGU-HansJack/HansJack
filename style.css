@@ -9929,6 +9929,10 @@ html.login-modal-open .login-modal {
     margin: 0 0 1rem;
 }
 
+:is(.article-content, .comment-content) :where(strong, b) {
+    font-weight: 700;
+}
+
 :is(.article-content, .comment-content) blockquote {
     margin: 1rem 0;
     padding: 0.65rem 0.85rem;
