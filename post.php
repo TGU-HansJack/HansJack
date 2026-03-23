@@ -455,6 +455,82 @@ $this->need('header.php');
             <div class="article-content">
                 <?php echoArchiveContent($this); ?>
             </div>
+            <?php
+            $copyrightLicense = trim((string) ($this->options->postCopyrightLicense ?? ''));
+            if ($copyrightLicense === '') {
+                $copyrightLicense = 'CC BY-NC-SA 4.0';
+            }
+            $copyrightLicenseUrl = trim((string) ($this->options->postCopyrightLicenseUrl ?? ''));
+            $copyrightTitle = trim((string) ($this->title ?? ''));
+            if ($copyrightTitle === '') {
+                $copyrightTitle = _t('无标题');
+            }
+            $copyrightSiteTitle = trim((string) ($this->options->title ?? ''));
+            if ($copyrightSiteTitle === '') {
+                $copyrightSiteTitle = _t('本站');
+            }
+            $copyrightPermalink = trim((string) ($this->permalink ?? ''));
+            $postSignatureSvgRaw = trim((string) ($this->options->postSignatureSvg ?? ''));
+            $postSignatureSvg = '';
+            if ($postSignatureSvgRaw !== '') {
+                $svgCleaned = (string) preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/iu', '', $postSignatureSvgRaw);
+                $svgCleaned = (string) preg_replace('/\son[a-z]+\s*=\s*(["\']).*?\1/iu', '', $svgCleaned);
+                $svgCleaned = (string) preg_replace('/\son[a-z]+\s*=\s*[^>\s]+/iu', '', $svgCleaned);
+                if (stripos($svgCleaned, '<svg') !== false) {
+                    $postSignatureSvg = trim($svgCleaned);
+                }
+            }
+            ?>
+            <section class="article-copyright" aria-label="<?php _e('文章版权信息'); ?>" data-article-copyright>
+                <div class="article-copyright-main">
+                    <div class="article-copyright-info">
+                        <div class="article-copyright-title">
+                            <button
+                                type="button"
+                                class="links-copy-trigger links-copy-text article-copyright-copy-text article-copyright-copy-title"
+                                data-copy-text="<?php echo escape($copyrightTitle . ' · ' . $copyrightSiteTitle); ?>"
+                                data-copy-tip="<?php _e('点击复制信息'); ?>"
+                                data-copy-tip-default="<?php _e('点击复制信息'); ?>"
+                                aria-label="<?php _e('复制标题信息'); ?>"
+                            ><?php echo escape($copyrightTitle . ' · ' . $copyrightSiteTitle); ?></button>
+                        </div>
+                        <?php if ($copyrightPermalink !== ''): ?>
+                            <div class="article-copyright-link-row">
+                                <button
+                                    type="button"
+                                    class="links-copy-trigger links-copy-text article-copyright-copy-text article-copyright-link"
+                                    data-copy-text="<?php echo escape($copyrightPermalink); ?>"
+                                    data-copy-tip="<?php _e('点击复制链接'); ?>"
+                                    data-copy-tip-default="<?php _e('点击复制链接'); ?>"
+                                    aria-label="<?php _e('复制文章链接'); ?>"
+                                    data-copyright-link
+                                ><?php echo escape($copyrightPermalink); ?></button>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($copyrightLicense !== ''): ?>
+                            <div class="article-copyright-license">
+                                <?php _e('本文采用'); ?>
+                                <?php if ($copyrightLicenseUrl !== ''): ?>
+                                    <a
+                                        class="article-copyright-license-link"
+                                        href="<?php echo escape($copyrightLicenseUrl); ?>"
+                                        rel="noopener noreferrer"
+                                        target="_blank"
+                                    ><?php echo escape($copyrightLicense); ?></a>
+                                <?php else: ?>
+                                    <span><?php echo escape($copyrightLicense); ?></span>
+                                <?php endif; ?>
+                                <?php _e('进行许可。'); ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    <?php if ($postSignatureSvg !== ''): ?>
+                    <div class="article-copyright-signature" data-hide-print="true" aria-hidden="true">
+                        <?php echo $postSignatureSvg; ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </section>
             <aside class="article-aside" aria-label="<?php _e('右侧栏'); ?>">
                 <div class="article-toc">
                     <div class="article-toc-header">
@@ -1092,6 +1168,107 @@ $this->need('header.php');
                 state.items = normalizeItems(state.items);
                 updateSortButton();
                 renderSeriesList();
+            })();
+        </script>
+        <script>
+            (function () {
+                var root = document.querySelector("[data-article-copyright]");
+                if (!root) {
+                    return;
+                }
+
+                var nodes = root.querySelectorAll(".links-copy-trigger[data-copy-text]");
+                if (!nodes || nodes.length === 0) {
+                    return;
+                }
+
+                function fallbackCopy(text) {
+                    var textarea = document.createElement("textarea");
+                    textarea.value = text;
+                    textarea.setAttribute("readonly", "readonly");
+                    textarea.style.position = "fixed";
+                    textarea.style.top = "-9999px";
+                    textarea.style.left = "-9999px";
+                    textarea.style.opacity = "0";
+                    textarea.style.pointerEvents = "none";
+                    document.body.appendChild(textarea);
+                    textarea.focus();
+                    textarea.select();
+
+                    var ok = false;
+                    try {
+                        ok = document.execCommand("copy");
+                    } catch (e) {
+                        ok = false;
+                    }
+
+                    document.body.removeChild(textarea);
+                    return ok;
+                }
+
+                function copyText(text) {
+                    if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+                        return Promise.resolve(fallbackCopy(text));
+                    }
+
+                    return navigator.clipboard.writeText(text).then(function () {
+                        return true;
+                    }).catch(function () {
+                        return fallbackCopy(text);
+                    });
+                }
+
+                function setTip(el, text, copied) {
+                    var defaultTip = String(el.getAttribute("data-copy-tip-default") || "点击复制信息");
+                    var tipText = String(text || defaultTip);
+                    el.setAttribute("data-copy-tip", tipText);
+                    if (copied) {
+                        el.classList.add("is-copied");
+                    } else {
+                        el.classList.remove("is-copied");
+                    }
+                }
+
+                Array.prototype.slice.call(nodes).forEach(function (el) {
+                    var resetTimer = 0;
+                    var defaultTip = String(el.getAttribute("data-copy-tip") || "点击复制信息");
+                    el.setAttribute("data-copy-tip-default", defaultTip);
+
+                    el.addEventListener("click", function (e) {
+                        if (e && e.preventDefault) {
+                            e.preventDefault();
+                        }
+                        if (el.disabled || el.getAttribute("aria-disabled") === "true") {
+                            return;
+                        }
+
+                        var text = String(el.getAttribute("data-copy-text") || "").trim();
+                        if (text === "") {
+                            return;
+                        }
+
+                        copyText(text).then(function (ok) {
+                            if (!ok) {
+                                setTip(el, "复制失败", true);
+                                if (resetTimer) {
+                                    window.clearTimeout(resetTimer);
+                                }
+                                resetTimer = window.setTimeout(function () {
+                                    setTip(el, defaultTip, false);
+                                }, 1500);
+                                return;
+                            }
+
+                            setTip(el, "复制成功", true);
+                            if (resetTimer) {
+                                window.clearTimeout(resetTimer);
+                            }
+                            resetTimer = window.setTimeout(function () {
+                                setTip(el, defaultTip, false);
+                            }, 1500);
+                        });
+                    });
+                });
             })();
         </script>
 

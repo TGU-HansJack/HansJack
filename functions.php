@@ -44,6 +44,33 @@ function themeConfig($form)
     );
     $form->addInput($afdianPageUrl);
 
+    $postCopyrightLicense = new \Typecho\Widget\Helper\Form\Element\Text(
+        'postCopyrightLicense',
+        null,
+        'CC BY-NC-SA 4.0',
+        _t('文章版权许可'),
+        _t('显示在文章正文下方版权信息中，例如：CC BY-NC-SA 4.0。')
+    );
+    $form->addInput($postCopyrightLicense);
+
+    $postCopyrightLicenseUrl = new \Typecho\Widget\Helper\Form\Element\Text(
+        'postCopyrightLicenseUrl',
+        null,
+        'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans',
+        _t('文章版权许可链接'),
+        _t('版权许可名称的跳转地址，留空则仅显示纯文本许可名称。')
+    );
+    $form->addInput($postCopyrightLicenseUrl);
+
+    $postSignatureSvg = new \Typecho\Widget\Helper\Form\Element\Textarea(
+        'postSignatureSvg',
+        null,
+        '',
+        _t('文章末尾签名svg'),
+        _t('显示在文章版权信息右侧，填写完整 <svg>...</svg> 代码；留空则不显示。')
+    );
+    $form->addInput($postSignatureSvg);
+
     $landingHitokotoEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
         'landingHitokotoEnabled',
         [
