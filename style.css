@@ -9961,9 +9961,9 @@ html.login-modal-open .login-modal {
 :is(.article-content, .comment-content) blockquote {
     margin: 1rem 0;
     padding: 0.65rem 0.85rem;
-    border-left: 2px solid rgba(42, 42, 40, 0.55);
     background: rgba(18, 18, 18, 0.06);
-    border-radius: 0;
+    border: 0;
+    border-radius: 4px;
 }
 
 :is(.article-content, .comment-content) blockquote p {
@@ -9972,6 +9972,100 @@ html.login-modal-open .login-modal {
 
 :is(.article-content, .comment-content) blockquote p:last-child {
     margin-bottom: 0;
+}
+
+:is(.article-content, .comment-content) .hj-quote-head {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.55rem;
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    line-height: 1.2;
+}
+
+:is(.article-content, .comment-content) .hj-quote-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 1rem;
+    height: 1rem;
+    opacity: 0.85;
+}
+
+:is(.article-content, .comment-content) .hj-quote-icon svg {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+:is(.article-content, .comment-content) .hj-quote-title-inner {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    font-size: inherit;
+    font-weight: 700;
+    line-height: inherit;
+    opacity: 0.8;
+}
+
+:is(.article-content, .comment-content) .hj-quote-body > :first-child {
+    margin-top: 0;
+}
+
+:is(.article-content, .comment-content) .hj-quote-body > :last-child {
+    margin-bottom: 0;
+}
+
+:is(.article-content, .comment-content) .hj-quote.is-collapsed .hj-quote-body {
+    display: none;
+}
+
+:is(.article-content, .comment-content) .hj-quote.is-collapsed .hj-quote-head {
+    margin-bottom: 0;
+}
+
+:is(.article-content, .comment-content) :where(.hj-quote-toggle, .markdown-alert-toggle) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.78;
+}
+
+:is(.article-content, .comment-content) :where(.hj-quote-toggle, .markdown-alert-toggle):hover,
+:is(.article-content, .comment-content) :where(.hj-quote-toggle, .markdown-alert-toggle):focus-visible {
+    opacity: 1;
+}
+
+:is(.article-content, .comment-content) :where(.hj-quote-toggle, .markdown-alert-toggle):focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+:is(.article-content, .comment-content) :where(.hj-quote-toggle, .markdown-alert-toggle) svg {
+    width: 1rem;
+    height: 1rem;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 :is(.article-content, .comment-content) .task-item {
@@ -10075,9 +10169,9 @@ html.login-modal-open .login-modal {
 :is(.article-content, .comment-content) .markdown-alert {
     margin: 0.72rem 0;
     padding: 0.65rem 0.85rem;
-    border-left: 3px solid var(--alert-accent, #50504d);
     background: var(--alert-bg, rgba(80, 80, 77, 0.08));
-    border-radius: 0;
+    border: 0;
+    border-radius: 4px;
 }
 
 :is(.article-content, .comment-content) .markdown-alert + .markdown-alert {
@@ -10128,8 +10222,30 @@ html.login-modal-open .login-modal {
 }
 
 :is(.article-content, .comment-content) .markdown-alert-title strong {
+    flex: 1 1 auto;
+    min-width: 0;
     font-weight: 700;
     color: inherit;
+}
+
+:is(.article-content, .comment-content) .markdown-alert-title .markdown-alert-toggle {
+    margin-left: auto;
+}
+
+:is(.article-content, .comment-content) .markdown-alert-title .markdown-alert-toggle svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+:is(.article-content, .comment-content) .markdown-alert.is-collapsed .markdown-alert-title {
+    margin-bottom: 0;
+}
+
+:is(.article-content, .comment-content) .markdown-alert.is-collapsed > :not(.markdown-alert-title) {
+    display: none;
 }
 
 :is(.article-content, .comment-content) .markdown-alert > :not(.markdown-alert-title) {
@@ -11672,7 +11788,6 @@ html.login-modal-open .login-modal {
     }
 
     html:not(.theme-light) :is(.article-content, .comment-content) blockquote {
-        border-left-color: rgba(221, 221, 219, 0.55);
         background: rgba(240, 240, 240, 0.06);
     }
 
@@ -12519,7 +12634,6 @@ html.theme-dark :is(.article-content, .comment-content) :not(pre) > code {
 }
 
 html.theme-dark :is(.article-content, .comment-content) blockquote {
-    border-left-color: rgba(221, 221, 219, 0.55);
     background: rgba(240, 240, 240, 0.06);
 }
 

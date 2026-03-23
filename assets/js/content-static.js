@@ -767,6 +767,278 @@
                 }
             }
 
+            function ensureCalloutIconSprite() {
+                if (!document || !document.createElementNS) {
+                    return;
+                }
+                if (document.getElementById("hj-callout-icon-sprite")) {
+                    return;
+                }
+
+                var ns = "http://www.w3.org/2000/svg";
+                var sprite = document.createElementNS(ns, "svg");
+                sprite.setAttribute("id", "hj-callout-icon-sprite");
+                sprite.setAttribute("aria-hidden", "true");
+                sprite.setAttribute("width", "0");
+                sprite.setAttribute("height", "0");
+                sprite.setAttribute("focusable", "false");
+                sprite.style.position = "absolute";
+                sprite.style.width = "0";
+                sprite.style.height = "0";
+                sprite.style.overflow = "hidden";
+
+                var defs = document.createElementNS(ns, "defs");
+                defs.innerHTML =
+                    '<symbol id="chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></symbol>' +
+                    '<symbol id="chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></symbol>';
+                sprite.appendChild(defs);
+
+                var root = document.body || document.documentElement;
+                if (!root) {
+                    return;
+                }
+                try {
+                    root.insertBefore(sprite, root.firstChild || null);
+                } catch (e) {}
+            }
+
+            function createSpriteSvg(iconName, classes) {
+                var ns = "http://www.w3.org/2000/svg";
+                var svg = document.createElementNS(ns, "svg");
+                svg.setAttribute("class", classes || "");
+                svg.setAttribute("width", "1em");
+                svg.setAttribute("height", "1em");
+                svg.setAttribute("aria-hidden", "true");
+                svg.setAttribute("xmlns", ns);
+
+                var use = document.createElementNS(ns, "use");
+                var href = "#" + String(iconName || "").trim();
+                use.setAttribute("href", href);
+                use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", href);
+                svg.appendChild(use);
+
+                return svg;
+            }
+
+            function createQuoteIconSvg() {
+                var ns = "http://www.w3.org/2000/svg";
+                var svg = document.createElementNS(ns, "svg");
+                svg.setAttribute("xmlns", ns);
+                svg.setAttribute("width", "24");
+                svg.setAttribute("height", "24");
+                svg.setAttribute("viewBox", "0 0 24 24");
+                svg.setAttribute("fill", "none");
+                svg.setAttribute("stroke", "currentColor");
+                svg.setAttribute("stroke-width", "2");
+                svg.setAttribute("stroke-linecap", "round");
+                svg.setAttribute("stroke-linejoin", "round");
+                svg.setAttribute("class", "lucide lucide-quote-icon lucide-quote");
+                svg.setAttribute("aria-hidden", "true");
+
+                var p1 = document.createElementNS(ns, "path");
+                p1.setAttribute(
+                    "d",
+                    "M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"
+                );
+                svg.appendChild(p1);
+
+                var p2 = document.createElementNS(ns, "path");
+                p2.setAttribute(
+                    "d",
+                    "M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"
+                );
+                svg.appendChild(p2);
+
+                return svg;
+            }
+
+            function createCollapseToggleButton(className) {
+                var button = document.createElement("button");
+                button.type = "button";
+                button.className = className;
+
+                var icon = createSpriteSvg(
+                    "chevron-down",
+                    "fa d-icon d-icon-chevron-down svg-icon fa-width-auto svg-string"
+                );
+                button.appendChild(icon);
+
+                syncCollapseButtonState(button, false);
+                return button;
+            }
+
+            function syncCollapseButtonState(button, isCollapsed) {
+                if (!button || !button.getAttribute) {
+                    return;
+                }
+
+                var nextLabel = isCollapsed ? "展开" : "收起";
+                var use = null;
+                try {
+                    use = button.querySelector("svg use");
+                } catch (e) {
+                    use = null;
+                }
+                if (use) {
+                    var href = isCollapsed ? "#chevron-right" : "#chevron-down";
+                    use.setAttribute("href", href);
+                    use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", href);
+                }
+
+                if (button.classList) {
+                    button.classList.toggle("is-collapsed", !!isCollapsed);
+                }
+                button.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
+                button.setAttribute("aria-label", nextLabel);
+            }
+
+            function enhanceQuoteBlocks() {
+                ensureCalloutIconSprite();
+
+                var quotes = content.querySelectorAll("blockquote");
+                if (!quotes || quotes.length === 0) {
+                    return;
+                }
+
+                for (var i = 0; i < quotes.length; i++) {
+                    var quote = quotes[i];
+                    if (!quote || !quote.classList) {
+                        continue;
+                    }
+                    if (quote.getAttribute("data-hj-quote-enhanced") === "1") {
+                        continue;
+                    }
+                    if (quote.classList.contains("markdown-alert")) {
+                        continue;
+                    }
+                    if (!hasVisibleContent(quote)) {
+                        continue;
+                    }
+
+                    var existingNodes = Array.prototype.slice.call(quote.childNodes || []);
+                    if (!existingNodes || existingNodes.length === 0) {
+                        continue;
+                    }
+
+                    var body = document.createElement("div");
+                    body.className = "hj-quote-body";
+                    for (var n = 0; n < existingNodes.length; n++) {
+                        body.appendChild(existingNodes[n]);
+                    }
+                    if (!hasVisibleContent(body)) {
+                        continue;
+                    }
+
+                    var head = document.createElement("div");
+                    head.className = "hj-quote-head";
+
+                    var iconWrap = document.createElement("span");
+                    iconWrap.className = "hj-quote-icon";
+                    iconWrap.appendChild(createQuoteIconSvg());
+                    head.appendChild(iconWrap);
+
+                    var titleText = document.createElement("span");
+                    titleText.className = "hj-quote-title-inner";
+                    titleText.textContent = "Quote";
+                    head.appendChild(titleText);
+
+                    var toggle = createCollapseToggleButton("hj-quote-toggle");
+                    head.appendChild(toggle);
+
+                    quote.classList.add("hj-quote");
+                    quote.setAttribute("data-hj-quote-enhanced", "1");
+                    quote.appendChild(head);
+                    quote.appendChild(body);
+
+                    (function (quoteEl, toggleEl) {
+                        if (!toggleEl || !toggleEl.addEventListener) {
+                            return;
+                        }
+                        toggleEl.addEventListener("click", function (e) {
+                            if (e && e.preventDefault) {
+                                e.preventDefault();
+                            }
+                            if (e && e.stopPropagation) {
+                                e.stopPropagation();
+                            }
+
+                            var isCollapsed = false;
+                            try {
+                                isCollapsed = quoteEl.classList.contains("is-collapsed");
+                            } catch (err) {
+                                isCollapsed = false;
+                            }
+                            var nextCollapsed = !isCollapsed;
+                            try {
+                                quoteEl.classList.toggle("is-collapsed", nextCollapsed);
+                            } catch (err) {}
+
+                            syncCollapseButtonState(toggleEl, nextCollapsed);
+                        });
+                    })(quote, toggle);
+                }
+            }
+
+            function enhanceMarkdownAlerts() {
+                ensureCalloutIconSprite();
+
+                var alerts = content.querySelectorAll(".markdown-alert");
+                if (!alerts || alerts.length === 0) {
+                    return;
+                }
+
+                for (var i = 0; i < alerts.length; i++) {
+                    var alert = alerts[i];
+                    if (!alert || !alert.classList) {
+                        continue;
+                    }
+                    if (alert.getAttribute("data-hj-alert-enhanced") === "1") {
+                        continue;
+                    }
+                    if (!alert.querySelector(":scope > :not(.markdown-alert-title)")) {
+                        continue;
+                    }
+
+                    var title = alert.querySelector(":scope > .markdown-alert-title");
+                    if (!title) {
+                        continue;
+                    }
+
+                    var toggle = createCollapseToggleButton("markdown-alert-toggle");
+                    title.appendChild(toggle);
+
+                    alert.setAttribute("data-hj-alert-enhanced", "1");
+                    alert.classList.add("markdown-alert-collapsible");
+
+                    (function (alertEl, toggleEl) {
+                        if (!toggleEl || !toggleEl.addEventListener) {
+                            return;
+                        }
+                        toggleEl.addEventListener("click", function (e) {
+                            if (e && e.preventDefault) {
+                                e.preventDefault();
+                            }
+                            if (e && e.stopPropagation) {
+                                e.stopPropagation();
+                            }
+
+                            var isCollapsed = false;
+                            try {
+                                isCollapsed = alertEl.classList.contains("is-collapsed");
+                            } catch (err) {
+                                isCollapsed = false;
+                            }
+                            var nextCollapsed = !isCollapsed;
+                            try {
+                                alertEl.classList.toggle("is-collapsed", nextCollapsed);
+                            } catch (err) {}
+
+                            syncCollapseButtonState(toggleEl, nextCollapsed);
+                        });
+                    })(alert, toggle);
+                }
+            }
+
             function parseTextNode(node) {
                 var text = node && node.nodeValue ? String(node.nodeValue) : "";
                 if (!text || (!hasRubyMarker(text) && !hasSpoilerMarker(text) && !hasInsMarker(text) && !hasMarkMarker(text))) {
@@ -909,6 +1181,8 @@
             }
 
             convertMarkdownAlerts();
+            enhanceMarkdownAlerts();
+            enhanceQuoteBlocks();
 
             if (!document.createTreeWalker) {
                 return;
