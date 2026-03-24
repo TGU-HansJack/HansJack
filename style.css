@@ -72,6 +72,42 @@ body {
     font-weight: var(--font-main-weight);
 }
 
+/* Default: disable text selection across the theme.
+   Whitelist article body and form controls below. */
+body,
+body * {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.article-content,
+.article-content *,
+input,
+textarea,
+select,
+option,
+[contenteditable="true"],
+[contenteditable="plaintext-only"] {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+.article-title,
+.article-title * {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+.article-content sup.footnote-tooltip,
+.article-content sup.footnote-tooltip *,
+.article-content .term-tooltip,
+.article-content .term-tooltip::before,
+.link-internal-tooltip,
+.link-internal-tooltip * {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
 /* Mobile browsers often apply a default focus/tap highlight (blue rectangle) after tapping links/buttons. */
 @media (hover: none) and (pointer: coarse) {
     a,
