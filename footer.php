@@ -1109,7 +1109,9 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                 }
                 if (height > 0) {
                     stageEl.style.minHeight = height + "px";
+                    return;
                 }
+                stageEl.style.minHeight = "0";
             }
 
             function ensureStageNode(hostEl) {
@@ -1278,8 +1280,8 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                 var nextSpec = spec;
                 var opts = options || {};
                 var height = normalizeHeight(opts.height);
+                setStageMinHeight(stageEl, height);
                 if (height > 0) {
-                    setStageMinHeight(stageEl, height);
                     if (typeof spec.height === "undefined" || spec.height === null || spec.height === "") {
                         nextSpec = cloneSpec(spec);
                         if (nextSpec && typeof nextSpec === "object") {

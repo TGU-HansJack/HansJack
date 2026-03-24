@@ -10863,7 +10863,7 @@ html.login-modal-open .login-modal {
     display: inline-block;
     width: auto;
     max-width: 100%;
-    min-height: 220px;
+    min-height: 0;
     border: 0;
     border-radius: 4px;
     padding: 0.4rem;
@@ -10877,6 +10877,7 @@ html.login-modal-open .login-modal {
 :is(.article-content, .comment-content) .vega-embed-stage svg {
     display: block;
     width: auto;
+    height: auto;
     max-width: 100%;
 }
 
