@@ -10920,7 +10920,10 @@ html.vega-overlay-open body {
 .vega-embed-overlay-stage {
     position: absolute;
     inset: 0;
-    padding: 2.7rem 0.35rem 0.55rem;
+    padding: calc(env(safe-area-inset-top, 0px) + 0.35rem)
+        calc(env(safe-area-inset-right, 0px) + 0.35rem)
+        calc(env(safe-area-inset-bottom, 0px) + 0.55rem)
+        calc(env(safe-area-inset-left, 0px) + 0.35rem);
     overflow: auto;
     -webkit-overflow-scrolling: touch;
 }
@@ -10944,15 +10947,16 @@ html.vega-overlay-open body {
 
 .vega-embed-overlay-close {
     position: absolute;
-    top: 0.45rem;
-    right: 0.45rem;
-    width: 2.2rem;
-    height: 2.2rem;
+    top: calc(env(safe-area-inset-top, 0px) + 0.35rem);
+    right: calc(env(safe-area-inset-right, 0px) + 0.35rem);
+    width: auto;
+    height: auto;
     border: 0;
     border-radius: 0;
     background: transparent;
     color: var(--day-text);
-    padding: 0;
+    padding: 0.1rem;
+    line-height: 0;
     box-shadow: none;
     display: inline-flex;
     align-items: center;
