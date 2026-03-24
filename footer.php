@@ -1114,6 +1114,498 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                 stageEl.style.minHeight = "0";
             }
 
+            var activeVegaOverlay = null;
+            var expandSyncTimer = 0;
+
+            function isNarrowVegaViewport() {
+                var docEl = document.documentElement;
+                var width = window.innerWidth || (docEl && docEl.clientWidth) || 0;
+                if (width > 0 && width <= 980) {
+                    return true;
+                }
+                if (!window.matchMedia) {
+                    return false;
+                }
+                try {
+                    return window.matchMedia("(max-width: 980px)").matches;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            function readChartIntrinsicWidth(stageEl) {
+                if (!stageEl || !stageEl.querySelector) {
+                    return 0;
+                }
+
+                var svgEl = stageEl.querySelector("svg");
+                if (svgEl) {
+                    var svgWidth = parseFloat(String(svgEl.getAttribute("width") || "").trim());
+                    if (isFiniteNumber(svgWidth) && svgWidth > 0) {
+                        return svgWidth;
+                    }
+
+                    var viewBox = String(svgEl.getAttribute("viewBox") || "").trim();
+                    if (viewBox) {
+                        var parts = viewBox.split(/[\s,]+/);
+                        if (parts.length === 4) {
+                            var viewWidth = parseFloat(parts[2]);
+                            if (isFiniteNumber(viewWidth) && viewWidth > 0) {
+                                return viewWidth;
+                            }
+                        }
+                    }
+                }
+
+                var canvasEl = stageEl.querySelector("canvas");
+                if (canvasEl && isFiniteNumber(canvasEl.width) && canvasEl.width > 0) {
+                    return canvasEl.width;
+                }
+
+                return stageEl.scrollWidth || 0;
+            }
+
+            function findPrimaryChartGraphic(stageEl) {
+                if (!stageEl || !stageEl.querySelector) {
+                    return null;
+                }
+                return stageEl.querySelector(".vega-embed > svg, .vega-embed > canvas, svg, canvas");
+            }
+
+            function measureChartGraphicSize(graphicEl) {
+                if (!graphicEl) {
+                    return {
+                        width: 0,
+                        height: 0
+                    };
+                }
+
+                var tagName = String(graphicEl.tagName || "").toLowerCase();
+                if (tagName === "svg") {
+                    var svgWidth = parseFloat(String(graphicEl.getAttribute("width") || "").trim());
+                    var svgHeight = parseFloat(String(graphicEl.getAttribute("height") || "").trim());
+                    if (isFiniteNumber(svgWidth) && svgWidth > 0 && isFiniteNumber(svgHeight) && svgHeight > 0) {
+                        return {
+                            width: svgWidth,
+                            height: svgHeight
+                        };
+                    }
+
+                    var viewBox = String(graphicEl.getAttribute("viewBox") || "").trim();
+                    if (viewBox) {
+                        var vbParts = viewBox.split(/[\s,]+/);
+                        if (vbParts.length === 4) {
+                            var vbWidth = parseFloat(vbParts[2]);
+                            var vbHeight = parseFloat(vbParts[3]);
+                            if (isFiniteNumber(vbWidth) && vbWidth > 0 && isFiniteNumber(vbHeight) && vbHeight > 0) {
+                                return {
+                                    width: vbWidth,
+                                    height: vbHeight
+                                };
+                            }
+                        }
+                    }
+                }
+
+                if (tagName === "canvas") {
+                    var canvasWidth = parseFloat(String(graphicEl.width || 0));
+                    var canvasHeight = parseFloat(String(graphicEl.height || 0));
+                    if (isFiniteNumber(canvasWidth) && canvasWidth > 0 && isFiniteNumber(canvasHeight) && canvasHeight > 0) {
+                        return {
+                            width: canvasWidth,
+                            height: canvasHeight
+                        };
+                    }
+                }
+
+                var rect = null;
+                try {
+                    rect = graphicEl.getBoundingClientRect();
+                } catch (e) {}
+                var rectWidth = rect && isFiniteNumber(rect.width) ? rect.width : 0;
+                var rectHeight = rect && isFiniteNumber(rect.height) ? rect.height : 0;
+                return {
+                    width: rectWidth > 0 ? rectWidth : 0,
+                    height: rectHeight > 0 ? rectHeight : 0
+                };
+            }
+
+            function restoreOverlayGraphicSize(state) {
+                if (!state || !state.graphicEl || !state.graphicEl.style) {
+                    return;
+                }
+                state.graphicEl.style.width = state.graphicInlineWidth || "";
+                state.graphicEl.style.height = state.graphicInlineHeight || "";
+            }
+
+            function applyOverlayMinimumFill(state) {
+                if (!state || !state.stageWrap || !state.stageEl) {
+                    return;
+                }
+
+                var graphicEl = findPrimaryChartGraphic(state.stageEl);
+                if (!graphicEl || !graphicEl.style) {
+                    return;
+                }
+
+                if (state.graphicEl !== graphicEl) {
+                    restoreOverlayGraphicSize(state);
+                    state.graphicEl = graphicEl;
+                    state.graphicInlineWidth = graphicEl.style.width || "";
+                    state.graphicInlineHeight = graphicEl.style.height || "";
+                }
+
+                var size = measureChartGraphicSize(graphicEl);
+                var wrapRect = null;
+                try {
+                    wrapRect = state.stageWrap.getBoundingClientRect();
+                } catch (e) {}
+
+                var availWidth = wrapRect && isFiniteNumber(wrapRect.width) ? wrapRect.width : 0;
+                var availHeight = wrapRect && isFiniteNumber(wrapRect.height) ? wrapRect.height : 0;
+                if (!(isFiniteNumber(size.width) && size.width > 0 && isFiniteNumber(size.height) && size.height > 0 && isFiniteNumber(availWidth) && availWidth > 0 && isFiniteNumber(availHeight) && availHeight > 0)) {
+                    return;
+                }
+
+                // Guarantee that at least one dimension fills the fullscreen viewport.
+                if (size.width >= availWidth || size.height >= availHeight) {
+                    restoreOverlayGraphicSize(state);
+                    return;
+                }
+
+                var scale = Math.max(availWidth / size.width, availHeight / size.height);
+                if (!isFiniteNumber(scale) || scale <= 1) {
+                    restoreOverlayGraphicSize(state);
+                    return;
+                }
+
+                graphicEl.style.width = Math.ceil(size.width * scale) + "px";
+                graphicEl.style.height = Math.ceil(size.height * scale) + "px";
+            }
+
+            function syncExpandability(hostEl, stageEl) {
+                if (!hostEl || !stageEl || !hostEl.setAttribute || !hostEl.removeAttribute) {
+                    return;
+                }
+
+                var canExpand = false;
+                var chartWidth = readChartIntrinsicWidth(stageEl);
+                if (chartWidth > 0) {
+                    canExpand = true;
+                }
+
+                try {
+                    if (canExpand) {
+                        hostEl.setAttribute("data-vega-expandable", "1");
+                    } else {
+                        hostEl.removeAttribute("data-vega-expandable");
+                    }
+                } catch (e) {}
+            }
+
+            function currentFullscreenElement() {
+                return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
+            }
+
+            function requestElementFullscreen(el) {
+                if (!el) {
+                    return;
+                }
+                var requestFn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+                if (typeof requestFn !== "function") {
+                    return;
+                }
+                try {
+                    var result = requestFn.call(el);
+                    if (result && typeof result.catch === "function") {
+                        result.catch(function () {});
+                    }
+                } catch (e) {}
+            }
+
+            function exitAnyFullscreen() {
+                var exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+                if (typeof exitFn !== "function") {
+                    return;
+                }
+                try {
+                    var result = exitFn.call(document);
+                    if (result && typeof result.catch === "function") {
+                        result.catch(function () {});
+                    }
+                } catch (e) {}
+            }
+
+            function requestLandscapeOrientationLock() {
+                try {
+                    if (!window.screen || !window.screen.orientation || typeof window.screen.orientation.lock !== "function") {
+                        return;
+                    }
+                    var lockResult = window.screen.orientation.lock("landscape");
+                    if (lockResult && typeof lockResult.catch === "function") {
+                        lockResult.catch(function () {});
+                    }
+                } catch (e) {}
+            }
+
+            function releaseOrientationLock() {
+                try {
+                    if (!window.screen || !window.screen.orientation || typeof window.screen.orientation.unlock !== "function") {
+                        return;
+                    }
+                    window.screen.orientation.unlock();
+                } catch (e) {}
+            }
+
+            function closeVegaOverlay(skipExitFullscreen) {
+                if (!activeVegaOverlay) {
+                    return;
+                }
+
+                var state = activeVegaOverlay;
+                activeVegaOverlay = null;
+
+                try {
+                    document.removeEventListener("fullscreenchange", state.onFullscreenChange);
+                    document.removeEventListener("webkitfullscreenchange", state.onFullscreenChange);
+                    document.removeEventListener("MSFullscreenChange", state.onFullscreenChange);
+                    document.removeEventListener("keydown", state.onKeydown, true);
+                    window.removeEventListener("resize", state.onWindowResize);
+                } catch (e) {}
+
+                if (!skipExitFullscreen && currentFullscreenElement()) {
+                    exitAnyFullscreen();
+                }
+
+                releaseOrientationLock();
+                restoreOverlayGraphicSize(state);
+
+                try {
+                    if (state.placeholder && state.placeholder.parentNode) {
+                        state.placeholder.parentNode.insertBefore(state.stageEl, state.placeholder);
+                        state.placeholder.parentNode.removeChild(state.placeholder);
+                    } else if (state.stageParent && state.stageParent.appendChild) {
+                        state.stageParent.appendChild(state.stageEl);
+                    }
+                } catch (e) {}
+
+                try {
+                    if (state.overlay && state.overlay.parentNode) {
+                        state.overlay.parentNode.removeChild(state.overlay);
+                    }
+                } catch (e) {}
+
+                try {
+                    if (state.hostEl && state.hostEl.removeAttribute) {
+                        state.hostEl.removeAttribute("data-vega-overlay-open");
+                    }
+                    document.documentElement.classList.remove("vega-overlay-open");
+                } catch (e) {}
+
+                try {
+                    if (state.focusEl && typeof state.focusEl.focus === "function") {
+                        state.focusEl.focus();
+                    }
+                } catch (e) {}
+
+                syncExpandability(state.hostEl, state.stageEl);
+            }
+
+            function openVegaOverlay(hostEl, stageEl) {
+                if (!hostEl || !stageEl || activeVegaOverlay) {
+                    return;
+                }
+                if (String(hostEl.getAttribute("data-vega-expandable") || "") !== "1") {
+                    return;
+                }
+
+                var stageParent = stageEl.parentNode;
+                if (!stageParent) {
+                    return;
+                }
+
+                var placeholder = document.createComment("vega-stage-placeholder");
+                try {
+                    stageParent.insertBefore(placeholder, stageEl);
+                } catch (e) {
+                    return;
+                }
+
+                var overlay = document.createElement("div");
+                overlay.className = "vega-embed-overlay";
+
+                var frame = document.createElement("div");
+                frame.className = "vega-embed-overlay-frame";
+
+                var closeBtn = document.createElement("button");
+                closeBtn.type = "button";
+                closeBtn.className = "vega-embed-overlay-close";
+                closeBtn.setAttribute("aria-label", "关闭放大图表");
+                closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>';
+
+                var stageWrap = document.createElement("div");
+                stageWrap.className = "vega-embed-overlay-stage";
+
+                try {
+                    stageWrap.appendChild(stageEl);
+                } catch (e) {
+                    return;
+                }
+
+                frame.appendChild(closeBtn);
+                frame.appendChild(stageWrap);
+                overlay.appendChild(frame);
+
+                var focusEl = document.activeElement;
+                document.body.appendChild(overlay);
+
+                try {
+                    hostEl.setAttribute("data-vega-overlay-open", "1");
+                    document.documentElement.classList.add("vega-overlay-open");
+                } catch (e) {}
+
+                function onKeydown(event) {
+                    if (!event) {
+                        return;
+                    }
+                    if (event.key === "Escape" || event.key === "Esc") {
+                        event.preventDefault();
+                        closeVegaOverlay(false);
+                    }
+                }
+
+                function onFullscreenChange() {
+                    if (!activeVegaOverlay) {
+                        return;
+                    }
+                    var fullscreenEl = currentFullscreenElement();
+                    if (fullscreenEl === activeVegaOverlay.frame) {
+                        activeVegaOverlay.wasFullscreen = true;
+                        applyOverlayMinimumFill(activeVegaOverlay);
+                        return;
+                    }
+                    if (activeVegaOverlay.wasFullscreen) {
+                        closeVegaOverlay(true);
+                    }
+                }
+
+                function onWindowResize() {
+                    if (!activeVegaOverlay) {
+                        return;
+                    }
+                    window.requestAnimationFrame(function () {
+                        if (!activeVegaOverlay) {
+                            return;
+                        }
+                        applyOverlayMinimumFill(activeVegaOverlay);
+                    });
+                }
+
+                closeBtn.addEventListener("click", function (event) {
+                    if (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    closeVegaOverlay(false);
+                });
+
+                activeVegaOverlay = {
+                    hostEl: hostEl,
+                    stageEl: stageEl,
+                    stageParent: stageParent,
+                    placeholder: placeholder,
+                    overlay: overlay,
+                    frame: frame,
+                    focusEl: focusEl,
+                    onKeydown: onKeydown,
+                    onFullscreenChange: onFullscreenChange,
+                    onWindowResize: onWindowResize,
+                    wasFullscreen: false
+                };
+
+                document.addEventListener("keydown", onKeydown, true);
+                document.addEventListener("fullscreenchange", onFullscreenChange);
+                document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+                document.addEventListener("MSFullscreenChange", onFullscreenChange);
+                window.addEventListener("resize", onWindowResize);
+
+                if (isNarrowVegaViewport()) {
+                    requestElementFullscreen(frame);
+                    window.setTimeout(requestLandscapeOrientationLock, 80);
+                }
+                window.setTimeout(function () {
+                    if (!activeVegaOverlay) {
+                        return;
+                    }
+                    applyOverlayMinimumFill(activeVegaOverlay);
+                }, 60);
+                window.setTimeout(function () {
+                    if (!activeVegaOverlay) {
+                        return;
+                    }
+                    applyOverlayMinimumFill(activeVegaOverlay);
+                }, 240);
+
+                try {
+                    closeBtn.focus();
+                } catch (e) {}
+            }
+
+            function ensureStageClickToExpand(hostEl, stageEl) {
+                if (!hostEl || !stageEl || !stageEl.addEventListener) {
+                    return;
+                }
+                if (hostEl.getAttribute("data-vega-expand-click-init") === "1") {
+                    return;
+                }
+
+                stageEl.addEventListener("click", function (event) {
+                    if (!event) {
+                        return;
+                    }
+                    if (event.defaultPrevented) {
+                        return;
+                    }
+                    if (activeVegaOverlay) {
+                        return;
+                    }
+                    openVegaOverlay(hostEl, stageEl);
+                });
+
+                hostEl.setAttribute("data-vega-expand-click-init", "1");
+            }
+
+            function syncAllRenderedVegaExpandability() {
+                var allCharts = document.querySelectorAll(".vega-embed-shortcode");
+                for (var i = 0; i < allCharts.length; i++) {
+                    var hostEl = allCharts[i];
+                    if (!hostEl || !hostEl.querySelector) {
+                        continue;
+                    }
+                    var stageEl = hostEl.querySelector("[data-vega-stage]");
+                    if (!stageEl) {
+                        continue;
+                    }
+                    syncExpandability(hostEl, stageEl);
+                }
+            }
+
+            function bindVegaExpandabilityResizeSync() {
+                if (window.__hansjackVegaResizeSyncBound) {
+                    return;
+                }
+                window.__hansjackVegaResizeSyncBound = true;
+
+                window.addEventListener("resize", function () {
+                    if (expandSyncTimer) {
+                        window.clearTimeout(expandSyncTimer);
+                    }
+                    expandSyncTimer = window.setTimeout(function () {
+                        syncAllRenderedVegaExpandability();
+                    }, 120);
+                });
+            }
+
             function ensureStageNode(hostEl) {
                 if (!hostEl || !hostEl.querySelector) {
                     return null;
@@ -1269,6 +1761,7 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                 }
 
                 clearError(hostEl);
+                ensureStageClickToExpand(hostEl, stageEl);
 
                 var unsafeDataUrl = findFirstUnsafeDataUrl(spec);
                 if (unsafeDataUrl) {
@@ -1304,11 +1797,15 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                         hostEl.setAttribute("data-vega-rendered", "1");
                         hostEl.removeAttribute("data-vega-status");
                     } catch (e) {}
+                    syncExpandability(hostEl, stageEl);
                 }
 
                 function markRenderError() {
                     markUnavailable(hostEl, "render");
                     appendError(hostEl, "Vega-Lite 图表渲染失败。");
+                    try {
+                        hostEl.removeAttribute("data-vega-expandable");
+                    } catch (e) {}
                 }
 
                 function embedWith(renderTargetSpec) {
@@ -1408,6 +1905,8 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                 });
             }
 
+            bindVegaExpandabilityResizeSync();
+
             ensureVegaAssets(function () {
                 if (
                     typeof window.vega === "undefined" ||
@@ -1434,6 +1933,8 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                 for (var j = 0; j < codeTargets.length; j++) {
                     renderCodeTarget(codeTargets[j]);
                 }
+
+                window.setTimeout(syncAllRenderedVegaExpandability, 80);
             });
         })();
     </script>

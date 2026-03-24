@@ -10855,7 +10855,8 @@ html.login-modal-open .login-modal {
     width: fit-content;
     max-width: 100%;
     border: 1px dashed var(--line-day);
-    border-radius: 4px;
+    border-radius: 0;
+    position: relative;
     box-sizing: border-box;
 }
 
@@ -10865,7 +10866,7 @@ html.login-modal-open .login-modal {
     max-width: 100%;
     min-height: 0;
     border: 0;
-    border-radius: 4px;
+    border-radius: 0;
     padding: 0.4rem;
     box-sizing: border-box;
     overflow-x: auto;
@@ -10879,6 +10880,87 @@ html.login-modal-open .login-modal {
     width: auto;
     height: auto;
     max-width: 100%;
+}
+
+:is(.article-content, .comment-content) .vega-embed-shortcode[data-vega-expandable="1"] .vega-embed-stage,
+:is(.article-content, .comment-content) .vega-embed-shortcode[data-vega-expandable="1"] .vega-embed-stage > .vega-embed,
+:is(.article-content, .comment-content) .vega-embed-shortcode[data-vega-expandable="1"] .vega-embed-stage canvas,
+:is(.article-content, .comment-content) .vega-embed-shortcode[data-vega-expandable="1"] .vega-embed-stage svg {
+    cursor: zoom-in;
+}
+
+html.vega-overlay-open,
+html.vega-overlay-open body {
+    overflow: hidden;
+}
+
+.vega-embed-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3200;
+    background: rgba(0, 0, 0, 0.42);
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+}
+
+.vega-embed-overlay-frame {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    background: var(--day-bg);
+}
+
+.vega-embed-overlay-stage {
+    position: absolute;
+    inset: 0;
+    padding: 2.7rem 0.35rem 0.55rem;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.vega-embed-overlay-stage .vega-embed-stage {
+    margin: 0 auto;
+    width: max-content;
+    max-width: none;
+    min-height: 0 !important;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0.25rem;
+}
+
+.vega-embed-overlay-stage .vega-embed-stage > .vega-embed,
+.vega-embed-overlay-stage .vega-embed-stage canvas,
+.vega-embed-overlay-stage .vega-embed-stage svg {
+    max-width: none;
+}
+
+.vega-embed-overlay-close {
+    position: absolute;
+    top: 0.45rem;
+    right: 0.45rem;
+    width: 2.2rem;
+    height: 2.2rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--day-text);
+    padding: 0;
+    box-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.vega-embed-overlay-close svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    display: block;
+    pointer-events: none;
 }
 
 :is(.article-content, .comment-content) .vega-embed-shortcode[data-vega-status="error"] .vega-embed-stage,
@@ -11860,6 +11942,14 @@ html.login-modal-open .login-modal {
 
     html:not(.theme-light) :is(.article-content, .comment-content) .vega-embed-shortcode {
         border-color: var(--line-night);
+    }
+
+    html:not(.theme-light) .vega-embed-overlay-frame {
+        background: var(--night-bg);
+    }
+
+    html:not(.theme-light) .vega-embed-overlay-close {
+        color: var(--night-text);
     }
 
     html:not(.theme-light) :is(.article-content, .comment-content) .vega-embed-error {
