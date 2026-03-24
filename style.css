@@ -4593,7 +4593,8 @@ html.theme-dark .memory {
     --about-line: var(--line-day);
     --about-muted: var(--muted-day);
     --about-bg: var(--day-bg);
-    padding: clamp(2.2rem, 6vw, 4.2rem) 0;
+    padding-top: 1.25rem;
+    padding-bottom: clamp(2.2rem, 6vw, 4.2rem);
 }
 
 .about-layout {
@@ -4609,6 +4610,10 @@ html.theme-dark .memory {
 
 .about-content {
     overflow-wrap: anywhere;
+}
+
+.about-content > :first-child {
+    margin-top: 0;
 }
 
 .about-aside {
