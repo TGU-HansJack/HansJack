@@ -1047,6 +1047,62 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                 }
             }
 
+            function isFiniteNumber(value) {
+                return typeof value === "number" && isFinite(value);
+            }
+
+            function hasCustomAutosize(spec) {
+                if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
+                    return false;
+                }
+                return spec.autosize !== undefined && spec.autosize !== null && spec.autosize !== "";
+            }
+
+            function shouldInjectFitAutosize(spec) {
+                if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
+                    return false;
+                }
+                if (hasCustomAutosize(spec)) {
+                    return false;
+                }
+                return isFiniteNumber(spec.width) || isFiniteNumber(spec.height);
+            }
+
+            function applyDefaultFitAutosize(spec) {
+                if (!shouldInjectFitAutosize(spec)) {
+                    return {
+                        spec: spec,
+                        injected: false
+                    };
+                }
+
+                var cloned = cloneSpec(spec);
+                if (!cloned || typeof cloned !== "object" || Array.isArray(cloned) || cloned === spec) {
+                    return {
+                        spec: spec,
+                        injected: false
+                    };
+                }
+
+                cloned.autosize = {
+                    type: "fit",
+                    contains: "padding"
+                };
+                return {
+                    spec: cloned,
+                    injected: true
+                };
+            }
+
+            function clearStage(stageEl) {
+                if (!stageEl) {
+                    return;
+                }
+                while (stageEl.firstChild) {
+                    stageEl.removeChild(stageEl.firstChild);
+                }
+            }
+
             function setStageMinHeight(stageEl, height) {
                 if (!stageEl || !stageEl.style) {
                     return;
@@ -1232,22 +1288,39 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                     }
                 }
 
-                while (stageEl.firstChild) {
-                    stageEl.removeChild(stageEl.firstChild);
-                }
-
-                Promise.resolve(window.vegaEmbed(stageEl, nextSpec, {
+                var baseRenderSpec = nextSpec;
+                var fitPrepared = applyDefaultFitAutosize(baseRenderSpec);
+                var renderSpec = fitPrepared.spec;
+                var embedOptions = {
                     mode: "vega-lite",
                     renderer: normalizeRenderer(opts.renderer),
                     actions: normalizeBoolean(opts.actions, false)
-                })).then(function () {
+                };
+
+                function markRendered() {
                     try {
                         hostEl.setAttribute("data-vega-rendered", "1");
                         hostEl.removeAttribute("data-vega-status");
                     } catch (e) {}
-                }).catch(function () {
+                }
+
+                function markRenderError() {
                     markUnavailable(hostEl, "render");
                     appendError(hostEl, "Vega-Lite 图表渲染失败。");
+                }
+
+                function embedWith(renderTargetSpec) {
+                    clearStage(stageEl);
+                    return Promise.resolve(window.vegaEmbed(stageEl, renderTargetSpec, embedOptions));
+                }
+
+                embedWith(renderSpec).then(markRendered).catch(function () {
+                    if (!fitPrepared.injected) {
+                        markRenderError();
+                        return;
+                    }
+
+                    embedWith(baseRenderSpec).then(markRendered).catch(markRenderError);
                 });
             }
 

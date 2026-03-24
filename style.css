@@ -10854,6 +10854,9 @@ html.login-modal-open .login-modal {
     display: table;
     width: fit-content;
     max-width: 100%;
+    border: 1px dashed var(--line-day);
+    border-radius: 4px;
+    box-sizing: border-box;
 }
 
 :is(.article-content, .comment-content) .vega-embed-stage {
@@ -11852,6 +11855,10 @@ html.login-modal-open .login-modal {
 
     html:not(.theme-light) :is(.article-content, .comment-content) .vega-embed-stage {
         background: rgba(240, 240, 240, 0.02);
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .vega-embed-shortcode {
+        border-color: var(--line-night);
     }
 
     html:not(.theme-light) :is(.article-content, .comment-content) .vega-embed-error {
