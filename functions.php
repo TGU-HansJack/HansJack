@@ -6309,6 +6309,101 @@ function githubDb()
     return null;
 }
 
+if (!function_exists('hansjackNormalizeContentTypeValue')) {
+    function hansjackNormalizeContentTypeValue($value): string
+    {
+        $text = trim((string) $value);
+        if ($text === '') {
+            return '';
+        }
+
+        if (function_exists('mb_strtolower')) {
+            return mb_strtolower($text, 'UTF-8');
+        }
+
+        return strtolower($text);
+    }
+}
+
+if (!function_exists('hansjackHasContentWarningType')) {
+    function hansjackHasContentWarningType(string $contentType): bool
+    {
+        return in_array(
+            hansjackNormalizeContentTypeValue($contentType),
+            ['warning', 'nsfw', 'sensitive'],
+            true
+        );
+    }
+}
+
+if (!function_exists('hansjackContentTypeByCid')) {
+    function hansjackContentTypeByCid(int $cid, $archive = null): string
+    {
+        static $cache = [];
+
+        if ($cid <= 0) {
+            return '';
+        }
+
+        if (array_key_exists($cid, $cache)) {
+            return (string) $cache[$cid];
+        }
+
+        $fieldValue = '';
+        if (is_object($archive)) {
+            try {
+                $fieldValue = (string) ($archive->fields->content_type ?? '');
+            } catch (\Throwable $e) {
+                $fieldValue = '';
+            }
+        }
+
+        $fieldValue = hansjackNormalizeContentTypeValue($fieldValue);
+        if ($fieldValue !== '') {
+            $cache[$cid] = $fieldValue;
+            return $fieldValue;
+        }
+
+        $db = githubDb();
+        if (!is_object($db)) {
+            $cache[$cid] = '';
+            return '';
+        }
+
+        $dbValue = '';
+        try {
+            $row = $db->fetchRow(
+                $db->select()
+                    ->from('table.fields')
+                    ->where('cid = ?', $cid)
+                    ->where('name = ?', 'content_type')
+                    ->limit(1)
+            );
+
+            if (is_array($row)) {
+                $candidateKeys = ['str_value', 'value', 'int_value', 'float_value'];
+                foreach ($candidateKeys as $key) {
+                    if (!array_key_exists($key, $row)) {
+                        continue;
+                    }
+                    $raw = $row[$key];
+                    if ($raw === null || $raw === '') {
+                        continue;
+                    }
+                    $dbValue = (string) $raw;
+                    break;
+                }
+            }
+        } catch (\Throwable $e) {
+            $dbValue = '';
+        }
+
+        $dbValue = hansjackNormalizeContentTypeValue($dbValue);
+        $cache[$cid] = $dbValue;
+        return $dbValue;
+    }
+}
+
 function themeOptionStorageName(Options $options): string
 {
     $theme = trim((string) basename(__DIR__));

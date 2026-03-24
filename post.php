@@ -18,6 +18,7 @@ $contentTypeKey = function_exists('mb_strtolower')
 
 $contentWarningMap = [
     'warning' => [
+        'icon' => '🚨',
         'title' => _t('内容警告'),
         'lines' => [
             _t('本文可能包含暴力、血腥或令人不适的画面或描述。'),
@@ -27,6 +28,7 @@ $contentWarningMap = [
         'tone' => 'warning',
     ],
     'nsfw' => [
+        'icon' => '🔞',
         'title' => _t('成人内容提示'),
         'lines' => [
             _t('本文包含成人向或不适合在公共场合浏览的内容（NSFW）。'),
@@ -36,6 +38,7 @@ $contentWarningMap = [
         'tone' => 'nsfw',
     ],
     'sensitive' => [
+        'icon' => '🧠',
         'title' => _t('敏感内容提示'),
         'lines' => [
             _t('本文涉及心理、情绪或其他可能引发不适的敏感话题。'),
@@ -523,7 +526,10 @@ $contentWarningBucket = 'posts';
         <?php if ($contentWarningEnabled): ?>
             <section class="article-content-warning is-type-<?php echo escape((string) ($contentWarningConfig['tone'] ?? 'warning')); ?>" data-content-warning-shell>
                 <div class="article-content-warning-panel">
-                    <h2 class="article-content-warning-title"><?php echo escape((string) ($contentWarningConfig['title'] ?? _t('内容提示'))); ?></h2>
+                    <h2 class="article-content-warning-title">
+                        <span class="article-content-warning-title-icon" aria-hidden="true"><?php echo escape((string) ($contentWarningConfig['icon'] ?? '⚠️')); ?></span>
+                        <span class="article-content-warning-title-text"><?php echo escape((string) ($contentWarningConfig['title'] ?? _t('内容提示'))); ?></span>
+                    </h2>
                     <div class="article-content-warning-copy">
                         <?php
                         $contentWarningLines = is_array($contentWarningConfig['lines'] ?? null) ? $contentWarningConfig['lines'] : [];

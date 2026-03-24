@@ -96,14 +96,24 @@ $pagerTemplate = [
                             }
                             $postExcerpt = (string) ob_get_clean();
                             $postExcerpt = trim((string) preg_replace('/\\s+/u', ' ', $postExcerpt));
+
+                            $postCid = (int) ($posts->cid ?? 0);
+                            $postContentTypeKey = hansjackContentTypeByCid($postCid, $posts);
+                            $postHasContentWarning = hansjackHasContentWarningType($postContentTypeKey);
                             ?>
                             <li class="posts-item"
                                 data-post-created="<?php echo (int) $postCreated; ?>"
                                 data-post-modified="<?php echo (int) $postModified; ?>"
                                 data-post-excerpt="<?php echo escape($postExcerpt); ?>">
                                 <div class="posts-item-left">
-                                    <a class="posts-title" href="<?php echo escape($posts->permalink); ?>">
-                                        <?php echo escape($posts->title); ?>
+                                    <a class="posts-title<?php echo $postHasContentWarning ? ' is-has-content-warning' : ''; ?>" href="<?php echo escape($posts->permalink); ?>">
+                                        <?php if ($postHasContentWarning): ?>
+                                            <span class="posts-title-warning-icon" aria-hidden="true">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-siren-icon lucide-siren"><path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/><path d="M21 12h1"/><path d="M18.5 4.5 18 5"/><path d="M2 12h1"/><path d="M12 2v1"/><path d="m4.929 4.929.707.707"/><path d="M12 12v6"/></svg>
+                                                <span class="footer-icon-tip" aria-hidden="true"><?php echo escape(_t('含有敏感内容')); ?></span>
+                                            </span>
+                                        <?php endif; ?>
+                                        <span class="posts-title-text"><?php echo escape($posts->title); ?></span>
                                     </a>
                                     <time class="posts-date" datetime="<?php $posts->date('c'); ?>">
                                         <?php $posts->date('Y/m/d-H:i:s'); ?>
