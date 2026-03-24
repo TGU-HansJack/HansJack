@@ -7,6 +7,7 @@ $fontChoice = themeFontChoice($this->options);
 $useNotoSansScRegular = $fontChoice === 'noto_sans_sc_regular';
 $useNotoSerifScLight = $fontChoice === 'noto_serif_sc_light';
 $useMapleMonoCnLight = $fontChoice === 'maple_mono_cn_light';
+$mourningEnabled = !empty($themeConfig['mourningEnabled']);
 
 // Read persisted theme choice early (cookie), so the initial HTML can render without a light flash in dark mode.
 $themeCookie = '';
@@ -229,6 +230,14 @@ $seoDescription = hansjackArchiveSeoDescription($this, 180);
         }
 
     </style>
+    <?php if ($mourningEnabled): ?>
+    <style id="theme-mourning-style">
+        html {
+            -webkit-filter: grayscale(100%);
+            filter: grayscale(100%);
+        }
+    </style>
+    <?php endif; ?>
     <?php if ($needsKatexAssets): ?>
         <link rel="stylesheet" href="<?php echo escape($katexCssHref); ?>">
     <?php endif; ?>
@@ -317,6 +326,9 @@ if ($this->is('tag')) {
 }
 if ($this->is('post')) {
     $bodyClasses[] = 'page-post';
+}
+if ($mourningEnabled) {
+    $bodyClasses[] = 'mode-mourning';
 }
 ?>
 <body class="<?php echo implode(' ', $bodyClasses); ?>">

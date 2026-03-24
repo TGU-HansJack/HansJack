@@ -169,6 +169,18 @@ function themeConfig($form)
     );
     $form->addInput($fontChoice);
 
+    $mourningEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'mourningEnabled',
+        [
+            '0' => _t('关闭'),
+            '1' => _t('开启'),
+        ],
+        '0',
+        _t('哀悼'),
+        _t('开启后全站启用哀悼灰度色调（黑白化）。')
+    );
+    $form->addInput($mourningEnabled);
+
     $githubOauthEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
         'githubOauthEnabled',
         [
@@ -6167,6 +6179,18 @@ function themeFontChoice(Options $options): string
     return $raw;
 }
 
+function themeMourningEnabled(Options $options): bool
+{
+    $raw = '';
+    try {
+        $raw = (string) ($options->mourningEnabled ?? '0');
+    } catch (\Throwable $e) {
+        $raw = '0';
+    }
+
+    return hansjackOptionEnabled($raw, false);
+}
+
 function githubCurrentAdminUid(&$uid = 0): bool
 {
     $uid = 0;
@@ -7478,6 +7502,7 @@ function buildThemeConfig(Options $options): array
         'brandName' => $brandName,
         'welcomeText' => text((string) ($options->landingWelcomeText ?? ($options->welcomeTitle ?? '')), ''),
         'landingHitokotoEnabled' => landingHitokotoEnabled($options),
+        'mourningEnabled' => themeMourningEnabled($options),
         'landingSocialLinks' => hansjackLandingSocialLinks($options),
         'presenceStatusEnabled' => hansjackPresenceStatusEnabled($options),
         'presenceStatusEndpoint' => hansjackPresenceStatusEndpoint($options),
