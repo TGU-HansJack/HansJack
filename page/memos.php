@@ -452,7 +452,7 @@ if ($pagePermalink === '') {
                                     data-memory-item
                                     data-month="<?php echo escape((string) ($item['month'] ?? '')); ?>"
                                     data-tags="<?php echo escape($tagKeysAttr); ?>">
-                                    <div class="comment-author" itemprop="creator" itemscope itemtype="http://schema.org/Person">
+                                    <div class="comment-author" itemprop="creator">
                                         <span itemprop="image">
                                             <?php $memoryAvatarAlt = trim((string) ($item['author'] ?? '')); ?>
                                             <?php if ($memoryAvatarAlt === '') {

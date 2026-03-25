@@ -7811,6 +7811,13 @@ function hansjackArchiveSeoTitle($archive): string
         $title .= ' - ' . $siteDescription;
     }
 
+    if (hansjackMbLength($title) < 12) {
+        $titleTail = $siteDescription !== '' ? $siteDescription : _t('文章与笔记');
+        if ($titleTail !== '' && strpos($title, $titleTail) === false) {
+            $title = trim($title . ' - ' . $titleTail, " \t\n\r\0\x0B-");
+        }
+    }
+
     return trim($title, " \t\n\r\0\x0B-");
 }
 
@@ -7911,6 +7918,18 @@ function hansjackArchiveSeoDescription($archive, int $maxLen = 180): string
             $siteDescription !== '' ? $siteDescription : ($siteTitle . '博客'),
             $maxLen
         );
+    }
+
+    $minLen = 34;
+    if (hansjackMbLength($description) < $minLen) {
+        $fallbackTail = $siteDescription !== '' ? $siteDescription : '持续分享技术实践、开发笔记与生活记录。';
+        $description = trim($description, "， \t\n\r\0\x0B");
+        if ($fallbackTail !== '' && strpos($description, $fallbackTail) === false) {
+            $description = $description !== ''
+                ? ($description . '，' . $fallbackTail)
+                : $fallbackTail;
+        }
+        $description = hansjackTruncateText($description, $maxLen);
     }
 
     return $description;
@@ -9842,8 +9861,8 @@ function renderCommentEmbedShortcodeFromDb(int $commentId, string $sourceUrl = '
 
     $coid = max(0, (int) hansjackSitemapRowValue($row, 'coid', $commentId));
 
-    $html = '<li itemscope itemtype="http://schema.org/UserComments" id="comment-' . $coid . '" class="' . escape($commentClass) . '" data-comment-level="0">';
-    $html .= '<div class="comment-author" itemprop="creator" itemscope itemtype="http://schema.org/Person">';
+    $html = '<li id="comment-' . $coid . '" class="' . escape($commentClass) . '" data-comment-level="0">';
+    $html .= '<div class="comment-author" itemprop="creator">';
     $html .= '<span itemprop="image"><img class="avatar" src="' . escape($avatarUrl) . '" alt="' . escape($author . '的头像') . '" width="' . $avatarSize . '" height="' . $avatarSize . '" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>';
     $html .= '<div class="comment-author-meta">';
     $html .= '<cite class="fn" itemprop="name">' . escape($author) . '</cite>';
@@ -11288,7 +11307,7 @@ function threadedComments($comments, $singleCommentOptions): void
     $memoryReactionEnabled = ($commentCoid > 0 && memoryReactionIsMemoryComment($commentCoid));
     $memoryReactionEmojis = $memoryReactionEnabled ? memoryReactionAllowedEmojis() : [];
     ?>
-    <li itemscope itemtype="http://schema.org/UserComments" id="<?php $comments->theId(); ?>" class="comment-body<?php 
+    <li id="<?php $comments->theId(); ?>" class="comment-body<?php 
     if ($commentLevel > 0) { 
         echo ' comment-child'; 
         $comments->levelsAlt(' comment-level-odd', ' comment-level-even'); 
@@ -11298,7 +11317,7 @@ function threadedComments($comments, $singleCommentOptions): void
     $comments->alt(' comment-odd', ' comment-even');
     echo $commentClass; 
     ?>" data-comment-level="<?php echo $commentLevel; ?>"> 
-        <div class="comment-author" itemprop="creator" itemscope itemtype="http://schema.org/Person">  
+        <div class="comment-author" itemprop="creator">  
             <span itemprop="image">  
                 <img
                     class="avatar"

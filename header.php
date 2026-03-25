@@ -73,8 +73,55 @@ if ($customCss !== '') {
     $customCss = str_ireplace('</style>', '<\/style>', $customCss);
 }
 
+$siteFaviconUrl = '';
+try {
+    ob_start();
+    $this->options->siteUrl('favicon.ico');
+    $siteFaviconUrl = trim((string) ob_get_clean());
+} catch (\Throwable $e) {
+    $siteFaviconUrl = '';
+}
+if ($siteFaviconUrl === '') {
+    try {
+        $siteFaviconUrl = \Typecho\Common::url('favicon.ico', (string) ($this->options->siteUrl ?? ''));
+    } catch (\Throwable $e) {
+        $siteFaviconUrl = '';
+    }
+}
+
 $seoTitle = hansjackArchiveSeoTitle($this);
-$seoDescription = hansjackArchiveSeoDescription($this, 180);
+$seoDescription = hansjackArchiveSeoDescription($this, 150);
+$seoSiteName = 'Typecho';
+$seoCanonical = '';
+$seoOgType = 'website';
+
+try {
+    $seoSiteName = trim((string) ($this->options->title ?? 'Typecho'));
+} catch (\Throwable $e) {
+    $seoSiteName = 'Typecho';
+}
+if ($seoSiteName === '') {
+    $seoSiteName = 'Typecho';
+}
+
+try {
+    $seoCanonical = trim((string) ($this->permalink ?? ''));
+} catch (\Throwable $e) {
+    $seoCanonical = '';
+}
+if ($seoCanonical === '') {
+    try {
+        $seoCanonical = trim((string) ($this->options->siteUrl ?? ''));
+    } catch (\Throwable $e) {
+        $seoCanonical = '';
+    }
+}
+
+try {
+    $seoOgType = ($this->is('post') || $this->is('page')) ? 'article' : 'website';
+} catch (\Throwable $e) {
+    $seoOgType = 'website';
+}
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN"<?php if ($htmlThemeClass !== '') {
@@ -90,8 +137,23 @@ $seoDescription = hansjackArchiveSeoDescription($this, 180);
     <meta name="supported-color-schemes" content="light dark">
     <meta name="theme-color" content="#fffffd" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#0e0e0c" media="(prefers-color-scheme: dark)">
+    <?php if ($siteFaviconUrl !== ''): ?>
+    <link rel="icon" href="<?php echo escape($siteFaviconUrl); ?>" sizes="any" type="image/x-icon">
+    <link rel="shortcut icon" href="<?php echo escape($siteFaviconUrl); ?>" type="image/x-icon">
+    <link rel="apple-touch-icon" href="<?php echo escape($siteFaviconUrl); ?>">
+    <?php endif; ?>
     <title><?php echo escape($seoTitle); ?></title>
     <meta name="description" content="<?php echo escape($seoDescription); ?>">
+    <?php if ($seoCanonical !== ''): ?>
+    <meta property="og:url" content="<?php echo escape($seoCanonical); ?>">
+    <?php endif; ?>
+    <meta property="og:type" content="<?php echo escape($seoOgType); ?>">
+    <meta property="og:title" content="<?php echo escape($seoTitle); ?>">
+    <meta property="og:description" content="<?php echo escape($seoDescription); ?>">
+    <meta property="og:site_name" content="<?php echo escape($seoSiteName); ?>">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="<?php echo escape($seoTitle); ?>">
+    <meta name="twitter:description" content="<?php echo escape($seoDescription); ?>">
     <script>
         (function () {
             var root = document.documentElement;
@@ -299,7 +361,7 @@ $seoDescription = hansjackArchiveSeoDescription($this, 180);
         }
     </style>
     <?php endif; ?>
-    <?php $this->header(); ?>
+    <?php $this->header('description=&social='); ?>
     <?php if ($customCss !== ''): ?>
     <style id="custom-css">
 <?php echo $customCss; ?>

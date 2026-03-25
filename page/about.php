@@ -158,6 +158,9 @@ $this->need('header.php');
 
 <main class="main" role="main">
     <section class="about" aria-label="<?php _e('关于'); ?>">
+        <header class="posts-page-head">
+            <h1 class="posts-page-title"><?php $this->title(); ?></h1>
+        </header>
         <div class="about-layout">
             <article class="about-article">
                 <div class="article-content about-content">

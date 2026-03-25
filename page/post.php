@@ -70,6 +70,9 @@ $pagerTemplate = [
     <section class="posts" aria-label="<?php _e('文章列表'); ?>">
         <div class="posts-layout">
             <div class="posts-main">
+                <header class="posts-page-head">
+                    <h1 class="posts-page-title"><?php $this->title(); ?></h1>
+                </header>
                 <ul class="posts-list" aria-label="<?php _e('文章'); ?>">
                     <?php if ($posts && $posts->have()): ?>
                         <?php while ($posts->next()): ?>

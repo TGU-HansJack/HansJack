@@ -810,6 +810,9 @@ $this->need('header.php');
         </div>
 
         <section class="links" aria-label="<?php _e('友链'); ?>">
+            <header class="posts-page-head">
+                <h1 class="posts-page-title"><?php $this->title(); ?></h1>
+            </header>
             <?php if (!$v3aEnabled): ?>
                 <p class="links-empty"><?php _e('未启用 Vue3Admin 插件，无法加载友链数据。'); ?></p>
             <?php else: ?>
