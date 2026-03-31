@@ -885,6 +885,23 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                 return language === "vega-lite" || language === "vl";
             }
 
+            function parseStrictJsonSpec(rawText) {
+                var text = String(rawText || "").replace(/^\uFEFF/, "").trim();
+                if (!text) {
+                    return null;
+                }
+
+                try {
+                    var parsed = JSON.parse(text);
+                    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+                        return null;
+                    }
+                    return parsed;
+                } catch (e) {
+                    return null;
+                }
+            }
+
             function isLocalVegaSrc(path) {
                 if (!path || typeof path !== "string") {
                     return false;
@@ -911,7 +928,6 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                     if (!node || typeof node !== "object") {
                         return "";
                     }
-
                     if (visited.indexOf(node) !== -1) {
                         return "";
                     }
@@ -948,735 +964,43 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                         if (!Object.prototype.hasOwnProperty.call(node, key)) {
                             continue;
                         }
-
                         var badInObject = walk(node[key]);
                         if (badInObject) {
                             return badInObject;
                         }
                     }
-
                     return "";
                 }
 
                 return walk(spec);
             }
 
-            var shortcodeTargets = [];
-            var codeTargets = [];
-            for (var c = 0; c < contents.length; c++) {
-                var content = contents[c];
-                if (!content || !content.querySelectorAll) {
-                    continue;
-                }
-
-                var embeds = content.querySelectorAll('[data-embed-type="vega"]');
-                for (var e = 0; e < embeds.length; e++) {
-                    if (embeds[e]) {
-                        shortcodeTargets.push(embeds[e]);
-                    }
-                }
-
-                var blocks = content.querySelectorAll("pre code");
-                for (var i = 0; i < blocks.length; i++) {
-                    var codeEl = blocks[i];
-                    if (!codeEl || !isVegaLiteCodeBlock(codeEl)) {
-                        continue;
-                    }
-                    codeTargets.push(codeEl);
-                }
-            }
-
-            if (shortcodeTargets.length === 0 && codeTargets.length === 0) {
-                return;
-            }
-
-            function normalizeRenderer(raw) {
-                var value = String(raw || "").trim().toLowerCase();
-                return value === "canvas" ? "canvas" : "svg";
-            }
-
-            function normalizeBoolean(raw, fallback) {
-                var value = String(raw || "").trim().toLowerCase();
-                if (!value) {
-                    return !!fallback;
-                }
-                if (value === "1" || value === "true" || value === "yes" || value === "on") {
-                    return true;
-                }
-                if (value === "0" || value === "false" || value === "no" || value === "off") {
-                    return false;
-                }
-                return !!fallback;
-            }
-
-            function normalizeHeight(raw) {
-                var value = parseInt(String(raw || "").trim(), 10);
-                if (!isFinite(value) || value <= 0) {
-                    return 0;
-                }
-                if (value < 120) {
-                    value = 120;
-                } else if (value > 2000) {
-                    value = 2000;
-                }
-                return value;
-            }
-
-            function parseStrictJsonSpec(rawText) {
-                var text = String(rawText || "").replace(/^\uFEFF/, "").trim();
-                if (!text) {
-                    return null;
-                }
-
-                try {
-                    var parsed = JSON.parse(text);
-                    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-                        return null;
-                    }
-                    return parsed;
-                } catch (e) {
-                    return null;
-                }
-            }
-
-            function cloneSpec(spec) {
-                try {
-                    return JSON.parse(JSON.stringify(spec));
-                } catch (e) {
-                    return spec;
-                }
-            }
-
-            function isFiniteNumber(value) {
-                return typeof value === "number" && isFinite(value);
-            }
-
-            function hasCustomAutosize(spec) {
-                if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
-                    return false;
-                }
-                return spec.autosize !== undefined && spec.autosize !== null && spec.autosize !== "";
-            }
-
-            function shouldInjectFitAutosize(spec) {
-                if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
-                    return false;
-                }
-                if (hasCustomAutosize(spec)) {
-                    return false;
-                }
-                return isFiniteNumber(spec.width) || isFiniteNumber(spec.height);
-            }
-
-            function applyDefaultFitAutosize(spec) {
-                if (!shouldInjectFitAutosize(spec)) {
-                    return {
-                        spec: spec,
-                        injected: false
-                    };
-                }
-
-                var cloned = cloneSpec(spec);
-                if (!cloned || typeof cloned !== "object" || Array.isArray(cloned) || cloned === spec) {
-                    return {
-                        spec: spec,
-                        injected: false
-                    };
-                }
-
-                cloned.autosize = {
-                    type: "fit",
-                    contains: "padding"
-                };
-                return {
-                    spec: cloned,
-                    injected: true
-                };
-            }
-
-            function clearStage(stageEl) {
-                if (!stageEl) {
-                    return;
-                }
-                while (stageEl.firstChild) {
-                    stageEl.removeChild(stageEl.firstChild);
-                }
-            }
-
-            function setStageMinHeight(stageEl, height) {
-                if (!stageEl || !stageEl.style) {
-                    return;
-                }
-                if (height > 0) {
-                    stageEl.style.minHeight = height + "px";
-                    return;
-                }
-                stageEl.style.minHeight = "0";
-            }
-
-            var activeVegaOverlay = null;
-            var expandSyncTimer = 0;
-
-            function isNarrowVegaViewport() {
-                var docEl = document.documentElement;
-                var width = window.innerWidth || (docEl && docEl.clientWidth) || 0;
-                if (width > 0 && width <= 980) {
-                    return true;
-                }
-                if (!window.matchMedia) {
-                    return false;
-                }
-                try {
-                    return window.matchMedia("(max-width: 980px)").matches;
-                } catch (e) {
-                    return false;
-                }
-            }
-
-            function readChartIntrinsicWidth(stageEl) {
-                if (!stageEl || !stageEl.querySelector) {
-                    return 0;
-                }
-
-                var svgEl = stageEl.querySelector("svg");
-                if (svgEl) {
-                    var svgWidth = parseFloat(String(svgEl.getAttribute("width") || "").trim());
-                    if (isFiniteNumber(svgWidth) && svgWidth > 0) {
-                        return svgWidth;
-                    }
-
-                    var viewBox = String(svgEl.getAttribute("viewBox") || "").trim();
-                    if (viewBox) {
-                        var parts = viewBox.split(/[\s,]+/);
-                        if (parts.length === 4) {
-                            var viewWidth = parseFloat(parts[2]);
-                            if (isFiniteNumber(viewWidth) && viewWidth > 0) {
-                                return viewWidth;
-                            }
-                        }
-                    }
-                }
-
-                var canvasEl = stageEl.querySelector("canvas");
-                if (canvasEl && isFiniteNumber(canvasEl.width) && canvasEl.width > 0) {
-                    return canvasEl.width;
-                }
-
-                return stageEl.scrollWidth || 0;
-            }
-
-            function findPrimaryChartGraphic(stageEl) {
-                if (!stageEl || !stageEl.querySelector) {
-                    return null;
-                }
-                return stageEl.querySelector(".vega-embed > svg, .vega-embed > canvas, svg, canvas");
-            }
-
-            function measureChartGraphicSize(graphicEl) {
-                if (!graphicEl) {
-                    return {
-                        width: 0,
-                        height: 0
-                    };
-                }
-
-                var tagName = String(graphicEl.tagName || "").toLowerCase();
-                if (tagName === "svg") {
-                    var svgWidth = parseFloat(String(graphicEl.getAttribute("width") || "").trim());
-                    var svgHeight = parseFloat(String(graphicEl.getAttribute("height") || "").trim());
-                    if (isFiniteNumber(svgWidth) && svgWidth > 0 && isFiniteNumber(svgHeight) && svgHeight > 0) {
-                        return {
-                            width: svgWidth,
-                            height: svgHeight
-                        };
-                    }
-
-                    var viewBox = String(graphicEl.getAttribute("viewBox") || "").trim();
-                    if (viewBox) {
-                        var vbParts = viewBox.split(/[\s,]+/);
-                        if (vbParts.length === 4) {
-                            var vbWidth = parseFloat(vbParts[2]);
-                            var vbHeight = parseFloat(vbParts[3]);
-                            if (isFiniteNumber(vbWidth) && vbWidth > 0 && isFiniteNumber(vbHeight) && vbHeight > 0) {
-                                return {
-                                    width: vbWidth,
-                                    height: vbHeight
-                                };
-                            }
-                        }
-                    }
-                }
-
-                if (tagName === "canvas") {
-                    var canvasWidth = parseFloat(String(graphicEl.width || 0));
-                    var canvasHeight = parseFloat(String(graphicEl.height || 0));
-                    if (isFiniteNumber(canvasWidth) && canvasWidth > 0 && isFiniteNumber(canvasHeight) && canvasHeight > 0) {
-                        return {
-                            width: canvasWidth,
-                            height: canvasHeight
-                        };
-                    }
-                }
-
-                var rect = null;
-                try {
-                    rect = graphicEl.getBoundingClientRect();
-                } catch (e) {}
-                var rectWidth = rect && isFiniteNumber(rect.width) ? rect.width : 0;
-                var rectHeight = rect && isFiniteNumber(rect.height) ? rect.height : 0;
-                return {
-                    width: rectWidth > 0 ? rectWidth : 0,
-                    height: rectHeight > 0 ? rectHeight : 0
-                };
-            }
-
-            function restoreOverlayGraphicSize(state) {
-                if (!state || !state.graphicEl || !state.graphicEl.style) {
-                    return;
-                }
-                state.graphicEl.style.width = state.graphicInlineWidth || "";
-                state.graphicEl.style.height = state.graphicInlineHeight || "";
-            }
-
-            function applyOverlayMinimumFill(state) {
-                if (!state || !state.stageWrap || !state.stageEl) {
-                    return;
-                }
-
-                var graphicEl = findPrimaryChartGraphic(state.stageEl);
-                if (!graphicEl || !graphicEl.style) {
-                    return;
-                }
-
-                if (state.graphicEl !== graphicEl) {
-                    restoreOverlayGraphicSize(state);
-                    state.graphicEl = graphicEl;
-                    state.graphicInlineWidth = graphicEl.style.width || "";
-                    state.graphicInlineHeight = graphicEl.style.height || "";
-                }
-
-                var size = measureChartGraphicSize(graphicEl);
-                var wrapRect = null;
-                try {
-                    wrapRect = state.stageWrap.getBoundingClientRect();
-                } catch (e) {}
-
-                var availWidth = wrapRect && isFiniteNumber(wrapRect.width) ? wrapRect.width : 0;
-                var availHeight = wrapRect && isFiniteNumber(wrapRect.height) ? wrapRect.height : 0;
-                if (!(isFiniteNumber(size.width) && size.width > 0 && isFiniteNumber(size.height) && size.height > 0 && isFiniteNumber(availWidth) && availWidth > 0 && isFiniteNumber(availHeight) && availHeight > 0)) {
-                    return;
-                }
-
-                // Guarantee that at least one dimension fills the fullscreen viewport.
-                if (size.width >= availWidth || size.height >= availHeight) {
-                    restoreOverlayGraphicSize(state);
-                    return;
-                }
-
-                var scale = Math.max(availWidth / size.width, availHeight / size.height);
-                if (!isFiniteNumber(scale) || scale <= 1) {
-                    restoreOverlayGraphicSize(state);
-                    return;
-                }
-
-                graphicEl.style.width = Math.ceil(size.width * scale) + "px";
-                graphicEl.style.height = Math.ceil(size.height * scale) + "px";
-            }
-
-            function syncExpandability(hostEl, stageEl) {
-                if (!hostEl || !stageEl || !hostEl.setAttribute || !hostEl.removeAttribute) {
-                    return;
-                }
-
-                var canExpand = false;
-                var chartWidth = readChartIntrinsicWidth(stageEl);
-                if (chartWidth > 0) {
-                    canExpand = true;
-                }
-
-                try {
-                    if (canExpand) {
-                        hostEl.setAttribute("data-vega-expandable", "1");
-                    } else {
-                        hostEl.removeAttribute("data-vega-expandable");
-                    }
-                } catch (e) {}
-            }
-
-            function currentFullscreenElement() {
-                return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
-            }
-
-            function requestElementFullscreen(el) {
-                if (!el) {
-                    return;
-                }
-                var requestFn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-                if (typeof requestFn !== "function") {
+            function markUnavailable(preEl, reason) {
+                if (!preEl || !preEl.classList) {
                     return;
                 }
                 try {
-                    var result = requestFn.call(el);
-                    if (result && typeof result.catch === "function") {
-                        result.catch(function () {});
+                    preEl.classList.add("vega-embed-unavailable");
+                    if (reason) {
+                        preEl.setAttribute("data-vega-error", reason);
                     }
-                } catch (e) {}
-            }
-
-            function exitAnyFullscreen() {
-                var exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-                if (typeof exitFn !== "function") {
-                    return;
-                }
-                try {
-                    var result = exitFn.call(document);
-                    if (result && typeof result.catch === "function") {
-                        result.catch(function () {});
-                    }
-                } catch (e) {}
-            }
-
-            function requestLandscapeOrientationLock() {
-                try {
-                    if (!window.screen || !window.screen.orientation || typeof window.screen.orientation.lock !== "function") {
-                        return;
-                    }
-                    var lockResult = window.screen.orientation.lock("landscape");
-                    if (lockResult && typeof lockResult.catch === "function") {
-                        lockResult.catch(function () {});
-                    }
-                } catch (e) {}
-            }
-
-            function releaseOrientationLock() {
-                try {
-                    if (!window.screen || !window.screen.orientation || typeof window.screen.orientation.unlock !== "function") {
-                        return;
-                    }
-                    window.screen.orientation.unlock();
-                } catch (e) {}
-            }
-
-            function closeVegaOverlay(skipExitFullscreen) {
-                if (!activeVegaOverlay) {
-                    return;
-                }
-
-                var state = activeVegaOverlay;
-                activeVegaOverlay = null;
-
-                try {
-                    document.removeEventListener("fullscreenchange", state.onFullscreenChange);
-                    document.removeEventListener("webkitfullscreenchange", state.onFullscreenChange);
-                    document.removeEventListener("MSFullscreenChange", state.onFullscreenChange);
-                    document.removeEventListener("keydown", state.onKeydown, true);
-                    window.removeEventListener("resize", state.onWindowResize);
-                } catch (e) {}
-
-                if (!skipExitFullscreen && currentFullscreenElement()) {
-                    exitAnyFullscreen();
-                }
-
-                releaseOrientationLock();
-                restoreOverlayGraphicSize(state);
-
-                try {
-                    if (state.placeholder && state.placeholder.parentNode) {
-                        state.placeholder.parentNode.insertBefore(state.stageEl, state.placeholder);
-                        state.placeholder.parentNode.removeChild(state.placeholder);
-                    } else if (state.stageParent && state.stageParent.appendChild) {
-                        state.stageParent.appendChild(state.stageEl);
-                    }
-                } catch (e) {}
-
-                try {
-                    if (state.overlay && state.overlay.parentNode) {
-                        state.overlay.parentNode.removeChild(state.overlay);
-                    }
-                } catch (e) {}
-
-                try {
-                    if (state.hostEl && state.hostEl.removeAttribute) {
-                        state.hostEl.removeAttribute("data-vega-overlay-open");
-                    }
-                    document.documentElement.classList.remove("vega-overlay-open");
-                } catch (e) {}
-
-                try {
-                    if (state.focusEl && typeof state.focusEl.focus === "function") {
-                        state.focusEl.focus();
-                    }
-                } catch (e) {}
-
-                syncExpandability(state.hostEl, state.stageEl);
-            }
-
-            function openVegaOverlay(hostEl, stageEl) {
-                if (!hostEl || !stageEl || activeVegaOverlay) {
-                    return;
-                }
-                if (String(hostEl.getAttribute("data-vega-expandable") || "") !== "1") {
-                    return;
-                }
-
-                var stageParent = stageEl.parentNode;
-                if (!stageParent) {
-                    return;
-                }
-
-                var placeholder = document.createComment("vega-stage-placeholder");
-                try {
-                    stageParent.insertBefore(placeholder, stageEl);
-                } catch (e) {
-                    return;
-                }
-
-                var overlay = document.createElement("div");
-                overlay.className = "vega-embed-overlay";
-
-                var frame = document.createElement("div");
-                frame.className = "vega-embed-overlay-frame";
-
-                var closeBtn = document.createElement("button");
-                closeBtn.type = "button";
-                closeBtn.className = "vega-embed-overlay-close";
-                closeBtn.setAttribute("aria-label", "关闭放大图表");
-                closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>';
-
-                var stageWrap = document.createElement("div");
-                stageWrap.className = "vega-embed-overlay-stage";
-
-                try {
-                    stageWrap.appendChild(stageEl);
-                } catch (e) {
-                    return;
-                }
-
-                frame.appendChild(closeBtn);
-                frame.appendChild(stageWrap);
-                overlay.appendChild(frame);
-
-                var focusEl = document.activeElement;
-                document.body.appendChild(overlay);
-
-                try {
-                    hostEl.setAttribute("data-vega-overlay-open", "1");
-                    document.documentElement.classList.add("vega-overlay-open");
-                } catch (e) {}
-
-                function onKeydown(event) {
-                    if (!event) {
-                        return;
-                    }
-                    if (event.key === "Escape" || event.key === "Esc") {
-                        event.preventDefault();
-                        closeVegaOverlay(false);
-                    }
-                }
-
-                function onFullscreenChange() {
-                    if (!activeVegaOverlay) {
-                        return;
-                    }
-                    var fullscreenEl = currentFullscreenElement();
-                    if (fullscreenEl === activeVegaOverlay.frame) {
-                        activeVegaOverlay.wasFullscreen = true;
-                        applyOverlayMinimumFill(activeVegaOverlay);
-                        return;
-                    }
-                    if (activeVegaOverlay.wasFullscreen) {
-                        closeVegaOverlay(true);
-                    }
-                }
-
-                function onWindowResize() {
-                    if (!activeVegaOverlay) {
-                        return;
-                    }
-                    window.requestAnimationFrame(function () {
-                        if (!activeVegaOverlay) {
-                            return;
-                        }
-                        applyOverlayMinimumFill(activeVegaOverlay);
-                    });
-                }
-
-                closeBtn.addEventListener("click", function (event) {
-                    if (event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                    }
-                    closeVegaOverlay(false);
-                });
-
-                activeVegaOverlay = {
-                    hostEl: hostEl,
-                    stageEl: stageEl,
-                    stageParent: stageParent,
-                    placeholder: placeholder,
-                    overlay: overlay,
-                    frame: frame,
-                    focusEl: focusEl,
-                    onKeydown: onKeydown,
-                    onFullscreenChange: onFullscreenChange,
-                    onWindowResize: onWindowResize,
-                    wasFullscreen: false
-                };
-
-                document.addEventListener("keydown", onKeydown, true);
-                document.addEventListener("fullscreenchange", onFullscreenChange);
-                document.addEventListener("webkitfullscreenchange", onFullscreenChange);
-                document.addEventListener("MSFullscreenChange", onFullscreenChange);
-                window.addEventListener("resize", onWindowResize);
-
-                if (isNarrowVegaViewport()) {
-                    requestElementFullscreen(frame);
-                    window.setTimeout(requestLandscapeOrientationLock, 80);
-                }
-                window.setTimeout(function () {
-                    if (!activeVegaOverlay) {
-                        return;
-                    }
-                    applyOverlayMinimumFill(activeVegaOverlay);
-                }, 60);
-                window.setTimeout(function () {
-                    if (!activeVegaOverlay) {
-                        return;
-                    }
-                    applyOverlayMinimumFill(activeVegaOverlay);
-                }, 240);
-
-                try {
-                    closeBtn.focus();
-                } catch (e) {}
-            }
-
-            function ensureStageClickToExpand(hostEl, stageEl) {
-                if (!hostEl || !stageEl || !stageEl.addEventListener) {
-                    return;
-                }
-                if (hostEl.getAttribute("data-vega-expand-click-init") === "1") {
-                    return;
-                }
-
-                stageEl.addEventListener("click", function (event) {
-                    if (!event) {
-                        return;
-                    }
-                    if (event.defaultPrevented) {
-                        return;
-                    }
-                    if (activeVegaOverlay) {
-                        return;
-                    }
-                    openVegaOverlay(hostEl, stageEl);
-                });
-
-                hostEl.setAttribute("data-vega-expand-click-init", "1");
-            }
-
-            function syncAllRenderedVegaExpandability() {
-                var allCharts = document.querySelectorAll(".vega-embed-shortcode");
-                for (var i = 0; i < allCharts.length; i++) {
-                    var hostEl = allCharts[i];
-                    if (!hostEl || !hostEl.querySelector) {
-                        continue;
-                    }
-                    var stageEl = hostEl.querySelector("[data-vega-stage]");
-                    if (!stageEl) {
-                        continue;
-                    }
-                    syncExpandability(hostEl, stageEl);
-                }
-            }
-
-            function bindVegaExpandabilityResizeSync() {
-                if (window.__hansjackVegaResizeSyncBound) {
-                    return;
-                }
-                window.__hansjackVegaResizeSyncBound = true;
-
-                window.addEventListener("resize", function () {
-                    if (expandSyncTimer) {
-                        window.clearTimeout(expandSyncTimer);
-                    }
-                    expandSyncTimer = window.setTimeout(function () {
-                        syncAllRenderedVegaExpandability();
-                    }, 120);
-                });
-            }
-
-            function ensureStageNode(hostEl) {
-                if (!hostEl || !hostEl.querySelector) {
-                    return null;
-                }
-
-                var stageEl = hostEl.querySelector("[data-vega-stage]");
-                if (stageEl) {
-                    return stageEl;
-                }
-
-                try {
-                    stageEl = document.createElement("div");
-                    stageEl.className = "vega-embed-stage";
-                    stageEl.setAttribute("data-vega-stage", "1");
-                    stageEl.setAttribute("aria-label", "Vega-Lite chart");
-                    hostEl.appendChild(stageEl);
-                    return stageEl;
-                } catch (e) {
-                    return null;
-                }
-            }
-
-            function clearError(hostEl) {
-                if (!hostEl || !hostEl.querySelector) {
-                    return;
-                }
-                var existing = hostEl.querySelector(".vega-embed-error");
-                if (existing && existing.parentNode) {
-                    try {
-                        existing.parentNode.removeChild(existing);
-                    } catch (e) {}
-                }
-                try {
-                    hostEl.removeAttribute("data-vega-status");
-                    hostEl.classList.remove("vega-embed-unavailable");
-                    hostEl.removeAttribute("data-vega-error");
                 } catch (e) {}
             }
 
             function appendError(hostEl, message) {
-                if (!hostEl || !hostEl.querySelector || !message) {
+                if (!hostEl || !message) {
                     return;
                 }
 
-                var text = String(message);
-                var errorNode = hostEl.querySelector(".vega-embed-error");
-                if (!errorNode) {
-                    try {
-                        errorNode = document.createElement("p");
-                        errorNode.className = "vega-embed-error";
-                        hostEl.appendChild(errorNode);
-                    } catch (e) {
-                        return;
-                    }
-                }
-
+                var node = null;
                 try {
-                    errorNode.textContent = text;
-                    hostEl.setAttribute("data-vega-status", "error");
-                } catch (e) {}
-            }
-
-            function markUnavailable(nodeEl, reason) {
-                if (!nodeEl || !nodeEl.classList) {
-                    return;
-                }
-                try {
-                    nodeEl.classList.add("vega-embed-unavailable");
-                    if (reason) {
-                        nodeEl.setAttribute("data-vega-error", reason);
-                    }
+                    node = document.createElement("p");
+                    node.textContent = String(message);
+                    node.style.margin = "0.5rem 0 0";
+                    node.style.fontSize = "0.82rem";
+                    node.style.lineHeight = "1.35";
+                    node.style.opacity = "0.8";
+                    hostEl.appendChild(node);
                 } catch (e) {}
             }
 
@@ -1688,14 +1012,13 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                 }
 
                 var key = src.replace(/[^a-z0-9]/gi, "_");
-                var selector = 'script[data-vega-js="' + key + '"]';
+                var selector = 'script[data-vega-code-js="' + key + '"]';
                 var existing = document.querySelector(selector);
                 if (existing) {
                     if (existing.getAttribute("data-vega-loaded") === "1") {
                         doneFn();
                         return;
                     }
-
                     existing.addEventListener("load", doneFn, { once: true });
                     existing.addEventListener("error", doneFn, { once: true });
                     return;
@@ -1704,7 +1027,7 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                 var script = document.createElement("script");
                 script.src = src;
                 script.async = true;
-                script.setAttribute("data-vega-js", key);
+                script.setAttribute("data-vega-code-js", key);
                 script.onload = function () {
                     script.setAttribute("data-vega-loaded", "1");
                     doneFn();
@@ -1730,182 +1053,59 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                 });
             }
 
-            var specCache = {};
-            function fetchSpecBySrc(src) {
-                if (specCache[src]) {
-                    return specCache[src];
-                }
-
-                specCache[src] = fetch(src, {
-                    credentials: "same-origin",
-                    cache: "default"
-                }).then(function (resp) {
-                    if (!resp || !resp.ok) {
-                        throw new Error("http");
-                    }
-                    return resp.text();
-                }).then(function (text) {
-                    var spec = parseStrictJsonSpec(text);
-                    if (!spec) {
-                        throw new Error("json");
-                    }
-                    return spec;
-                });
-
-                return specCache[src];
-            }
-
-            function renderIntoStage(hostEl, stageEl, spec, options) {
-                if (!hostEl || !stageEl || !spec || typeof window.vegaEmbed !== "function") {
+            function mountCodeChart(preEl, spec) {
+                if (!preEl || !preEl.parentNode) {
                     return;
                 }
 
-                clearError(hostEl);
-                ensureStageClickToExpand(hostEl, stageEl);
-
-                var unsafeDataUrl = findFirstUnsafeDataUrl(spec);
-                if (unsafeDataUrl) {
-                    markUnavailable(hostEl, "data-url");
-                    appendError(hostEl, "仅允许站内数据源");
-                    return;
-                }
-
-                var nextSpec = spec;
-                var opts = options || {};
-                var height = normalizeHeight(opts.height);
-                setStageMinHeight(stageEl, height);
-                if (height > 0) {
-                    if (typeof spec.height === "undefined" || spec.height === null || spec.height === "") {
-                        nextSpec = cloneSpec(spec);
-                        if (nextSpec && typeof nextSpec === "object") {
-                            nextSpec.height = height;
-                        }
-                    }
-                }
-
-                var baseRenderSpec = nextSpec;
-                var fitPrepared = applyDefaultFitAutosize(baseRenderSpec);
-                var renderSpec = fitPrepared.spec;
-                var embedOptions = {
-                    mode: "vega-lite",
-                    renderer: normalizeRenderer(opts.renderer),
-                    actions: normalizeBoolean(opts.actions, false)
-                };
-
-                function markRendered() {
-                    try {
-                        hostEl.setAttribute("data-vega-rendered", "1");
-                        hostEl.removeAttribute("data-vega-status");
-                    } catch (e) {}
-                    syncExpandability(hostEl, stageEl);
-                }
-
-                function markRenderError() {
-                    markUnavailable(hostEl, "render");
-                    appendError(hostEl, "Vega-Lite 图表渲染失败。");
-                    try {
-                        hostEl.removeAttribute("data-vega-expandable");
-                    } catch (e) {}
-                }
-
-                function embedWith(renderTargetSpec) {
-                    clearStage(stageEl);
-                    return Promise.resolve(window.vegaEmbed(stageEl, renderTargetSpec, embedOptions));
-                }
-
-                embedWith(renderSpec).then(markRendered).catch(function () {
-                    if (!fitPrepared.injected) {
-                        markRenderError();
-                        return;
-                    }
-
-                    embedWith(baseRenderSpec).then(markRendered).catch(markRenderError);
-                });
-            }
-
-            function renderShortcodeTarget(target) {
-                if (!target || target.getAttribute("data-vega-inited") === "1") {
-                    return;
-                }
-                target.setAttribute("data-vega-inited", "1");
-
-                var src = String(target.getAttribute("data-vega-src") || "").trim();
-                if (!isLocalVegaSrc(src)) {
-                    markUnavailable(target, "src");
-                    appendError(target, "Vega 图表 src 必须为站内路径。");
-                    return;
-                }
-
-                var stageEl = ensureStageNode(target);
-                if (!stageEl) {
-                    markUnavailable(target, "stage");
-                    appendError(target, "Vega 图表容器不可用。");
-                    return;
-                }
-
-                var height = normalizeHeight(
-                    target.getAttribute("data-vega-height") ||
-                    stageEl.getAttribute("data-vega-height") ||
-                    ""
-                );
-                setStageMinHeight(stageEl, height);
-
-                fetchSpecBySrc(src).then(function (spec) {
-                    renderIntoStage(target, stageEl, spec, {
-                        renderer: target.getAttribute("data-vega-renderer"),
-                        actions: target.getAttribute("data-vega-actions"),
-                        height: height
-                    });
-                }).catch(function () {
-                    markUnavailable(target, "fetch");
-                    appendError(target, "Vega 源文件无法加载或 JSON 不合法。");
-                });
-            }
-
-            function renderCodeTarget(codeEl) {
-                if (!codeEl || !codeEl.closest) {
-                    return;
-                }
-
-                var preEl = codeEl.closest("pre");
-                if (!preEl || !preEl.parentNode || preEl.getAttribute("data-vega-inited") === "1") {
-                    return;
-                }
-                preEl.setAttribute("data-vega-inited", "1");
-
-                var spec = parseStrictJsonSpec(codeEl.textContent || "");
-                if (!spec) {
-                    markUnavailable(preEl, "json");
-                    return;
-                }
-
-                var wrapper = document.createElement("section");
-                wrapper.className = "vega-embed-shortcode vega-embed-from-code";
-                wrapper.setAttribute("data-embed-type", "vega");
-                wrapper.setAttribute("data-vega-from", "code");
-                wrapper.style.margin = "1rem 0";
+                var hostEl = document.createElement("section");
+                hostEl.className = "vega-codeblock-render";
+                hostEl.style.margin = "1rem 0";
+                hostEl.style.maxWidth = "100%";
+                hostEl.style.overflowX = "auto";
+                hostEl.style.border = "1px dashed rgba(127,127,127,0.35)";
 
                 var stageEl = document.createElement("div");
-                stageEl.className = "vega-embed-stage";
-                stageEl.setAttribute("data-vega-stage", "1");
-                stageEl.setAttribute("aria-label", "Vega-Lite chart");
-                wrapper.appendChild(stageEl);
+                stageEl.style.display = "inline-block";
+                stageEl.style.padding = "0.4rem";
+                hostEl.appendChild(stageEl);
 
                 try {
-                    preEl.parentNode.replaceChild(wrapper, preEl);
+                    preEl.parentNode.replaceChild(hostEl, preEl);
                 } catch (e) {
                     markUnavailable(preEl, "replace");
                     return;
                 }
 
-                renderIntoStage(wrapper, stageEl, spec, {
+                Promise.resolve(window.vegaEmbed(stageEl, spec, {
+                    mode: "vega-lite",
                     renderer: "svg",
-                    actions: false,
-                    height: 0
+                    actions: false
+                })).catch(function () {
+                    appendError(hostEl, "Vega-Lite 图表渲染失败。");
                 });
             }
 
-            bindVegaExpandabilityResizeSync();
+            var codeTargets = [];
+            for (var c = 0; c < contents.length; c++) {
+                var content = contents[c];
+                if (!content || !content.querySelectorAll) {
+                    continue;
+                }
+
+                var blocks = content.querySelectorAll("pre code");
+                for (var i = 0; i < blocks.length; i++) {
+                    var codeEl = blocks[i];
+                    if (!codeEl || !isVegaLiteCodeBlock(codeEl)) {
+                        continue;
+                    }
+                    codeTargets.push(codeEl);
+                }
+            }
+
+            if (codeTargets.length === 0) {
+                return;
+            }
 
             ensureVegaAssets(function () {
                 if (
@@ -1913,28 +1113,38 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
                     typeof window.vegaLite === "undefined" ||
                     typeof window.vegaEmbed !== "function"
                 ) {
-                    for (var s = 0; s < shortcodeTargets.length; s++) {
-                        markUnavailable(shortcodeTargets[s], "runtime");
-                        appendError(shortcodeTargets[s], "Vega 运行时加载失败。");
-                    }
-                    for (var k = 0; k < codeTargets.length; k++) {
-                        var pre = codeTargets[k] && codeTargets[k].closest ? codeTargets[k].closest("pre") : null;
-                        markUnavailable(pre, "runtime");
-                    }
                     if (window.console && typeof window.console.warn === "function") {
                         window.console.warn("[Theme] Vega runtime unavailable.");
                     }
                     return;
                 }
 
-                for (var i = 0; i < shortcodeTargets.length; i++) {
-                    renderShortcodeTarget(shortcodeTargets[i]);
-                }
-                for (var j = 0; j < codeTargets.length; j++) {
-                    renderCodeTarget(codeTargets[j]);
-                }
+                for (var i = 0; i < codeTargets.length; i++) {
+                    var codeEl = codeTargets[i];
+                    if (!codeEl || !codeEl.closest) {
+                        continue;
+                    }
 
-                window.setTimeout(syncAllRenderedVegaExpandability, 80);
+                    var preEl = codeEl.closest("pre");
+                    if (!preEl || preEl.getAttribute("data-vega-code-inited") === "1") {
+                        continue;
+                    }
+                    preEl.setAttribute("data-vega-code-inited", "1");
+
+                    var spec = parseStrictJsonSpec(codeEl.textContent || "");
+                    if (!spec) {
+                        markUnavailable(preEl, "json");
+                        continue;
+                    }
+
+                    var unsafeDataUrl = findFirstUnsafeDataUrl(spec);
+                    if (unsafeDataUrl) {
+                        markUnavailable(preEl, "data-url");
+                        continue;
+                    }
+
+                    mountCodeChart(preEl, spec);
+                }
             });
         })();
     </script>
