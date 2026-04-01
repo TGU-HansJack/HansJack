@@ -5940,6 +5940,7 @@ function hansjackThemeCacheTargetPaths(): array
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'maimemo-study.json',
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'maimemo-rate-limit.json',
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'internal-link-meta.json',
+        __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'github-onebox.json',
     ];
 }
 
@@ -6057,7 +6058,7 @@ function hansjackThemeCachePanelHtml(Options $options): string
     }
 
     $html = '<div class="hansjack-cache-panel">';
-    $html .= '<div>' . _t('目标缓存：page-cache、post-guess、series、presence-status、maimemo-study、maimemo-rate-limit、internal-link-meta。') . '</div>';
+    $html .= '<div>' . _t('目标缓存：page-cache、post-guess、series、presence-status、maimemo-study、maimemo-rate-limit、internal-link-meta、github-onebox。') . '</div>';
 
     if ($message !== '') {
         $html .= '<div style="margin-top:6px;color:' . escape($messageColor) . ';">' . escape($message) . '</div>';
@@ -10479,6 +10480,1114 @@ function applyEmbedSyntaxToHtml(string $html): string
     return $replaced;
 }
 
+function hansjackGithubOneboxCachePath(): string
+{
+    return __DIR__
+        . DIRECTORY_SEPARATOR . 'cache'
+        . DIRECTORY_SEPARATOR . 'github-onebox.json';
+}
+
+function hansjackGithubOneboxLoadCache(): array
+{
+    $cache = [
+        'version' => 1,
+        'items' => [],
+    ];
+
+    $path = hansjackGithubOneboxCachePath();
+    if (!is_file($path)) {
+        return $cache;
+    }
+
+    $raw = @file_get_contents($path);
+    if (!is_string($raw) || trim($raw) === '') {
+        return $cache;
+    }
+
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        return $cache;
+    }
+
+    $items = is_array($decoded['items'] ?? null) ? $decoded['items'] : [];
+    if (empty($items)) {
+        return $cache;
+    }
+
+    $now = time();
+    $cleaned = [];
+    foreach ($items as $key => $item) {
+        if (!is_string($key) || $key === '' || !is_array($item)) {
+            continue;
+        }
+
+        $expires = (int) ($item['expires'] ?? 0);
+        if ($expires <= $now) {
+            continue;
+        }
+
+        $cleaned[$key] = [
+            'expires' => $expires,
+            'ok' => !empty($item['ok']) ? 1 : 0,
+            'html' => is_string($item['html'] ?? null) ? (string) $item['html'] : '',
+        ];
+    }
+
+    if (count($cleaned) > 400) {
+        uasort($cleaned, static function ($a, $b): int {
+            $ea = (int) (($a['expires'] ?? 0));
+            $eb = (int) (($b['expires'] ?? 0));
+            if ($ea === $eb) {
+                return 0;
+            }
+            return $ea > $eb ? -1 : 1;
+        });
+        $cleaned = array_slice($cleaned, 0, 400, true);
+    }
+
+    $cache['items'] = $cleaned;
+    return $cache;
+}
+
+function hansjackGithubOneboxCacheBootstrap(): void
+{
+    if (isset($GLOBALS['hansjack_github_onebox_cache_state']) && is_array($GLOBALS['hansjack_github_onebox_cache_state'])) {
+        return;
+    }
+
+    $GLOBALS['hansjack_github_onebox_cache_state'] = hansjackGithubOneboxLoadCache();
+    $GLOBALS['hansjack_github_onebox_cache_dirty'] = false;
+}
+
+function hansjackGithubOneboxCacheGet(string $key): ?array
+{
+    $key = trim($key);
+    if ($key === '') {
+        return null;
+    }
+
+    hansjackGithubOneboxCacheBootstrap();
+    $state = &$GLOBALS['hansjack_github_onebox_cache_state'];
+    if (!is_array($state) || !is_array($state['items'] ?? null)) {
+        return null;
+    }
+
+    $entry = $state['items'][$key] ?? null;
+    if (!is_array($entry)) {
+        return null;
+    }
+
+    $expires = (int) ($entry['expires'] ?? 0);
+    if ($expires <= time()) {
+        unset($state['items'][$key]);
+        $GLOBALS['hansjack_github_onebox_cache_dirty'] = true;
+        return null;
+    }
+
+    return [
+        'ok' => !empty($entry['ok']),
+        'html' => is_string($entry['html'] ?? null) ? (string) $entry['html'] : '',
+    ];
+}
+
+function hansjackGithubOneboxCachePut(string $key, string $html, bool $ok): void
+{
+    $key = trim($key);
+    if ($key === '') {
+        return;
+    }
+
+    hansjackGithubOneboxCacheBootstrap();
+    $state = &$GLOBALS['hansjack_github_onebox_cache_state'];
+    if (!is_array($state)) {
+        $state = ['version' => 1, 'items' => []];
+    }
+    if (!is_array($state['items'] ?? null)) {
+        $state['items'] = [];
+    }
+
+    $ttl = $ok ? 21600 : 900;
+    $state['items'][$key] = [
+        'expires' => time() + $ttl,
+        'ok' => $ok ? 1 : 0,
+        'html' => $ok ? trim($html) : '',
+    ];
+
+    if (count($state['items']) > 400) {
+        uasort($state['items'], static function ($a, $b): int {
+            $ea = (int) (($a['expires'] ?? 0));
+            $eb = (int) (($b['expires'] ?? 0));
+            if ($ea === $eb) {
+                return 0;
+            }
+            return $ea > $eb ? -1 : 1;
+        });
+        $state['items'] = array_slice($state['items'], 0, 400, true);
+    }
+
+    $GLOBALS['hansjack_github_onebox_cache_dirty'] = true;
+}
+
+function hansjackGithubOneboxCacheFlush(): void
+{
+    hansjackGithubOneboxCacheBootstrap();
+
+    if (empty($GLOBALS['hansjack_github_onebox_cache_dirty'])) {
+        return;
+    }
+
+    $state = $GLOBALS['hansjack_github_onebox_cache_state'] ?? [];
+    $items = is_array($state['items'] ?? null) ? $state['items'] : [];
+
+    $payload = [
+        'version' => 1,
+        'updated' => time(),
+        'items' => $items,
+    ];
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if (is_string($json) && $json !== '') {
+        hansjackWriteFileAtomic(hansjackGithubOneboxCachePath(), $json);
+    }
+
+    $GLOBALS['hansjack_github_onebox_cache_dirty'] = false;
+}
+
+function hansjackGithubOneboxApiJson(string $url): array
+{
+    $url = trim($url);
+    if ($url === '') {
+        return [];
+    }
+
+    $resp = githubHttpRequest('GET', $url, [
+        'Accept: application/vnd.github+json',
+        'User-Agent: HansJack-GitHub-Onebox/1.0',
+        'X-GitHub-Api-Version: 2022-11-28',
+    ]);
+
+    $status = (int) ($resp['status'] ?? 0);
+    if ($status < 200 || $status >= 300) {
+        return [];
+    }
+
+    $body = (string) ($resp['body'] ?? '');
+    if ($body === '') {
+        return [];
+    }
+
+    $json = json_decode($body, true);
+    return is_array($json) ? $json : [];
+}
+
+function hansjackGithubOneboxHttpGet(string $url, int $timeoutSeconds = 8): string
+{
+    $url = trim($url);
+    if ($url === '' || preg_match('/^https?:\/\//i', $url) !== 1) {
+        return '';
+    }
+
+    $timeoutSeconds = max(2, min(20, (int) $timeoutSeconds));
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        if ($ch !== false) {
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min(6, $timeoutSeconds));
+            curl_setopt($ch, CURLOPT_TIMEOUT, $timeoutSeconds);
+            curl_setopt($ch, CURLOPT_ENCODING, '');
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Accept: text/plain,text/*;q=0.9,*/*;q=0.8',
+                'User-Agent: HansJack-GitHub-Onebox/1.0',
+            ]);
+
+            $resp = curl_exec($ch);
+            $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+            curl_close($ch);
+
+            if ($status >= 200 && $status < 300 && is_string($resp)) {
+                return $resp;
+            }
+            return '';
+        }
+    }
+
+    $ctx = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => "Accept: text/plain,text/*;q=0.9,*/*;q=0.8\r\nUser-Agent: HansJack-GitHub-Onebox/1.0\r\n",
+            'timeout' => $timeoutSeconds,
+            'ignore_errors' => true,
+        ],
+    ]);
+
+    $resp = @file_get_contents($url, false, $ctx);
+    $status = 0;
+    if (!empty($http_response_header[0]) && preg_match('/\s(\d{3})\s/', (string) $http_response_header[0], $match)) {
+        $status = (int) $match[1];
+    }
+
+    if ($status >= 200 && $status < 300 && is_string($resp)) {
+        return $resp;
+    }
+
+    return '';
+}
+
+function hansjackGithubOneboxParseLineRange(string $fragment): array
+{
+    $fragment = trim($fragment);
+    if ($fragment === '') {
+        return ['start' => 0, 'end' => 0];
+    }
+
+    if (preg_match('/^L(\d+)(?:C\d+)?(?:-L(\d+)(?:C\d+)?)?$/i', $fragment, $match) !== 1) {
+        return ['start' => 0, 'end' => 0];
+    }
+
+    $start = max(1, (int) ($match[1] ?? 0));
+    $end = isset($match[2]) && $match[2] !== '' ? max(1, (int) $match[2]) : $start;
+    if ($end < $start) {
+        $tmp = $start;
+        $start = $end;
+        $end = $tmp;
+    }
+
+    if (($end - $start + 1) > 80) {
+        $end = $start + 79;
+    }
+
+    return ['start' => $start, 'end' => $end];
+}
+
+function hansjackGithubOneboxParseUrl(string $url): array
+{
+    $raw = trim(html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    if ($raw === '' || preg_match('/^https?:\/\//i', $raw) !== 1) {
+        return [];
+    }
+
+    $parsed = parse_url($raw);
+    if (!is_array($parsed)) {
+        return [];
+    }
+
+    $host = strtolower(trim((string) ($parsed['host'] ?? '')));
+    if ($host === 'www.github.com') {
+        $host = 'github.com';
+    }
+    if ($host !== 'github.com') {
+        return [];
+    }
+
+    $path = trim((string) ($parsed['path'] ?? ''), '/');
+    if ($path === '') {
+        return [];
+    }
+
+    $parts = array_values(array_filter(explode('/', $path), static function ($segment): bool {
+        return $segment !== '';
+    }));
+    if (count($parts) < 2) {
+        return [];
+    }
+
+    $owner = trim(rawurldecode((string) ($parts[0] ?? '')));
+    $repo = trim(rawurldecode((string) ($parts[1] ?? '')));
+    if (
+        $owner === '' || $repo === ''
+        || preg_match('/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/', $owner) !== 1
+        || preg_match('/^[A-Za-z0-9._-]+$/', $repo) !== 1
+    ) {
+        return [];
+    }
+
+    $fragment = trim((string) ($parsed['fragment'] ?? ''));
+    $repoUrl = 'https://github.com/' . rawurlencode($owner) . '/' . rawurlencode($repo);
+
+    if (count($parts) === 2) {
+        return [
+            'type' => 'repo',
+            'owner' => $owner,
+            'repo' => $repo,
+            'canonicalUrl' => $repoUrl,
+        ];
+    }
+
+    $third = strtolower((string) ($parts[2] ?? ''));
+    if ($third === 'pull' && isset($parts[3]) && preg_match('/^\d+$/', (string) $parts[3]) === 1) {
+        $number = (int) $parts[3];
+        if ($number <= 0) {
+            return [];
+        }
+        return [
+            'type' => 'pull',
+            'owner' => $owner,
+            'repo' => $repo,
+            'number' => $number,
+            'canonicalUrl' => $repoUrl . '/pull/' . $number,
+        ];
+    }
+
+    if ($third === 'blob' && count($parts) >= 5) {
+        $blobSegments = array_slice($parts, 3);
+        $decodedSegments = [];
+        foreach ($blobSegments as $segment) {
+            $decoded = trim(rawurldecode((string) $segment));
+            if ($decoded === '') {
+                continue;
+            }
+            $decodedSegments[] = $decoded;
+        }
+        if (count($decodedSegments) < 2) {
+            return [];
+        }
+
+        $ref = (string) ($decodedSegments[0] ?? '');
+        $filePath = implode('/', array_slice($decodedSegments, 1));
+        if ($ref === '' || $filePath === '') {
+            return [];
+        }
+
+        $encodedBlobPath = implode('/', array_map('rawurlencode', $decodedSegments));
+        $canonicalUrl = $repoUrl . '/blob/' . $encodedBlobPath;
+        if ($fragment !== '') {
+            $canonicalUrl .= '#' . rawurlencode($fragment);
+        }
+
+        return [
+            'type' => 'file',
+            'owner' => $owner,
+            'repo' => $repo,
+            'ref' => $ref,
+            'filePath' => $filePath,
+            'blobSegments' => $decodedSegments,
+            'lineRange' => hansjackGithubOneboxParseLineRange($fragment),
+            'canonicalUrl' => $canonicalUrl,
+        ];
+    }
+
+    return [];
+}
+
+function hansjackGithubOneboxIconSvg(string $type): string
+{
+    if ($type === 'pull') {
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-git-pull-request-arrow-icon lucide-git-pull-request-arrow"><circle cx="5" cy="6" r="3"/><path d="M5 9v12"/><circle cx="19" cy="18" r="3"/><path d="m15 9-3-3 3-3"/><path d="M12 6h5a2 2 0 0 1 2 2v7"/></svg>';
+    }
+
+    if ($type === 'file') {
+        return '<svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M3.75 1h4.19c.28 0 .55.11.75.31l3 3c.2.2.31.47.31.75v8.19A1.75 1.75 0 0 1 10.25 15h-6.5A1.75 1.75 0 0 1 2 13.25v-10.5C2 1.78 2.78 1 3.75 1zm3.5 5.5a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5zm0 3a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5h-2.5zM8 2.56V4.5h1.94L8 2.56z"></path></svg>';
+    }
+
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-github-icon lucide-github"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>';
+}
+
+function hansjackGithubOneboxFormatNumber(int $value): string
+{
+    $value = max(0, $value);
+    if ($value >= 1000000) {
+        return rtrim(rtrim(number_format($value / 1000000, 1, '.', ''), '0'), '.') . 'M';
+    }
+    if ($value >= 1000) {
+        return rtrim(rtrim(number_format($value / 1000, 1, '.', ''), '0'), '.') . 'k';
+    }
+    return (string) $value;
+}
+
+function hansjackGithubOneboxFormatDate(string $iso): string
+{
+    $iso = trim($iso);
+    if ($iso === '') {
+        return '';
+    }
+
+    $ts = strtotime($iso);
+    if (!is_int($ts) || $ts <= 0) {
+        return '';
+    }
+
+    return date('Y-m-d', $ts);
+}
+
+function hansjackGithubOneboxBuildBlobUrl(string $owner, string $repo, string $ref, string $filePath, string $fragment = ''): string
+{
+    $owner = trim($owner);
+    $repo = trim($repo);
+    $ref = trim($ref);
+    $filePath = trim($filePath, '/');
+    if ($owner === '' || $repo === '' || $ref === '' || $filePath === '') {
+        return '';
+    }
+
+    $refParts = array_filter(explode('/', $ref), static function ($item): bool {
+        return $item !== '';
+    });
+    $pathParts = array_filter(explode('/', $filePath), static function ($item): bool {
+        return $item !== '';
+    });
+    if (empty($refParts) || empty($pathParts)) {
+        return '';
+    }
+
+    $url = 'https://github.com/' . rawurlencode($owner) . '/' . rawurlencode($repo)
+        . '/blob/' . implode('/', array_map('rawurlencode', $refParts))
+        . '/' . implode('/', array_map('rawurlencode', $pathParts));
+    if ($fragment !== '') {
+        $url .= '#' . $fragment;
+    }
+
+    return $url;
+}
+
+function hansjackGithubOneboxBuildRawUrl(string $owner, string $repo, string $ref, string $filePath): string
+{
+    $owner = trim($owner);
+    $repo = trim($repo);
+    $ref = trim($ref);
+    $filePath = trim($filePath, '/');
+    if ($owner === '' || $repo === '' || $ref === '' || $filePath === '') {
+        return '';
+    }
+
+    $pathParts = array_filter(explode('/', $filePath), static function ($item): bool {
+        return $item !== '';
+    });
+    if (empty($pathParts)) {
+        return '';
+    }
+
+    return 'https://raw.githubusercontent.com/' . rawurlencode($owner)
+        . '/' . rawurlencode($repo)
+        . '/' . rawurlencode($ref)
+        . '/' . implode('/', array_map('rawurlencode', $pathParts));
+}
+
+function hansjackGithubOneboxResolveCodeLanguage(string $filePath): array
+{
+    $ext = strtolower(trim((string) pathinfo($filePath, PATHINFO_EXTENSION)));
+    $map = [
+        'bash' => ['bash', 'Bash'],
+        'c' => ['c', 'C'],
+        'cc' => ['cpp', 'C++'],
+        'cpp' => ['cpp', 'C++'],
+        'cs' => ['csharp', 'C#'],
+        'css' => ['css', 'CSS'],
+        'go' => ['go', 'Go'],
+        'h' => ['c', 'C'],
+        'hpp' => ['cpp', 'C++'],
+        'html' => ['html', 'HTML'],
+        'ini' => ['ini', 'INI'],
+        'java' => ['java', 'Java'],
+        'js' => ['javascript', 'JavaScript'],
+        'json' => ['json', 'JSON'],
+        'jsx' => ['jsx', 'JSX'],
+        'lua' => ['lua', 'Lua'],
+        'md' => ['markdown', 'Markdown'],
+        'mjs' => ['javascript', 'JavaScript'],
+        'php' => ['php', 'PHP'],
+        'py' => ['python', 'Python'],
+        'rb' => ['ruby', 'Ruby'],
+        'rs' => ['rust', 'Rust'],
+        'sh' => ['bash', 'Shell'],
+        'sql' => ['sql', 'SQL'],
+        'toml' => ['toml', 'TOML'],
+        'ts' => ['typescript', 'TypeScript'],
+        'tsx' => ['tsx', 'TSX'],
+        'txt' => ['plaintext', 'Text'],
+        'xml' => ['xml', 'XML'],
+        'yaml' => ['yaml', 'YAML'],
+        'yml' => ['yaml', 'YAML'],
+    ];
+
+    if ($ext !== '' && isset($map[$ext])) {
+        return [
+            'class' => 'language-' . (string) $map[$ext][0],
+            'label' => (string) $map[$ext][1],
+        ];
+    }
+
+    if ($ext !== '') {
+        $sanitized = preg_replace('/[^a-z0-9_-]+/i', '', $ext);
+        return [
+            'class' => $sanitized !== '' ? 'language-' . strtolower((string) $sanitized) : '',
+            'label' => strtoupper($ext),
+        ];
+    }
+
+    return ['class' => '', 'label' => 'Text'];
+}
+
+function hansjackGithubOneboxFetchFileByRef(string $owner, string $repo, string $ref, string $filePath): string
+{
+    $pathParts = array_filter(explode('/', trim($filePath, '/')), static function ($item): bool {
+        return $item !== '';
+    });
+    if (empty($pathParts)) {
+        return '';
+    }
+
+    $apiUrl = 'https://api.github.com/repos/' . rawurlencode($owner)
+        . '/' . rawurlencode($repo)
+        . '/contents/' . implode('/', array_map('rawurlencode', $pathParts))
+        . '?ref=' . rawurlencode($ref);
+    $json = hansjackGithubOneboxApiJson($apiUrl);
+    if (!empty($json)) {
+        $encoding = strtolower(trim((string) ($json['encoding'] ?? '')));
+        $contentRaw = (string) ($json['content'] ?? '');
+        if ($encoding === 'base64' && $contentRaw !== '') {
+            $decoded = base64_decode(str_replace(["\r", "\n"], '', $contentRaw), true);
+            if (is_string($decoded)) {
+                return $decoded;
+            }
+        }
+
+        $downloadUrl = trim((string) ($json['download_url'] ?? ''));
+        if ($downloadUrl !== '') {
+            $download = hansjackGithubOneboxHttpGet($downloadUrl, 8);
+            if ($download !== '') {
+                return $download;
+            }
+        }
+    }
+
+    $rawUrl = hansjackGithubOneboxBuildRawUrl($owner, $repo, $ref, $filePath);
+    if ($rawUrl === '') {
+        return '';
+    }
+
+    return hansjackGithubOneboxHttpGet($rawUrl, 8);
+}
+
+function hansjackGithubOneboxRenderRepo(array $parsed): string
+{
+    $owner = trim((string) ($parsed['owner'] ?? ''));
+    $repo = trim((string) ($parsed['repo'] ?? ''));
+    if ($owner === '' || $repo === '') {
+        return '';
+    }
+
+    $data = hansjackGithubOneboxApiJson(
+        'https://api.github.com/repos/' . rawurlencode($owner) . '/' . rawurlencode($repo)
+    );
+    if (empty($data)) {
+        return '';
+    }
+
+    $repoUrl = trim((string) ($data['html_url'] ?? (($parsed['canonicalUrl'] ?? ''))));
+    if ($repoUrl === '') {
+        $repoUrl = 'https://github.com/' . rawurlencode($owner) . '/' . rawurlencode($repo);
+    }
+
+    $fullName = trim((string) ($data['full_name'] ?? ($owner . '/' . $repo)));
+    $description = hansjackTruncateText((string) ($data['description'] ?? ''), 260);
+    $language = trim((string) ($data['language'] ?? ''));
+    $stars = (int) ($data['stargazers_count'] ?? 0);
+    $forks = (int) ($data['forks_count'] ?? 0);
+    $watchers = (int) ($data['subscribers_count'] ?? ($data['watchers_count'] ?? 0));
+    $ownerLogin = trim((string) ($data['owner']['login'] ?? ''));
+    $ownerUrl = trim((string) ($data['owner']['html_url'] ?? ''));
+    $ownerAvatar = trim((string) ($data['owner']['avatar_url'] ?? ''));
+    $private = !empty($data['private']);
+
+    $html = '<aside class="onebox githubrepo" data-onebox-src="' . escape($repoUrl) . '">';
+    $html .= '<article class="onebox-body">';
+    $html .= '<div class="source">';
+    $html .= '<span class="github-source-icon" aria-hidden="true">' . hansjackGithubOneboxIconSvg('repo') . '</span>';
+    $html .= '<a href="' . escape($repoUrl) . '" target="_blank" rel="noopener">github.com/' . escape($fullName) . '</a>';
+    $html .= '</div>';
+    $html .= '<div class="github-row" data-github-private-repo="' . ($private ? 'true' : 'false') . '">';
+    $html .= '<div class="github-info-container">';
+    $html .= '<div class="github-title"><a href="' . escape($repoUrl) . '" target="_blank" rel="noopener">GitHub - ' . escape($fullName) . '</a></div>';
+    if ($description !== '') {
+        $html .= '<p class="github-repo-description">' . escape($description) . '</p>';
+    }
+    $html .= '<div class="github-info">';
+    if ($ownerLogin !== '') {
+        $html .= '<span class="github-stat user">';
+        if ($ownerUrl !== '') {
+            $html .= '<a href="' . escape($ownerUrl) . '" target="_blank" rel="noopener">';
+        }
+        if ($ownerAvatar !== '') {
+            $html .= '<img alt="" src="' . escape($ownerAvatar) . '" class="onebox-avatar-inline" width="20" height="20" loading="lazy">';
+        }
+        $html .= escape($ownerLogin);
+        if ($ownerUrl !== '') {
+            $html .= '</a>';
+        }
+        $html .= '</span>';
+    }
+    $html .= '<span class="github-stat">★ ' . escape(hansjackGithubOneboxFormatNumber($stars)) . '</span>';
+    $html .= '<span class="github-stat">Fork ' . escape(hansjackGithubOneboxFormatNumber($forks)) . '</span>';
+    if ($watchers > 0) {
+        $html .= '<span class="github-stat">Watch ' . escape(hansjackGithubOneboxFormatNumber($watchers)) . '</span>';
+    }
+    if ($language !== '') {
+        $html .= '<span class="github-stat">' . escape($language) . '</span>';
+    }
+    $html .= '</div>';
+    $html .= '</div>';
+    $html .= '</div>';
+    $html .= '</article>';
+    $html .= '</aside>';
+
+    return $html;
+}
+
+function hansjackGithubOneboxRenderPull(array $parsed): string
+{
+    $owner = trim((string) ($parsed['owner'] ?? ''));
+    $repo = trim((string) ($parsed['repo'] ?? ''));
+    $number = (int) ($parsed['number'] ?? 0);
+    if ($owner === '' || $repo === '' || $number <= 0) {
+        return '';
+    }
+
+    $data = hansjackGithubOneboxApiJson(
+        'https://api.github.com/repos/' . rawurlencode($owner) . '/' . rawurlencode($repo) . '/pulls/' . $number
+    );
+    if (empty($data)) {
+        return '';
+    }
+
+    $prUrl = trim((string) ($data['html_url'] ?? (($parsed['canonicalUrl'] ?? ''))));
+    if ($prUrl === '') {
+        $prUrl = 'https://github.com/' . rawurlencode($owner) . '/' . rawurlencode($repo) . '/pull/' . $number;
+    }
+
+    $title = trim((string) ($data['title'] ?? ''));
+    if ($title === '') {
+        $title = $owner . '/' . $repo . '#' . $number;
+    }
+
+    $state = strtolower(trim((string) ($data['state'] ?? 'open')));
+    $mergedAt = trim((string) ($data['merged_at'] ?? ''));
+    $status = $mergedAt !== '' ? _t('已合并') : ($state === 'closed' ? _t('已关闭') : _t('已打开'));
+    $createdAt = hansjackGithubOneboxFormatDate((string) ($data['created_at'] ?? ''));
+    $excerpt = hansjackTruncateText((string) ($data['body'] ?? ''), 320);
+
+    $baseRef = trim((string) ($data['base']['ref'] ?? ''));
+    $headRef = trim((string) ($data['head']['ref'] ?? ''));
+    $headRepoFull = trim((string) ($data['head']['repo']['full_name'] ?? ''));
+    $branchesText = '';
+    if ($baseRef !== '' || $headRef !== '') {
+        $headLabel = $headRef;
+        if ($headRepoFull !== '') {
+            $headLabel = $headRepoFull . ($headRef !== '' ? ':' . $headRef : '');
+        }
+        $branchesText = '<div class="branches"><code>' . escape($baseRef !== '' ? $baseRef : '-') . '</code> ← <code>' . escape($headLabel !== '' ? $headLabel : '-') . '</code></div>';
+    }
+
+    $userLogin = trim((string) ($data['user']['login'] ?? ''));
+    $userUrl = trim((string) ($data['user']['html_url'] ?? ''));
+    $userAvatar = trim((string) ($data['user']['avatar_url'] ?? ''));
+    $additions = max(0, (int) ($data['additions'] ?? 0));
+    $deletions = max(0, (int) ($data['deletions'] ?? 0));
+    $filesChanged = max(0, (int) ($data['changed_files'] ?? 0));
+
+    $html = '<aside class="onebox githubpullrequest" data-onebox-src="' . escape($prUrl) . '">';
+    $html .= '<article class="onebox-body">';
+    $html .= '<div class="source">';
+    $html .= '<span class="github-source-icon" aria-hidden="true">' . hansjackGithubOneboxIconSvg('repo') . '</span>';
+    $html .= '<a href="' . escape($prUrl) . '" target="_blank" rel="noopener">github.com/' . escape($owner . '/' . $repo) . '</a>';
+    $html .= '</div>';
+    $html .= '<div class="github-row github-feature">';
+    $html .= '<div class="github-leading-icon" title="' . escape(_t('拉取请求')) . '" aria-hidden="true">' . hansjackGithubOneboxIconSvg('pull') . '</div>';
+    $html .= '<div class="github-info-container">';
+    $html .= '<div class="github-title github-pr-title">';
+    $html .= '<a href="' . escape($prUrl) . '" target="_blank" rel="noopener">' . escape($title) . ' (#' . $number . ')</a>';
+    $html .= '</div>';
+    if ($branchesText !== '') {
+        $html .= $branchesText;
+    }
+    $html .= '<div class="github-info">';
+    $html .= '<span class="github-stat github-pr-status">' . escape($status) . '</span>';
+    if ($createdAt !== '') {
+        $html .= '<span class="github-stat">' . escape(_t('创建于')) . ' ' . escape($createdAt) . '</span>';
+    }
+    if ($userLogin !== '') {
+        $html .= '<span class="github-stat user">';
+        if ($userUrl !== '') {
+            $html .= '<a href="' . escape($userUrl) . '" target="_blank" rel="noopener">';
+        }
+        if ($userAvatar !== '') {
+            $html .= '<img alt="" src="' . escape($userAvatar) . '" class="onebox-avatar-inline" width="20" height="20" loading="lazy">';
+        }
+        $html .= escape($userLogin);
+        if ($userUrl !== '') {
+            $html .= '</a>';
+        }
+        $html .= '</span>';
+    }
+    if ($filesChanged > 0 || $additions > 0 || $deletions > 0) {
+        $html .= '<span class="github-stat lines">';
+        if ($additions > 0) {
+            $html .= '<span class="added">+' . escape((string) $additions) . '</span>';
+        }
+        if ($deletions > 0) {
+            $html .= '<span class="removed">-' . escape((string) $deletions) . '</span>';
+        }
+        if ($filesChanged > 0) {
+            $html .= '<span class="changed">' . escape(_t('%d 个文件', $filesChanged)) . '</span>';
+        }
+        $html .= '</span>';
+    }
+    $html .= '</div>';
+    $html .= '</div>';
+    $html .= '</div>';
+    if ($excerpt !== '') {
+        $html .= '<div class="github-row"><p class="github-body-container">' . escape($excerpt) . '</p></div>';
+    }
+    $html .= '</article>';
+    $html .= '</aside>';
+
+    return $html;
+}
+
+function hansjackGithubOneboxRenderFile(array $parsed): string
+{
+    $owner = trim((string) ($parsed['owner'] ?? ''));
+    $repo = trim((string) ($parsed['repo'] ?? ''));
+    $segments = is_array($parsed['blobSegments'] ?? null) ? $parsed['blobSegments'] : [];
+    if ($owner === '' || $repo === '' || count($segments) < 2) {
+        return '';
+    }
+
+    $resolvedRef = '';
+    $resolvedPath = '';
+    $content = '';
+
+    $maxRefParts = max(1, min(count($segments) - 1, 4));
+    for ($refParts = 1; $refParts <= $maxRefParts; $refParts++) {
+        $ref = trim(implode('/', array_slice($segments, 0, $refParts)));
+        $filePath = trim(implode('/', array_slice($segments, $refParts)), '/');
+        if ($ref === '' || $filePath === '') {
+            continue;
+        }
+
+        $fetched = hansjackGithubOneboxFetchFileByRef($owner, $repo, $ref, $filePath);
+        if ($fetched === '') {
+            continue;
+        }
+
+        $resolvedRef = $ref;
+        $resolvedPath = $filePath;
+        $content = $fetched;
+        break;
+    }
+
+    if ($resolvedRef === '' || $resolvedPath === '') {
+        $resolvedRef = trim((string) ($parsed['ref'] ?? ''));
+        $resolvedPath = trim((string) ($parsed['filePath'] ?? ''), '/');
+        if ($resolvedRef !== '' && $resolvedPath !== '') {
+            $content = hansjackGithubOneboxFetchFileByRef($owner, $repo, $resolvedRef, $resolvedPath);
+        }
+    }
+
+    if ($resolvedRef === '' || $resolvedPath === '') {
+        return '';
+    }
+
+    $lineRange = is_array($parsed['lineRange'] ?? null) ? $parsed['lineRange'] : ['start' => 0, 'end' => 0];
+    $lineStart = max(0, (int) ($lineRange['start'] ?? 0));
+    $lineEnd = max(0, (int) ($lineRange['end'] ?? 0));
+    $lineFragment = '';
+    if ($lineStart > 0) {
+        $lineFragment = 'L' . $lineStart;
+        if ($lineEnd > $lineStart) {
+            $lineFragment .= '-L' . $lineEnd;
+        }
+    }
+
+    $sourceUrl = trim((string) ($parsed['canonicalUrl'] ?? ''));
+    if ($sourceUrl === '') {
+        $sourceUrl = hansjackGithubOneboxBuildBlobUrl($owner, $repo, $resolvedRef, $resolvedPath, $lineFragment);
+    }
+
+    $language = hansjackGithubOneboxResolveCodeLanguage($resolvedPath);
+    $langClass = trim((string) ($language['class'] ?? ''));
+
+    $previewHtml = '';
+    if ($content !== '') {
+        if (strlen($content) > 260000) {
+            $content = substr($content, 0, 260000);
+        }
+        if (strpos($content, "\0") === false) {
+            $normalized = str_replace(["\r\n", "\r"], "\n", $content);
+            $lines = explode("\n", $normalized);
+            $total = count($lines);
+            if ($total > 0) {
+                $start = $lineStart > 0 ? min($lineStart, $total) : 1;
+                $end = $lineEnd > 0 ? min($lineEnd, $total) : $total;
+                if ($end < $start) {
+                    $end = $start;
+                }
+                if (($lineStart > 0 || $lineEnd > 0) && ($end - $start + 1) > 200) {
+                    $end = $start + 199;
+                }
+                $slice = array_slice($lines, $start - 1, $end - $start + 1);
+                $snippet = implode("\n", $slice);
+                $previewHtml = '<pre><code'
+                    . ($langClass !== '' ? ' class="' . escape($langClass) . '"' : '')
+                    . '>' . escape($snippet) . '</code></pre>';
+            }
+        } else {
+            $previewHtml = '<pre><code>' . escape(_t('二进制文件，无法生成预览。')) . '</code></pre>';
+        }
+    } else {
+        $previewHtml = '<pre><code>' . escape(_t('无法读取该文件内容。')) . '</code></pre>';
+    }
+
+    $html = '<div class="github-file-inline" data-onebox-src="' . escape($sourceUrl) . '">';
+    if ($previewHtml !== '') {
+        $html .= $previewHtml;
+    }
+    $html .= '<p class="github-file-link"><a href="' . escape($sourceUrl) . '" target="_blank" rel="noopener">' . escape($resolvedPath . ' @ ' . $resolvedRef) . '</a></p>';
+    $html .= '</div>';
+
+    return $html;
+}
+
+function hansjackGithubOneboxRender(array $parsed): string
+{
+    $type = trim((string) ($parsed['type'] ?? ''));
+    if ($type === 'repo') {
+        return hansjackGithubOneboxRenderRepo($parsed);
+    }
+    if ($type === 'pull') {
+        return hansjackGithubOneboxRenderPull($parsed);
+    }
+    if ($type === 'file') {
+        return hansjackGithubOneboxRenderFile($parsed);
+    }
+    return '';
+}
+
+function hansjackGithubOneboxFromUrl(string $url): string
+{
+    static $memo = [];
+
+    $parsed = hansjackGithubOneboxParseUrl($url);
+    if (empty($parsed)) {
+        return '';
+    }
+
+    $cacheBase = (string) ($parsed['canonicalUrl'] ?? '');
+    if ($cacheBase === '') {
+        $cacheBase = trim(html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    }
+    if ($cacheBase === '') {
+        return '';
+    }
+
+    $cacheKey = md5('gh-onebox-v3:' . (string) ($parsed['type'] ?? '') . ':' . $cacheBase);
+    if (array_key_exists($cacheKey, $memo)) {
+        return (string) $memo[$cacheKey];
+    }
+
+    $cached = hansjackGithubOneboxCacheGet($cacheKey);
+    if (is_array($cached)) {
+        $memo[$cacheKey] = !empty($cached['ok']) ? (string) ($cached['html'] ?? '') : '';
+        return (string) $memo[$cacheKey];
+    }
+
+    $html = hansjackGithubOneboxRender($parsed);
+    hansjackGithubOneboxCachePut($cacheKey, $html, $html !== '');
+    $memo[$cacheKey] = $html;
+    return $html;
+}
+
+function hansjackGithubOneboxIsBlockedByAncestor(\DOMElement $element, \DOMElement $root): bool
+{
+    $blockedTags = ['pre', 'code', 'script', 'style', 'textarea', 'aside'];
+    $parent = $element->parentNode;
+    while ($parent instanceof \DOMElement && $parent !== $root) {
+        $tag = strtolower((string) $parent->tagName);
+        if (in_array($tag, $blockedTags, true)) {
+            return true;
+        }
+        if (domElementHasClass($parent, 'onebox')) {
+            return true;
+        }
+        $parent = $parent->parentNode;
+    }
+    return false;
+}
+
+function hansjackGithubOneboxExtractStandaloneUrl(\DOMElement $block): string
+{
+    $tag = strtolower((string) $block->tagName);
+    if ($tag !== 'p') {
+        return '';
+    }
+    if (domElementHasClass($block, 'onebox')) {
+        return '';
+    }
+
+    $anchorHref = '';
+    $hasPlainText = false;
+
+    foreach ($block->childNodes as $child) {
+        if ($child instanceof \DOMText) {
+            if (trim((string) $child->nodeValue) !== '') {
+                $hasPlainText = true;
+            }
+            continue;
+        }
+
+        if (!$child instanceof \DOMElement) {
+            continue;
+        }
+
+        $childTag = strtolower((string) $child->tagName);
+        if ($childTag === 'br') {
+            continue;
+        }
+
+        if ($childTag === 'a') {
+            if ($anchorHref !== '') {
+                return '';
+            }
+
+            $href = trim(html_entity_decode((string) $child->getAttribute('href'), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            if ($href === '') {
+                return '';
+            }
+            $anchorHref = $href;
+            continue;
+        }
+
+        return '';
+    }
+
+    if ($anchorHref !== '') {
+        return $hasPlainText ? '' : $anchorHref;
+    }
+
+    $text = trim((string) $block->textContent);
+    if ($text !== '' && preg_match('/^https?:\/\/[^\s<>"\']+$/i', $text) === 1) {
+        return $text;
+    }
+
+    return '';
+}
+
+function applyGithubOneboxToHtml(string $html): string
+{
+    if ($html === '' || stripos($html, 'github.com/') === false || !class_exists('DOMDocument')) {
+        return $html;
+    }
+
+    $dom = new \DOMDocument('1.0', 'UTF-8');
+    $flags = 0;
+    if (defined('LIBXML_HTML_NODEFDTD')) {
+        $flags |= LIBXML_HTML_NODEFDTD;
+    }
+    if (defined('LIBXML_HTML_NOIMPLIED')) {
+        $flags |= LIBXML_HTML_NOIMPLIED;
+    }
+    if (defined('LIBXML_NOERROR')) {
+        $flags |= LIBXML_NOERROR;
+    }
+    if (defined('LIBXML_NOWARNING')) {
+        $flags |= LIBXML_NOWARNING;
+    }
+
+    $wrapped = '<div id="github-onebox-root">' . $html . '</div>';
+    $useErrors = libxml_use_internal_errors(true);
+    $loaded = $flags > 0
+        ? $dom->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped, $flags)
+        : $dom->loadHTML('<?xml encoding="utf-8" ?>' . $wrapped);
+    libxml_clear_errors();
+    libxml_use_internal_errors($useErrors);
+    if (!$loaded) {
+        return $html;
+    }
+
+    $xpath = new \DOMXPath($dom);
+    $rootNodes = $xpath->query('//div[@id="github-onebox-root"]');
+    if (!$rootNodes instanceof \DOMNodeList || $rootNodes->length === 0) {
+        return $html;
+    }
+
+    $root = $rootNodes->item(0);
+    if (!$root instanceof \DOMElement) {
+        return $html;
+    }
+
+    $blocks = $xpath->query('.//p', $root);
+    if (!$blocks instanceof \DOMNodeList || $blocks->length === 0) {
+        return $html;
+    }
+
+    $targets = [];
+    foreach ($blocks as $block) {
+        if (!$block instanceof \DOMElement) {
+            continue;
+        }
+        if (hansjackGithubOneboxIsBlockedByAncestor($block, $root)) {
+            continue;
+        }
+
+        $url = hansjackGithubOneboxExtractStandaloneUrl($block);
+        if ($url === '') {
+            continue;
+        }
+        if (empty(hansjackGithubOneboxParseUrl($url))) {
+            continue;
+        }
+
+        $targets[] = [
+            'node' => $block,
+            'url' => $url,
+        ];
+    }
+
+    $changed = false;
+    foreach ($targets as $target) {
+        $node = $target['node'] ?? null;
+        if (!$node instanceof \DOMElement) {
+            continue;
+        }
+
+        $boxHtml = hansjackGithubOneboxFromUrl((string) ($target['url'] ?? ''));
+        if ($boxHtml === '') {
+            continue;
+        }
+
+        $fragment = $dom->createDocumentFragment();
+        if (!appendHtmlSnippetToFragment($dom, $fragment, $boxHtml)) {
+            continue;
+        }
+
+        $parent = $node->parentNode;
+        if (!$parent) {
+            continue;
+        }
+
+        try {
+            $parent->replaceChild($fragment, $node);
+            $changed = true;
+        } catch (\Throwable $e) {
+            // Keep original link paragraph when replacement fails.
+        }
+    }
+
+    hansjackGithubOneboxCacheFlush();
+
+    if (!$changed) {
+        return $html;
+    }
+
+    $output = '';
+    foreach ($root->childNodes as $child) {
+        $output .= (string) $dom->saveHTML($child);
+    }
+
+    return $output !== '' ? $output : $html;
+}
+
 function renderArchiveContent($archive): string
 {
     if (!is_object($archive) || !method_exists($archive, 'content')) {
@@ -10511,6 +11620,7 @@ function renderArchiveContent($archive): string
     if (!isEmbedFetchRequest()) {
         $html = applyEmbedSyntaxToHtml($html);
     }
+    $html = applyGithubOneboxToHtml($html);
     return $html;
 }
 
@@ -10588,6 +11698,7 @@ function renderCommentContent($comments): string
     $html = applyTaskListSyntaxToHtml($html);
     $html = applyMarkdownAlertSyntaxToHtml($html);
     $html = applyInlineSyntaxToHtml($html);
+    $html = applyGithubOneboxToHtml($html);
     return $html;
 }
 

@@ -9776,6 +9776,260 @@ html.login-modal-open .login-modal {
     text-decoration: none;
 }
 
+:is(.article-content, .comment-content) .onebox {
+    margin: 1rem 0;
+    border: 1px solid var(--line-day);
+    border-radius: 6px;
+    background: #fff;
+    overflow: hidden;
+}
+
+:is(.article-content, .comment-content) .onebox .source {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 0.5rem;
+    padding: 0;
+    border-bottom: 0;
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    line-height: 1.3;
+    color: var(--muted-day);
+}
+
+:is(.article-content, .comment-content) .onebox .source a,
+:is(.article-content, .comment-content) .onebox .source a:visited {
+    color: inherit;
+}
+
+:is(.article-content, .comment-content) .onebox .source .github-source-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+}
+
+:is(.article-content, .comment-content) .onebox .source .github-source-icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+:is(.article-content, .comment-content) .onebox .onebox-body {
+    padding: 0.72rem 0.85rem;
+}
+
+:is(.article-content, .comment-content) .onebox .github-row + .github-row {
+    margin-top: 0.65rem;
+}
+
+:is(.article-content, .comment-content) .onebox .github-row.github-feature {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.72rem;
+}
+
+:is(.article-content, .comment-content) .onebox .github-leading-icon {
+    flex: 0 0 2rem;
+    width: 2rem;
+    min-height: 2rem;
+    display: inline-flex;
+    align-items: flex-start;
+    justify-content: center;
+    color: var(--muted-day);
+}
+
+:is(.article-content, .comment-content) .onebox .github-leading-icon svg {
+    width: 1.75rem;
+    height: 1.75rem;
+    display: block;
+}
+
+:is(.article-content, .comment-content) .onebox .github-info-container {
+    min-width: 0;
+    display: grid;
+    row-gap: 0.18rem;
+}
+
+:is(.article-content, .comment-content) .onebox .github-row,
+:is(.article-content, .comment-content) .onebox .github-repo-description,
+:is(.article-content, .comment-content) .onebox .github-body-container {
+    font-size: clamp(0.8rem, 0.95vw, 0.9rem);
+    line-height: 1.56;
+}
+
+:is(.article-content, .comment-content) .onebox .github-title {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0;
+    line-height: 1.56;
+    font-size: clamp(0.8rem, 0.95vw, 0.9rem);
+    font-family: var(--font-ui);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+:is(.article-content, .comment-content) .onebox .github-title a,
+:is(.article-content, .comment-content) .onebox .github-title a:visited {
+    color: #0077bc;
+}
+
+:is(.article-content, .comment-content) .onebox .github-title a:hover,
+:is(.article-content, .comment-content) .onebox .github-title a:focus-visible {
+    color: #0a8ad7;
+}
+
+:is(.article-content, .comment-content) .onebox .github-repo-description,
+:is(.article-content, .comment-content) .onebox .github-body-container,
+:is(.article-content, .comment-content) .onebox .github-file-fallback {
+    margin: 0.45rem 0 0;
+    color: inherit;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+:is(.article-content, .comment-content) .onebox .github-repo-description {
+    margin: 0;
+}
+
+:is(.article-content, .comment-content) .onebox .branches {
+    margin-top: 0;
+    font-family: var(--font-ui);
+    font-size: clamp(0.8rem, 0.95vw, 0.9rem);
+    line-height: 1.56;
+}
+
+:is(.article-content, .comment-content) .onebox .branches code,
+:is(.article-content, .comment-content) .onebox .github-info code {
+    display: inline-block;
+    background: rgba(117, 117, 117, 0.16);
+    padding: 0.02rem 0.32rem;
+    border-radius: 4px;
+    font-family: var(--font-code);
+    font-size: 0.86em;
+    line-height: 1.35;
+}
+
+:is(.article-content, .comment-content) .onebox .github-info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: center;
+    gap: 0.14rem 0.55rem;
+    margin-top: 0;
+    font-family: var(--font-ui);
+    font-size: clamp(0.8rem, 0.95vw, 0.9rem);
+    line-height: 1.3;
+}
+
+:is(.article-content, .comment-content) .onebox .github-info .github-stat {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1.3;
+    margin: 0;
+    padding: 0;
+}
+
+:is(.article-content, .comment-content) .onebox .github-info .user a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    line-height: 1.3;
+    color: #0077bc;
+}
+
+:is(.article-content, .comment-content) .onebox .github-info .user a:visited {
+    color: #0077bc;
+}
+
+:is(.article-content, .comment-content) .onebox .onebox-avatar-inline {
+    border-radius: 999px;
+    width: 1em;
+    height: 1em;
+    flex: 0 0 1em;
+    object-fit: cover;
+    margin: 0;
+    display: block;
+    vertical-align: middle;
+}
+
+:is(.article-content, .comment-content) .onebox .onebox-avatar-inline.lazy-blurup,
+:is(.article-content, .comment-content) .onebox .onebox-avatar-inline.lazy-blurup.is-loaded {
+    filter: none;
+    transform: none;
+    opacity: 1;
+}
+
+:is(.article-content, .comment-content) .onebox .lines {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+:is(.article-content, .comment-content) .onebox .lines .added {
+    color: #1a7f37;
+}
+
+:is(.article-content, .comment-content) .onebox .lines .removed {
+    color: #b42318;
+}
+
+:is(.article-content, .comment-content) .onebox.githubfile .github-file-preview {
+    margin-top: 0.65rem;
+}
+
+:is(.article-content, .comment-content) .onebox.githubfile pre {
+    margin: 0;
+    border: 1px solid var(--line-day);
+    background: rgba(18, 18, 18, 0.06);
+}
+
+:is(.article-content, .comment-content) .onebox.githubfile pre > code {
+    white-space: pre;
+    overflow-x: auto;
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+:is(.article-content, .comment-content) .onebox a::before,
+:is(.article-content, .comment-content) .onebox a::after {
+    content: none !important;
+    background-image: none !important;
+    background-color: transparent !important;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+}
+
+:is(.article-content, .comment-content) .github-file-inline {
+    margin: 1rem 0;
+}
+
+:is(.article-content, .comment-content) .github-file-inline .github-file-link {
+    margin: 0.5rem 0 0;
+    text-align: center;
+    font-family: var(--font-ui);
+    font-size: 0.86rem;
+    color: var(--muted-day);
+}
+
+:is(.article-content, .comment-content) .github-file-inline .github-file-link a,
+:is(.article-content, .comment-content) .github-file-inline .github-file-link a:visited {
+    color: inherit;
+}
+
+:is(.article-content, .comment-content) .github-file-inline .github-file-link a::before,
+:is(.article-content, .comment-content) .github-file-inline .github-file-link a::after {
+    content: none !important;
+    background-image: none !important;
+    background-color: transparent !important;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+}
+
 .link-internal-tooltip {
     position: absolute;
     left: 0;
@@ -12077,6 +12331,57 @@ html.login-modal-open .login-modal {
         --internal-link-tip-bg: rgba(221, 221, 219, 0.96);
         --internal-link-tip-fg: var(--night-black);
         box-shadow: none;
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox {
+        border-color: var(--line-night);
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox.githubfile pre {
+        border-color: var(--line-night);
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .source {
+        color: var(--muted-night);
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-leading-icon {
+        color: var(--muted-night);
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-title a,
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-title a:visited {
+        color: #7bc9ff;
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-info .user a,
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-info .user a:visited {
+        color: #7bc9ff;
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .onebox-avatar-inline.lazy-blurup,
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .onebox-avatar-inline.lazy-blurup.is-loaded {
+        filter: none;
+        transform: none;
+        opacity: 1;
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .branches code,
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-info code {
+        background: rgba(221, 221, 219, 0.16);
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .lines .added {
+        color: #78dba9;
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .lines .removed {
+        color: #ff938a;
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .github-file-inline .github-file-link {
+        color: var(--muted-night);
     }
 
     html:not(.theme-light) :is(.article-content, .comment-content) sup.footnote-tooltip > .footnote-tip a,
