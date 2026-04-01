@@ -221,13 +221,13 @@
 
     function updateHistoryStateScroll() {
         var state = window.history.state;
-        if (!state || state.hansjackPjax !== true) {
+        if (!state || state.themekitPjax !== true) {
             return;
         }
         try {
             var top = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
             var next = {
-                hansjackPjax: true,
+                themekitPjax: true,
                 url: String(state.url || window.location.href),
                 scrollY: Math.max(0, Math.floor(top || 0))
             };
@@ -354,7 +354,7 @@
             return false;
         }
 
-        dispatchPjaxEvent("hansjack:pjax:before", {
+        dispatchPjaxEvent("themekit:pjax:before", {
             url: targetUrlObj ? targetUrlObj.toString() : window.location.href,
             listPage: true
         });
@@ -373,14 +373,14 @@
 
         var pageUrl = targetUrlObj ? targetUrlObj.toString() : window.location.href;
         if (mode === "push") {
-            window.history.pushState({ hansjackPjax: true, url: pageUrl, scrollY: 0 }, "", pageUrl);
+            window.history.pushState({ themekitPjax: true, url: pageUrl, scrollY: 0 }, "", pageUrl);
         } else if (mode === "replace") {
-            window.history.replaceState({ hansjackPjax: true, url: pageUrl, scrollY: 0 }, "", pageUrl);
+            window.history.replaceState({ themekitPjax: true, url: pageUrl, scrollY: 0 }, "", pageUrl);
         }
 
         scrollForNavigation(targetUrlObj, stateScrollY);
 
-        dispatchPjaxEvent("hansjack:pjax:after", {
+        dispatchPjaxEvent("themekit:pjax:after", {
             url: pageUrl,
             listPage: true,
             mode: mode
@@ -594,7 +594,7 @@
 
     window.addEventListener("popstate", function (e) {
         var state = e && e.state ? e.state : null;
-        if (!state || state.hansjackPjax !== true || !state.url) {
+        if (!state || state.themekitPjax !== true || !state.url) {
             return;
         }
         if (!isCurrentListPage()) {
@@ -607,10 +607,11 @@
     if (isCurrentListPage()) {
         try {
             window.history.replaceState({
-                hansjackPjax: true,
+                themekitPjax: true,
                 url: window.location.href,
                 scrollY: Math.max(0, Math.floor(window.pageYOffset || document.documentElement.scrollTop || 0))
             }, "", window.location.href);
         } catch (e) {}
     }
 })();
+

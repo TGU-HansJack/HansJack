@@ -1966,15 +1966,15 @@ html.theme-dark .landing-social-link:focus-visible {
 }
 
 .landing-letter-memory {
-    height: max(0px, calc(var(--hansjack-vh, 100svh) * 0.5));
-    min-height: max(0px, calc(var(--hansjack-vh, 100svh) * 0.5));
+    height: max(0px, calc(var(--themekit-vh, 100svh) * 0.5));
+    min-height: max(0px, calc(var(--themekit-vh, 100svh) * 0.5));
     display: flex;
     flex-direction: column;
 }
 
 .landing-seasonal {
-    height: max(0px, calc(var(--hansjack-vh, 100svh) * 0.5));
-    min-height: max(0px, calc(var(--hansjack-vh, 100svh) * 0.5));
+    height: max(0px, calc(var(--themekit-vh, 100svh) * 0.5));
+    min-height: max(0px, calc(var(--themekit-vh, 100svh) * 0.5));
     display: flex;
     flex-direction: column;
     border-top: none;
@@ -7488,7 +7488,7 @@ html:not(.theme-light) .article-toc-link[aria-current="location"] {
     cursor: default;
 }
 
-@keyframes hansjack-refresh-spin {
+@keyframes themekit-refresh-spin {
     to {
         transform: rotate(360deg);
     }
@@ -7496,7 +7496,7 @@ html:not(.theme-light) .article-toc-link[aria-current="location"] {
 
 .article-series-refresh-btn[aria-busy="true"] svg,
 .comments .comments-refresh-btn[aria-busy="true"] svg {
-    animation: hansjack-refresh-spin 0.9s linear infinite;
+    animation: themekit-refresh-spin 0.9s linear infinite;
     transform-origin: 50% 50%;
 }
 
@@ -10492,7 +10492,7 @@ html.login-modal-open .login-modal {
     margin-bottom: 0;
 }
 
-:is(.article-content, .comment-content) .hj-quote-head {
+:is(.article-content, .comment-content) .mk-quote-head {
     display: flex;
     align-items: center;
     gap: 0.4rem;
@@ -10502,7 +10502,7 @@ html.login-modal-open .login-modal {
     line-height: 1.2;
 }
 
-:is(.article-content, .comment-content) .hj-quote-icon {
+:is(.article-content, .comment-content) .mk-quote-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -10512,7 +10512,7 @@ html.login-modal-open .login-modal {
     opacity: 0.85;
 }
 
-:is(.article-content, .comment-content) .hj-quote-icon svg {
+:is(.article-content, .comment-content) .mk-quote-icon svg {
     display: block;
     width: 1rem;
     height: 1rem;
@@ -10523,7 +10523,7 @@ html.login-modal-open .login-modal {
     stroke-linejoin: round;
 }
 
-:is(.article-content, .comment-content) .hj-quote-title-inner {
+:is(.article-content, .comment-content) .mk-quote-title-inner {
     display: inline-flex;
     align-items: center;
     margin: 0;
@@ -10533,23 +10533,23 @@ html.login-modal-open .login-modal {
     opacity: 0.8;
 }
 
-:is(.article-content, .comment-content) .hj-quote-body > :first-child {
+:is(.article-content, .comment-content) .mk-quote-body > :first-child {
     margin-top: 0;
 }
 
-:is(.article-content, .comment-content) .hj-quote-body > :last-child {
+:is(.article-content, .comment-content) .mk-quote-body > :last-child {
     margin-bottom: 0;
 }
 
-:is(.article-content, .comment-content) .hj-quote.is-collapsed .hj-quote-body {
+:is(.article-content, .comment-content) .mk-quote.is-collapsed .mk-quote-body {
     display: none;
 }
 
-:is(.article-content, .comment-content) .hj-quote.is-collapsed .hj-quote-head {
+:is(.article-content, .comment-content) .mk-quote.is-collapsed .mk-quote-head {
     margin-bottom: 0;
 }
 
-:is(.article-content, .comment-content) :where(.hj-quote-toggle, .markdown-alert-toggle) {
+:is(.article-content, .comment-content) :where(.mk-quote-toggle, .markdown-alert-toggle) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -10564,18 +10564,18 @@ html.login-modal-open .login-modal {
     opacity: 0.78;
 }
 
-:is(.article-content, .comment-content) :where(.hj-quote-toggle, .markdown-alert-toggle):hover,
-:is(.article-content, .comment-content) :where(.hj-quote-toggle, .markdown-alert-toggle):focus-visible {
+:is(.article-content, .comment-content) :where(.mk-quote-toggle, .markdown-alert-toggle):hover,
+:is(.article-content, .comment-content) :where(.mk-quote-toggle, .markdown-alert-toggle):focus-visible {
     opacity: 1;
 }
 
-:is(.article-content, .comment-content) :where(.hj-quote-toggle, .markdown-alert-toggle):focus-visible {
+:is(.article-content, .comment-content) :where(.mk-quote-toggle, .markdown-alert-toggle):focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
     border-radius: 4px;
 }
 
-:is(.article-content, .comment-content) :where(.hj-quote-toggle, .markdown-alert-toggle) svg {
+:is(.article-content, .comment-content) :where(.mk-quote-toggle, .markdown-alert-toggle) svg {
     width: 1rem;
     height: 1rem;
     display: block;
@@ -13357,3 +13357,4 @@ html.theme-dark .comments .comment-author-badge {
     color: var(--night-white);
     opacity: 1;
 }
+

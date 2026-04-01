@@ -328,7 +328,7 @@ function themeConfig($form)
 
     $themeCachePanel = new \Typecho\Widget\Helper\Form\Element\Fake('themeCachePanel', '');
     $themeCachePanel->label(_t('主题缓存维护'));
-    $themeCachePanel->description(hansjackThemeCachePanelHtml($options));
+    $themeCachePanel->description(themekitThemeCachePanelHtml($options));
     $form->addInput($themeCachePanel);
 
     $icpBeian = new \Typecho\Widget\Helper\Form\Element\Text(
@@ -478,7 +478,7 @@ function themeConfig($form)
     $commentUploadAllowedTypes = new \Typecho\Widget\Helper\Form\Element\Textarea(
         'commentUploadAllowedTypes',
         null,
-        implode(', ', hansjackCommentUploadDefaultAllowedExts()),
+        implode(', ', themekitCommentUploadDefaultAllowedExts()),
         _t('评论附件允许类型'),
         _t('填写扩展名，使用英文逗号、空格或换行分隔，如 jpg, png, txt, pdf；游客仅会从中允许图片/文本类型。')
     );
@@ -545,10 +545,10 @@ function themeConfigHandle(array $settings, bool $isInit): void
 {
     $options = Options::alloc();
     themeOptionSave($options, $settings);
-    hansjackEnsureSitemapRoute();
+    themekitEnsureSitemapRoute();
 }
 
-function hansjackEnsureSitemapRoute(): bool
+function themekitEnsureSitemapRoute(): bool
 {
     static $done = false;
     if ($done) {
@@ -558,7 +558,7 @@ function hansjackEnsureSitemapRoute(): bool
     $done = true;
 
     $options = Options::alloc();
-    $routeName = 'hansjack_sitemap';
+    $routeName = 'themekit_sitemap';
     $routeUrl = '/sitemap.xml';
     $routeWidget = 'Widget_Archive';
 
@@ -592,7 +592,7 @@ function hansjackEnsureSitemapRoute(): bool
     }
 }
 
-function hansjackOptionEnabled($raw, bool $default = true): bool
+function themekitOptionEnabled($raw, bool $default = true): bool
 {
     $text = trim(strtolower((string) $raw));
     if ($text === '') {
@@ -602,17 +602,17 @@ function hansjackOptionEnabled($raw, bool $default = true): bool
     return !($text === '0' || $text === 'false' || $text === 'off' || $text === 'no');
 }
 
-function hansjackCommentUploadImageExts(): array
+function themekitCommentUploadImageExts(): array
 {
     return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg'];
 }
 
-function hansjackCommentUploadTextExts(): array
+function themekitCommentUploadTextExts(): array
 {
     return ['txt', 'md', 'markdown', 'log', 'json', 'csv'];
 }
 
-function hansjackCommentUploadDefaultAllowedExts(): array
+function themekitCommentUploadDefaultAllowedExts(): array
 {
     return [
         'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg',
@@ -622,15 +622,15 @@ function hansjackCommentUploadDefaultAllowedExts(): array
     ];
 }
 
-function hansjackCommentUploadGuestExts(): array
+function themekitCommentUploadGuestExts(): array
 {
     return array_values(array_unique(array_merge(
-        hansjackCommentUploadImageExts(),
-        hansjackCommentUploadTextExts()
+        themekitCommentUploadImageExts(),
+        themekitCommentUploadTextExts()
     )));
 }
 
-function hansjackFormatBytesHuman(int $bytes): string
+function themekitFormatBytesHuman(int $bytes): string
 {
     if ($bytes >= 1073741824) {
         return rtrim(rtrim(number_format($bytes / 1073741824, 2, '.', ''), '0'), '.') . 'GB';
@@ -647,7 +647,7 @@ function hansjackFormatBytesHuman(int $bytes): string
     return max(0, $bytes) . 'B';
 }
 
-function hansjackParsePositiveInt($raw, int $default, int $min = 0, int $max = PHP_INT_MAX): int
+function themekitParsePositiveInt($raw, int $default, int $min = 0, int $max = PHP_INT_MAX): int
 {
     $value = trim((string) $raw);
     if ($value === '') {
@@ -670,7 +670,7 @@ function hansjackParsePositiveInt($raw, int $default, int $min = 0, int $max = P
     return $number;
 }
 
-function hansjackNormalizeExtList(string $raw, array $default): array
+function themekitNormalizeExtList(string $raw, array $default): array
 {
     $normalized = [];
     $tokens = preg_split('/[\s,;|]+/u', $raw, -1, PREG_SPLIT_NO_EMPTY);
@@ -699,7 +699,7 @@ function hansjackNormalizeExtList(string $raw, array $default): array
     return array_values($normalized);
 }
 
-function hansjackCommentGuestUploadEnabled(Options $options): bool
+function themekitCommentGuestUploadEnabled(Options $options): bool
 {
     $raw = '';
     try {
@@ -708,10 +708,10 @@ function hansjackCommentGuestUploadEnabled(Options $options): bool
         $raw = '1';
     }
 
-    return hansjackOptionEnabled($raw, true);
+    return themekitOptionEnabled($raw, true);
 }
 
-function hansjackCommentUploadMaxSizeBytes(Options $options): int
+function themekitCommentUploadMaxSizeBytes(Options $options): int
 {
     $raw = '';
     try {
@@ -720,11 +720,11 @@ function hansjackCommentUploadMaxSizeBytes(Options $options): int
         $raw = '1024';
     }
 
-    $sizeMb = hansjackParsePositiveInt($raw, 1024, 1, 1024);
+    $sizeMb = themekitParsePositiveInt($raw, 1024, 1, 1024);
     return $sizeMb * 1024 * 1024;
 }
 
-function hansjackCommentUploadStorageLimitBytes(Options $options): int
+function themekitCommentUploadStorageLimitBytes(Options $options): int
 {
     $raw = '';
     try {
@@ -733,7 +733,7 @@ function hansjackCommentUploadStorageLimitBytes(Options $options): int
         $raw = '0';
     }
 
-    $sizeMb = hansjackParsePositiveInt($raw, 0, 0);
+    $sizeMb = themekitParsePositiveInt($raw, 0, 0);
     if ($sizeMb <= 0) {
         return 0;
     }
@@ -741,7 +741,7 @@ function hansjackCommentUploadStorageLimitBytes(Options $options): int
     return $sizeMb * 1024 * 1024;
 }
 
-function hansjackCommentUploadAllowedExts(Options $options): array
+function themekitCommentUploadAllowedExts(Options $options): array
 {
     $raw = '';
     try {
@@ -750,10 +750,10 @@ function hansjackCommentUploadAllowedExts(Options $options): array
         $raw = '';
     }
 
-    return hansjackNormalizeExtList($raw, hansjackCommentUploadDefaultAllowedExts());
+    return themekitNormalizeExtList($raw, themekitCommentUploadDefaultAllowedExts());
 }
 
-function hansjackCommentUploadAcceptAttr(array $exts): string
+function themekitCommentUploadAcceptAttr(array $exts): string
 {
     $accept = [];
     foreach ($exts as $ext) {
@@ -767,20 +767,20 @@ function hansjackCommentUploadAcceptAttr(array $exts): string
     return implode(',', array_values(array_unique($accept)));
 }
 
-function hansjackCommentUploadPolicy(Options $options, bool $isUserLogged): array
+function themekitCommentUploadPolicy(Options $options, bool $isUserLogged): array
 {
-    $globalAllowedExts = hansjackCommentUploadAllowedExts($options);
-    $globalMaxBytes = hansjackCommentUploadMaxSizeBytes($options);
-    $storageLimitBytes = hansjackCommentUploadStorageLimitBytes($options);
+    $globalAllowedExts = themekitCommentUploadAllowedExts($options);
+    $globalMaxBytes = themekitCommentUploadMaxSizeBytes($options);
+    $storageLimitBytes = themekitCommentUploadStorageLimitBytes($options);
 
     $enabled = true;
     $allowedExts = $globalAllowedExts;
     $maxBytes = $globalMaxBytes;
-    $hint = _t('附件会在评论提交时一并上传，可选择多个文件，单个文件最大 %s。', hansjackFormatBytesHuman($maxBytes));
+    $hint = _t('附件会在评论提交时一并上传，可选择多个文件，单个文件最大 %s。', themekitFormatBytesHuman($maxBytes));
 
     if (!$isUserLogged) {
-        $enabled = hansjackCommentGuestUploadEnabled($options);
-        $allowedExts = array_values(array_intersect($globalAllowedExts, hansjackCommentUploadGuestExts()));
+        $enabled = themekitCommentGuestUploadEnabled($options);
+        $allowedExts = array_values(array_intersect($globalAllowedExts, themekitCommentUploadGuestExts()));
         $maxBytes = min($globalMaxBytes, 5 * 1024 * 1024);
 
         if ($enabled && $allowedExts === []) {
@@ -788,14 +788,14 @@ function hansjackCommentUploadPolicy(Options $options, bool $isUserLogged): arra
         }
 
         $hint = $enabled
-            ? _t('游客仅支持图片/文本附件，可选择多个文件，且单个文件不能超过 %s。', hansjackFormatBytesHuman($maxBytes))
+            ? _t('游客仅支持图片/文本附件，可选择多个文件，且单个文件不能超过 %s。', themekitFormatBytesHuman($maxBytes))
             : _t('当前未开启游客附件上传。');
     }
 
     return [
         'enabled' => $enabled,
         'allowedExts' => $allowedExts,
-        'accept' => hansjackCommentUploadAcceptAttr($allowedExts),
+        'accept' => themekitCommentUploadAcceptAttr($allowedExts),
         'maxBytes' => $maxBytes,
         'storageLimitBytes' => $storageLimitBytes,
         'hint' => $hint,
@@ -803,7 +803,7 @@ function hansjackCommentUploadPolicy(Options $options, bool $isUserLogged): arra
     ];
 }
 
-function hansjackCommentUploadRootDir(): string
+function themekitCommentUploadRootDir(): string
 {
     return rtrim((string) __TYPECHO_ROOT_DIR__, '/\\')
         . DIRECTORY_SEPARATOR . 'usr'
@@ -811,7 +811,7 @@ function hansjackCommentUploadRootDir(): string
         . DIRECTORY_SEPARATOR . 'comment';
 }
 
-function hansjackDirectorySize(string $dir): int
+function themekitDirectorySize(string $dir): int
 {
     if ($dir === '' || !is_dir($dir)) {
         return 0;
@@ -837,7 +837,7 @@ function hansjackDirectorySize(string $dir): int
     return $total;
 }
 
-function hansjackDetectUploadedMime(string $tmpPath, array $file): string
+function themekitDetectUploadedMime(string $tmpPath, array $file): string
 {
     $mime = '';
     if (function_exists('finfo_open')) {
@@ -862,9 +862,9 @@ function hansjackDetectUploadedMime(string $tmpPath, array $file): string
     return $mime;
 }
 
-function hansjackPrepareCommentUpload(array $file, Options $options, bool $isUserLogged): array
+function themekitPrepareCommentUpload(array $file, Options $options, bool $isUserLogged): array
 {
-    $policy = hansjackCommentUploadPolicy($options, $isUserLogged);
+    $policy = themekitCommentUploadPolicy($options, $isUserLogged);
     if (empty($policy['enabled'])) {
         throw new \RuntimeException(_t('当前未开启游客附件上传。'));
     }
@@ -901,10 +901,10 @@ function hansjackPrepareCommentUpload(array $file, Options $options, bool $isUse
     $maxBytes = (int) ($policy['maxBytes'] ?? $hardMaxBytes);
     if ($maxBytes > 0 && $size > $maxBytes) {
         if (!$isUserLogged) {
-            throw new \RuntimeException(_t('游客仅支持不超过 %s 的图片/文本附件', hansjackFormatBytesHuman($maxBytes)));
+            throw new \RuntimeException(_t('游客仅支持不超过 %s 的图片/文本附件', themekitFormatBytesHuman($maxBytes)));
         }
 
-        throw new \RuntimeException(_t('文件大小不能超过 %s', hansjackFormatBytesHuman($maxBytes)));
+        throw new \RuntimeException(_t('文件大小不能超过 %s', themekitFormatBytesHuman($maxBytes)));
     }
 
     $originalName = trim((string) ($file['name'] ?? ''));
@@ -925,7 +925,7 @@ function hansjackPrepareCommentUpload(array $file, Options $options, bool $isUse
         throw new \RuntimeException(_t('该文件类型不允许上传'));
     }
 
-    $mime = hansjackDetectUploadedMime($tmpPath, $file);
+    $mime = themekitDetectUploadedMime($tmpPath, $file);
     $blockedMimes = [
         'application/x-php',
         'text/x-php',
@@ -938,13 +938,13 @@ function hansjackPrepareCommentUpload(array $file, Options $options, bool $isUse
 
     $storageLimitBytes = (int) ($policy['storageLimitBytes'] ?? 0);
     if ($storageLimitBytes > 0) {
-        $usedBytes = hansjackDirectorySize(hansjackCommentUploadRootDir());
+        $usedBytes = themekitDirectorySize(themekitCommentUploadRootDir());
         if (($usedBytes + $size) > $storageLimitBytes) {
             throw new \RuntimeException(_t('评论附件总存储已达到上限，请联系站长清理后重试'));
         }
     }
 
-    $imageExts = hansjackCommentUploadImageExts();
+    $imageExts = themekitCommentUploadImageExts();
     $isImage = in_array($ext, $imageExts, true) || strpos($mime, 'image/') === 0;
 
     return [
@@ -958,7 +958,7 @@ function hansjackPrepareCommentUpload(array $file, Options $options, bool $isUse
     ];
 }
 
-function hansjackStoreCommentUpload(array $upload): array
+function themekitStoreCommentUpload(array $upload): array
 {
     $ext = (string) ($upload['ext'] ?? '');
     $tmpPath = (string) ($upload['tmpPath'] ?? '');
@@ -996,7 +996,7 @@ function hansjackStoreCommentUpload(array $upload): array
     return $upload;
 }
 
-function hansjackBuildCommentAttachmentSnippet(array $upload): string
+function themekitBuildCommentAttachmentSnippet(array $upload): string
 {
     $url = trim((string) ($upload['url'] ?? ''));
     if ($url === '') {
@@ -1014,7 +1014,7 @@ function hansjackBuildCommentAttachmentSnippet(array $upload): string
     return $isImage ? ('![' . $name . '](' . $url . ')') : ('[' . $name . '](' . $url . ')');
 }
 
-function hansjackNormalizeCommentUploadFiles($rawFile): array
+function themekitNormalizeCommentUploadFiles($rawFile): array
 {
     if (!is_array($rawFile)) {
         return [];
@@ -1045,15 +1045,15 @@ function hansjackNormalizeCommentUploadFiles($rawFile): array
     ]];
 }
 
-function hansjackFilterCommentAttachment(array $comment, $content): array
+function themekitFilterCommentAttachment(array $comment, $content): array
 {
-    $files = hansjackNormalizeCommentUploadFiles($_FILES['comment_attachment'] ?? null);
+    $files = themekitNormalizeCommentUploadFiles($_FILES['comment_attachment'] ?? null);
     if ($files === []) {
         return $comment;
     }
 
     $options = Options::alloc();
-    $isUserLogged = hansjackCurrentUserHasLogin();
+    $isUserLogged = themekitCurrentUserHasLogin();
     $snippets = [];
 
     foreach ($files as $file) {
@@ -1063,13 +1063,13 @@ function hansjackFilterCommentAttachment(array $comment, $content): array
         }
 
         try {
-            $upload = hansjackPrepareCommentUpload($file, $options, $isUserLogged);
-            $upload = hansjackStoreCommentUpload($upload);
+            $upload = themekitPrepareCommentUpload($file, $options, $isUserLogged);
+            $upload = themekitStoreCommentUpload($upload);
         } catch (\RuntimeException $e) {
             throw new \Typecho\Widget\Exception($e->getMessage(), 400);
         }
 
-        $snippet = hansjackBuildCommentAttachmentSnippet($upload);
+        $snippet = themekitBuildCommentAttachmentSnippet($upload);
         if ($snippet !== '') {
             $snippets[] = $snippet;
         }
@@ -1085,9 +1085,9 @@ function hansjackFilterCommentAttachment(array $comment, $content): array
     return $comment;
 }
 
-\Typecho\Plugin::factory('Widget_Feedback')->comment = 'hansjackFilterCommentAttachment';
+\Typecho\Plugin::factory('Widget_Feedback')->comment = 'themekitFilterCommentAttachment';
 
-function hansjackVisitorLivePollingEnabled(Options $options): bool
+function themekitVisitorLivePollingEnabled(Options $options): bool
 {
     $raw = '';
     try {
@@ -1096,10 +1096,10 @@ function hansjackVisitorLivePollingEnabled(Options $options): bool
         $raw = '1';
     }
 
-    return hansjackOptionEnabled($raw, true);
+    return themekitOptionEnabled($raw, true);
 }
 
-function hansjackAnonymousPageCacheEnabled(Options $options): bool
+function themekitAnonymousPageCacheEnabled(Options $options): bool
 {
     $raw = '';
     try {
@@ -1108,10 +1108,10 @@ function hansjackAnonymousPageCacheEnabled(Options $options): bool
         $raw = '0';
     }
 
-    return hansjackOptionEnabled($raw, false);
+    return themekitOptionEnabled($raw, false);
 }
 
-function hansjackHighLoadDegradeEnabled(Options $options): bool
+function themekitHighLoadDegradeEnabled(Options $options): bool
 {
     $raw = '';
     try {
@@ -1120,10 +1120,10 @@ function hansjackHighLoadDegradeEnabled(Options $options): bool
         $raw = '0';
     }
 
-    return hansjackOptionEnabled($raw, false);
+    return themekitOptionEnabled($raw, false);
 }
 
-function hansjackPresenceStatusEnabled(Options $options): bool
+function themekitPresenceStatusEnabled(Options $options): bool
 {
     $raw = '';
     try {
@@ -1132,10 +1132,10 @@ function hansjackPresenceStatusEnabled(Options $options): bool
         $raw = '0';
     }
 
-    return hansjackOptionEnabled($raw, false);
+    return themekitOptionEnabled($raw, false);
 }
 
-function hansjackPresenceStatusToken(Options $options): string
+function themekitPresenceStatusToken(Options $options): string
 {
     $raw = '';
     try {
@@ -1147,7 +1147,7 @@ function hansjackPresenceStatusToken(Options $options): string
     return trim($raw);
 }
 
-function hansjackPresenceStatusEndpoint(Options $options): string
+function themekitPresenceStatusEndpoint(Options $options): string
 {
     $base = '';
     try {
@@ -1172,14 +1172,14 @@ function hansjackPresenceStatusEndpoint(Options $options): string
     return $base . $separator . 'presence_status=1';
 }
 
-function hansjackPresenceStatusFilePath(): string
+function themekitPresenceStatusFilePath(): string
 {
     return __DIR__
         . DIRECTORY_SEPARATOR . 'cache'
         . DIRECTORY_SEPARATOR . 'presence-status.json';
 }
 
-function hansjackNormalizePresenceState(string $raw): string
+function themekitNormalizePresenceState(string $raw): string
 {
     $state = strtolower(trim($raw));
     $allowed = ['online', 'busy', 'idle', 'offline'];
@@ -1189,9 +1189,9 @@ function hansjackNormalizePresenceState(string $raw): string
     return $state;
 }
 
-function hansjackPresenceStateLabel(string $state): string
+function themekitPresenceStateLabel(string $state): string
 {
-    $state = hansjackNormalizePresenceState($state);
+    $state = themekitNormalizePresenceState($state);
     if ($state === 'online') {
         return _t('在线');
     }
@@ -1204,7 +1204,7 @@ function hansjackPresenceStateLabel(string $state): string
     return _t('离线');
 }
 
-function hansjackPresenceSanitizeText(string $value, int $maxLen = 120): string
+function themekitPresenceSanitizeText(string $value, int $maxLen = 120): string
 {
     $text = trim($value);
     if ($text === '') {
@@ -1234,7 +1234,7 @@ function hansjackPresenceSanitizeText(string $value, int $maxLen = 120): string
     return trim($text);
 }
 
-function hansjackPresenceSanitizeIcon(string $value): string
+function themekitPresenceSanitizeIcon(string $value): string
 {
     $icon = trim($value);
     if ($icon === '') {
@@ -1267,9 +1267,9 @@ function hansjackPresenceSanitizeIcon(string $value): string
     return $icon;
 }
 
-function hansjackPresenceStatusReadStored(): array
+function themekitPresenceStatusReadStored(): array
 {
-    $path = hansjackPresenceStatusFilePath();
+    $path = themekitPresenceStatusFilePath();
     if (!is_file($path) || !is_readable($path)) {
         return [];
     }
@@ -1283,7 +1283,7 @@ function hansjackPresenceStatusReadStored(): array
     return is_array($data) ? $data : [];
 }
 
-function hansjackPresenceStatusBuildTitle(array $status): string
+function themekitPresenceStatusBuildTitle(array $status): string
 {
     $title = _t('实时活动图标：实现了实时的系统进程和媒体信息上报。');
     $parts = [];
@@ -1325,19 +1325,19 @@ function hansjackPresenceStatusBuildTitle(array $status): string
     return $title . ' ' . implode('；', $parts);
 }
 
-function hansjackPresenceStatusPublicPayload(Options $options): array
+function themekitPresenceStatusPublicPayload(Options $options): array
 {
-    $enabled = hansjackPresenceStatusEnabled($options);
-    $stored = hansjackPresenceStatusReadStored();
+    $enabled = themekitPresenceStatusEnabled($options);
+    $stored = themekitPresenceStatusReadStored();
     $now = time();
 
-    $state = hansjackNormalizePresenceState((string) ($stored['state'] ?? 'offline'));
-    $source = hansjackPresenceSanitizeText((string) ($stored['source'] ?? ''), 48);
-    $process = hansjackPresenceSanitizeText((string) ($stored['process'] ?? ''), 96);
-    $app = hansjackPresenceSanitizeText((string) ($stored['app'] ?? ''), 96);
-    $media = hansjackPresenceSanitizeText((string) ($stored['media'] ?? ''), 140);
-    $detail = hansjackPresenceSanitizeText((string) ($stored['detail'] ?? ''), 180);
-    $icon = hansjackPresenceSanitizeIcon((string) ($stored['icon'] ?? ''));
+    $state = themekitNormalizePresenceState((string) ($stored['state'] ?? 'offline'));
+    $source = themekitPresenceSanitizeText((string) ($stored['source'] ?? ''), 48);
+    $process = themekitPresenceSanitizeText((string) ($stored['process'] ?? ''), 96);
+    $app = themekitPresenceSanitizeText((string) ($stored['app'] ?? ''), 96);
+    $media = themekitPresenceSanitizeText((string) ($stored['media'] ?? ''), 140);
+    $detail = themekitPresenceSanitizeText((string) ($stored['detail'] ?? ''), 180);
+    $icon = themekitPresenceSanitizeIcon((string) ($stored['icon'] ?? ''));
     $updatedAt = max(0, (int) ($stored['updatedAt'] ?? 0));
     $expireAt = max(0, (int) ($stored['expireAt'] ?? 0));
     $isExpired = ($expireAt > 0 && $expireAt < $now);
@@ -1354,7 +1354,7 @@ function hansjackPresenceStatusPublicPayload(Options $options): array
         'ok' => true,
         'enabled' => $enabled,
         'state' => $state,
-        'stateLabel' => hansjackPresenceStateLabel($state),
+        'stateLabel' => themekitPresenceStateLabel($state),
         'source' => $source,
         'process' => $process,
         'app' => $app,
@@ -1366,14 +1366,14 @@ function hansjackPresenceStatusPublicPayload(Options $options): array
         'expireAt' => $expireAt,
         'isExpired' => $isExpired,
         'serverTime' => $now,
-        'endpoint' => hansjackPresenceStatusEndpoint($options),
+        'endpoint' => themekitPresenceStatusEndpoint($options),
     ];
-    $payload['title'] = hansjackPresenceStatusBuildTitle($payload);
+    $payload['title'] = themekitPresenceStatusBuildTitle($payload);
 
     return $payload;
 }
 
-function hansjackMaimemoStudyEnabled(Options $options): bool
+function themekitMaimemoStudyEnabled(Options $options): bool
 {
     $raw = '';
     try {
@@ -1382,10 +1382,10 @@ function hansjackMaimemoStudyEnabled(Options $options): bool
         $raw = '0';
     }
 
-    return hansjackOptionEnabled($raw, false);
+    return themekitOptionEnabled($raw, false);
 }
 
-function hansjackMaimemoApiToken(Options $options): string
+function themekitMaimemoApiToken(Options $options): string
 {
     $raw = '';
     try {
@@ -1397,36 +1397,36 @@ function hansjackMaimemoApiToken(Options $options): string
     return trim($raw);
 }
 
-function hansjackMaimemoStudyCacheTtl(Options $options): int
+function themekitMaimemoStudyCacheTtl(Options $options): int
 {
     return 60 * 60;
 }
 
-function hansjackMaimemoRecordsFetchLimit(Options $options): int
+function themekitMaimemoRecordsFetchLimit(Options $options): int
 {
     // 墨墨接口单次 limit 上限为 1000，降级模式下适当降低采样量。
-    if (hansjackHighLoadDegradeEnabled($options)) {
+    if (themekitHighLoadDegradeEnabled($options)) {
         return 600;
     }
 
     return 1000;
 }
 
-function hansjackMaimemoStudyCacheFilePath(): string
+function themekitMaimemoStudyCacheFilePath(): string
 {
     return __DIR__
         . DIRECTORY_SEPARATOR . 'cache'
         . DIRECTORY_SEPARATOR . 'maimemo-study.json';
 }
 
-function hansjackMaimemoRateLimitFilePath(): string
+function themekitMaimemoRateLimitFilePath(): string
 {
     return __DIR__
         . DIRECTORY_SEPARATOR . 'cache'
         . DIRECTORY_SEPARATOR . 'maimemo-rate-limit.json';
 }
 
-function hansjackMaimemoAcquireRequestSlot(): array
+function themekitMaimemoAcquireRequestSlot(): array
 {
     $limits = [
         ['seconds' => 10, 'max' => 20],
@@ -1434,8 +1434,8 @@ function hansjackMaimemoAcquireRequestSlot(): array
         ['seconds' => 5 * 60 * 60, 'max' => 2000],
     ];
 
-    $path = hansjackMaimemoRateLimitFilePath();
-    if (!hansjackEnsureDir(dirname($path))) {
+    $path = themekitMaimemoRateLimitFilePath();
+    if (!themekitEnsureDir(dirname($path))) {
         return [
             'ok' => true,
             'retry_after' => 0,
@@ -1542,7 +1542,7 @@ function hansjackMaimemoAcquireRequestSlot(): array
     ];
 }
 
-function hansjackOptionsTimezoneOffset(Options $options): int
+function themekitOptionsTimezoneOffset(Options $options): int
 {
     $tz = 0;
     try {
@@ -1554,23 +1554,23 @@ function hansjackOptionsTimezoneOffset(Options $options): int
     return $tz;
 }
 
-function hansjackFormatTimestampByOptions(Options $options, int $timestamp, string $format = 'Y-m-d H:i:s'): string
+function themekitFormatTimestampByOptions(Options $options, int $timestamp, string $format = 'Y-m-d H:i:s'): string
 {
     $timestamp = max(0, (int) $timestamp);
     if ($timestamp <= 0) {
         return '';
     }
 
-    $tz = hansjackOptionsTimezoneOffset($options);
+    $tz = themekitOptionsTimezoneOffset($options);
     return gmdate($format, $timestamp + $tz);
 }
 
-function hansjackMaimemoTodayDate(Options $options): string
+function themekitMaimemoTodayDate(Options $options): string
 {
-    return hansjackFormatTimestampByOptions($options, time(), 'Y-m-d');
+    return themekitFormatTimestampByOptions($options, time(), 'Y-m-d');
 }
 
-function hansjackMaimemoNormalizeProgress($progress): array
+function themekitMaimemoNormalizeProgress($progress): array
 {
     if (!is_array($progress)) {
         $progress = [];
@@ -1600,7 +1600,7 @@ function hansjackMaimemoNormalizeProgress($progress): array
     ];
 }
 
-function hansjackMaimemoNormalizeTodayItems($items, int $limit = 120): array
+function themekitMaimemoNormalizeTodayItems($items, int $limit = 120): array
 {
     if (!is_array($items)) {
         return [];
@@ -1657,7 +1657,7 @@ function hansjackMaimemoNormalizeTodayItems($items, int $limit = 120): array
     return $normalized;
 }
 
-function hansjackMaimemoStudyTimeText(int $milliseconds): string
+function themekitMaimemoStudyTimeText(int $milliseconds): string
 {
     $milliseconds = max(0, $milliseconds);
     $seconds = (int) floor($milliseconds / 1000);
@@ -1681,7 +1681,7 @@ function hansjackMaimemoStudyTimeText(int $milliseconds): string
     return _t('%d 秒', max(1, $seconds));
 }
 
-function hansjackMaimemoResponseLabel(string $code): string
+function themekitMaimemoResponseLabel(string $code): string
 {
     $map = [
         'UNSPECIFIED' => _t('未反馈'),
@@ -1710,9 +1710,9 @@ function hansjackMaimemoResponseLabel(string $code): string
     return (string) ($map[$key] ?? $key);
 }
 
-function hansjackMaimemoReadCache(): array
+function themekitMaimemoReadCache(): array
 {
-    $path = hansjackMaimemoStudyCacheFilePath();
+    $path = themekitMaimemoStudyCacheFilePath();
     if (!is_file($path) || !is_readable($path)) {
         return [];
     }
@@ -1726,24 +1726,24 @@ function hansjackMaimemoReadCache(): array
     return is_array($decoded) ? $decoded : [];
 }
 
-function hansjackMaimemoWriteCache(array $payload): bool
+function themekitMaimemoWriteCache(array $payload): bool
 {
     $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if (!is_string($json) || $json === '') {
         return false;
     }
 
-    return hansjackWriteFileAtomic(hansjackMaimemoStudyCacheFilePath(), $json);
+    return themekitWriteFileAtomic(themekitMaimemoStudyCacheFilePath(), $json);
 }
 
-function hansjackMaimemoRequestJson(string $endpoint, string $token, array $payload = []): array
+function themekitMaimemoRequestJson(string $endpoint, string $token, array $payload = []): array
 {
     $endpoint = trim($endpoint, '/');
     if ($endpoint === '' || $token === '') {
         return ['status' => 0, 'body' => '', 'json' => []];
     }
 
-    $slot = hansjackMaimemoAcquireRequestSlot();
+    $slot = themekitMaimemoAcquireRequestSlot();
     if (empty($slot['ok'])) {
         $retryAfter = max(1, (int) ($slot['retry_after'] ?? 1));
         $message = trim((string) ($slot['message'] ?? ''));
@@ -1783,7 +1783,7 @@ function hansjackMaimemoRequestJson(string $endpoint, string $token, array $payl
             'Accept: application/json',
             'Authorization: ' . $authToken,
             'Content-Type: application/json',
-            'User-Agent: HansJack-MaiMemo/1.0',
+            'User-Agent: ThemeKit-MaiMemo/1.0',
         ],
         $body
     );
@@ -1797,7 +1797,7 @@ function hansjackMaimemoRequestJson(string $endpoint, string $token, array $payl
     ];
 }
 
-function hansjackMaimemoApiErrorText(array $response): string
+function themekitMaimemoApiErrorText(array $response): string
 {
     $json = is_array($response['json'] ?? null) ? $response['json'] : [];
 
@@ -1840,7 +1840,7 @@ function hansjackMaimemoApiErrorText(array $response): string
     return '';
 }
 
-function hansjackMaimemoIsoToTimestamp(string $iso): int
+function themekitMaimemoIsoToTimestamp(string $iso): int
 {
     $value = trim($iso);
     if ($value === '') {
@@ -1855,7 +1855,7 @@ function hansjackMaimemoIsoToTimestamp(string $iso): int
     return max(0, (int) $ts);
 }
 
-function hansjackMaimemoShortDateLabel(int $ts): string
+function themekitMaimemoShortDateLabel(int $ts): string
 {
     if ($ts <= 0) {
         return _t('未知');
@@ -1864,7 +1864,7 @@ function hansjackMaimemoShortDateLabel(int $ts): string
     return date('n/j', $ts);
 }
 
-function hansjackMaimemoIsoUtcFromTimestamp(int $ts): string
+function themekitMaimemoIsoUtcFromTimestamp(int $ts): string
 {
     $ts = max(0, (int) $ts);
     if ($ts <= 0) {
@@ -1874,7 +1874,7 @@ function hansjackMaimemoIsoUtcFromTimestamp(int $ts): string
     return gmdate('Y-m-d\TH:i:s\Z', $ts);
 }
 
-function hansjackMaimemoMaxNextStudyTs(array $records): int
+function themekitMaimemoMaxNextStudyTs(array $records): int
 {
     $maxTs = 0;
     foreach ($records as $row) {
@@ -1890,7 +1890,7 @@ function hansjackMaimemoMaxNextStudyTs(array $records): int
     return $maxTs;
 }
 
-function hansjackMaimemoRecordsStoreLimit(int $plannedCount = 0): int
+function themekitMaimemoRecordsStoreLimit(int $plannedCount = 0): int
 {
     $plannedCount = max(0, $plannedCount);
     if ($plannedCount <= 0) {
@@ -1900,34 +1900,34 @@ function hansjackMaimemoRecordsStoreLimit(int $plannedCount = 0): int
     return max(1000, min(12000, $plannedCount + 200));
 }
 
-function hansjackMaimemoIncrementalBudget(Options $options): int
+function themekitMaimemoIncrementalBudget(Options $options): int
 {
-    if (hansjackHighLoadDegradeEnabled($options)) {
+    if (themekitHighLoadDegradeEnabled($options)) {
         return 4;
     }
 
     return 8;
 }
 
-function hansjackMaimemoRangeTsMin(): int
+function themekitMaimemoRangeTsMin(): int
 {
     return 946684800; // 2000-01-01T00:00:00Z
 }
 
-function hansjackMaimemoRangeTsMax(): int
+function themekitMaimemoRangeTsMax(): int
 {
     return 4102444800; // 2100-01-01T00:00:00Z
 }
 
-function hansjackMaimemoNormalizeRangeQueue($queue): array
+function themekitMaimemoNormalizeRangeQueue($queue): array
 {
     $result = [];
     if (!is_array($queue)) {
         return $result;
     }
 
-    $globalMin = hansjackMaimemoRangeTsMin();
-    $globalMax = hansjackMaimemoRangeTsMax();
+    $globalMin = themekitMaimemoRangeTsMin();
+    $globalMax = themekitMaimemoRangeTsMax();
 
     foreach ($queue as $row) {
         if (!is_array($row)) {
@@ -1950,25 +1950,25 @@ function hansjackMaimemoNormalizeRangeQueue($queue): array
     return $result;
 }
 
-function hansjackMaimemoBuildRangePayload(int $startTs, int $endTs): array
+function themekitMaimemoBuildRangePayload(int $startTs, int $endTs): array
 {
-    $startTs = max(hansjackMaimemoRangeTsMin(), $startTs);
-    $endTs = min(hansjackMaimemoRangeTsMax(), $endTs);
+    $startTs = max(themekitMaimemoRangeTsMin(), $startTs);
+    $endTs = min(themekitMaimemoRangeTsMax(), $endTs);
 
     return [
         'next_study_date' => [
-            'start' => hansjackMaimemoIsoUtcFromTimestamp($startTs),
-            'end' => hansjackMaimemoIsoUtcFromTimestamp($endTs),
+            'start' => themekitMaimemoIsoUtcFromTimestamp($startTs),
+            'end' => themekitMaimemoIsoUtcFromTimestamp($endTs),
         ],
     ];
 }
 
-function hansjackMaimemoQueryRecordsCountByRange(string $token, int $startTs, int $endTs): array
+function themekitMaimemoQueryRecordsCountByRange(string $token, int $startTs, int $endTs): array
 {
-    $payload = hansjackMaimemoBuildRangePayload($startTs, $endTs);
+    $payload = themekitMaimemoBuildRangePayload($startTs, $endTs);
     $payload['as_count'] = true;
 
-    $resp = hansjackMaimemoRequestJson('query_study_records', $token, $payload);
+    $resp = themekitMaimemoRequestJson('query_study_records', $token, $payload);
     $status = (int) ($resp['status'] ?? 0);
     $json = is_array($resp['json'] ?? null) ? $resp['json'] : [];
     $root = is_array($json['data'] ?? null) ? $json['data'] : $json;
@@ -1985,7 +1985,7 @@ function hansjackMaimemoQueryRecordsCountByRange(string $token, int $startTs, in
         return [
             'ok' => false,
             'count' => 0,
-            'error' => hansjackMaimemoApiErrorText($resp),
+            'error' => themekitMaimemoApiErrorText($resp),
         ];
     }
 
@@ -1996,13 +1996,13 @@ function hansjackMaimemoQueryRecordsCountByRange(string $token, int $startTs, in
     ];
 }
 
-function hansjackMaimemoQueryRecordsByRange(string $token, int $startTs, int $endTs, int $limit): array
+function themekitMaimemoQueryRecordsByRange(string $token, int $startTs, int $endTs, int $limit): array
 {
-    $payload = hansjackMaimemoBuildRangePayload($startTs, $endTs);
+    $payload = themekitMaimemoBuildRangePayload($startTs, $endTs);
     $payload['as_count'] = false;
     $payload['limit'] = max(1, min(1000, $limit));
 
-    $resp = hansjackMaimemoRequestJson('query_study_records', $token, $payload);
+    $resp = themekitMaimemoRequestJson('query_study_records', $token, $payload);
     $status = (int) ($resp['status'] ?? 0);
     $json = is_array($resp['json'] ?? null) ? $resp['json'] : [];
     $root = is_array($json['data'] ?? null) ? $json['data'] : $json;
@@ -2019,18 +2019,18 @@ function hansjackMaimemoQueryRecordsByRange(string $token, int $startTs, int $en
         return [
             'ok' => false,
             'records' => [],
-            'error' => hansjackMaimemoApiErrorText($resp),
+            'error' => themekitMaimemoApiErrorText($resp),
         ];
     }
 
     return [
         'ok' => true,
-        'records' => hansjackMaimemoNormalizeRecords($root['records'] ?? [], $limit),
+        'records' => themekitMaimemoNormalizeRecords($root['records'] ?? [], $limit),
         'error' => '',
     ];
 }
 
-function hansjackMaimemoCollectRecordsIncremental(
+function themekitMaimemoCollectRecordsIncremental(
     string $token,
     array $seedRecords,
     array $seedQueue,
@@ -2040,8 +2040,8 @@ function hansjackMaimemoCollectRecordsIncremental(
     int $budget,
     int $plannedCount
 ): array {
-    $records = hansjackMaimemoNormalizeRecords($seedRecords, $storeLimit);
-    $queue = hansjackMaimemoNormalizeRangeQueue($seedQueue);
+    $records = themekitMaimemoNormalizeRecords($seedRecords, $storeLimit);
+    $queue = themekitMaimemoNormalizeRangeQueue($seedQueue);
     $complete = $seedComplete;
     $budget = max(1, min(24, $budget));
     $plannedCount = max(0, $plannedCount);
@@ -2057,8 +2057,8 @@ function hansjackMaimemoCollectRecordsIncremental(
 
     if (empty($queue) && !$complete) {
         $queue[] = [
-            'start' => hansjackMaimemoRangeTsMin(),
-            'end' => hansjackMaimemoRangeTsMax(),
+            'start' => themekitMaimemoRangeTsMin(),
+            'end' => themekitMaimemoRangeTsMax(),
         ];
     }
 
@@ -2071,13 +2071,13 @@ function hansjackMaimemoCollectRecordsIncremental(
             continue;
         }
 
-        $start = max(hansjackMaimemoRangeTsMin(), (int) ($range['start'] ?? 0));
-        $end = min(hansjackMaimemoRangeTsMax(), (int) ($range['end'] ?? 0));
+        $start = max(themekitMaimemoRangeTsMin(), (int) ($range['start'] ?? 0));
+        $end = min(themekitMaimemoRangeTsMax(), (int) ($range['end'] ?? 0));
         if ($start <= 0 || $end <= 0 || $start > $end) {
             continue;
         }
 
-        $countResp = hansjackMaimemoQueryRecordsCountByRange($token, $start, $end);
+        $countResp = themekitMaimemoQueryRecordsCountByRange($token, $start, $end);
         $budget -= 1;
         if (empty($countResp['ok'])) {
             $error = trim((string) ($countResp['error'] ?? ''));
@@ -2096,7 +2096,7 @@ function hansjackMaimemoCollectRecordsIncremental(
                 break;
             }
 
-            $recordsResp = hansjackMaimemoQueryRecordsByRange($token, $start, $end, $recordsLimit);
+            $recordsResp = themekitMaimemoQueryRecordsByRange($token, $start, $end, $recordsLimit);
             $budget -= 1;
             if (empty($recordsResp['ok'])) {
                 $error = trim((string) ($recordsResp['error'] ?? ''));
@@ -2104,7 +2104,7 @@ function hansjackMaimemoCollectRecordsIncremental(
                 break;
             }
 
-            $records = hansjackMaimemoMergeRecords(
+            $records = themekitMaimemoMergeRecords(
                 $records,
                 is_array($recordsResp['records'] ?? null) ? $recordsResp['records'] : [],
                 $storeLimit
@@ -2119,7 +2119,7 @@ function hansjackMaimemoCollectRecordsIncremental(
                 break;
             }
 
-            $recordsResp = hansjackMaimemoQueryRecordsByRange($token, $start, $end, $recordsLimit);
+            $recordsResp = themekitMaimemoQueryRecordsByRange($token, $start, $end, $recordsLimit);
             $budget -= 1;
             if (empty($recordsResp['ok'])) {
                 $error = trim((string) ($recordsResp['error'] ?? ''));
@@ -2127,7 +2127,7 @@ function hansjackMaimemoCollectRecordsIncremental(
                 break;
             }
 
-            $records = hansjackMaimemoMergeRecords(
+            $records = themekitMaimemoMergeRecords(
                 $records,
                 is_array($recordsResp['records'] ?? null) ? $recordsResp['records'] : [],
                 $storeLimit
@@ -2140,7 +2140,7 @@ function hansjackMaimemoCollectRecordsIncremental(
         array_unshift($queue, ['start' => $start, 'end' => $mid]);
     }
 
-    $queue = hansjackMaimemoNormalizeRangeQueue($queue);
+    $queue = themekitMaimemoNormalizeRangeQueue($queue);
     $complete = empty($queue);
     if ($plannedCount > 0 && count($records) >= $plannedCount) {
         $complete = true;
@@ -2155,7 +2155,7 @@ function hansjackMaimemoCollectRecordsIncremental(
     ];
 }
 
-function hansjackMaimemoMergeRecords(array $baseRecords, array $appendRecords, int $storeLimit = 12000): array
+function themekitMaimemoMergeRecords(array $baseRecords, array $appendRecords, int $storeLimit = 12000): array
 {
     $storeLimit = max(1000, min(20000, $storeLimit));
     $merged = [];
@@ -2188,12 +2188,12 @@ function hansjackMaimemoMergeRecords(array $baseRecords, array $appendRecords, i
     }
 
     $mergedList = array_values($merged);
-    $mergedList = hansjackMaimemoNormalizeRecords($mergedList, $storeLimit);
+    $mergedList = themekitMaimemoNormalizeRecords($mergedList, $storeLimit);
 
     return $mergedList;
 }
 
-function hansjackMaimemoNormalizeRecords($records, int $limit = 1000): array
+function themekitMaimemoNormalizeRecords($records, int $limit = 1000): array
 {
     if (!is_array($records)) {
         return [];
@@ -2214,7 +2214,7 @@ function hansjackMaimemoNormalizeRecords($records, int $limit = 1000): array
         $studyCount = max(0, (int) ($row['study_count'] ?? 0));
         $tags = trim((string) ($row['tags'] ?? ''));
 
-        $nextStudyTs = hansjackMaimemoIsoToTimestamp($nextStudyDate);
+        $nextStudyTs = themekitMaimemoIsoToTimestamp($nextStudyDate);
 
         $normalized[] = [
             'voc_id' => $vocId,
@@ -2249,7 +2249,7 @@ function hansjackMaimemoNormalizeRecords($records, int $limit = 1000): array
     return $normalized;
 }
 
-function hansjackMaimemoBuildRecordsStats(array $records, int $plannedCount = 0): array
+function themekitMaimemoBuildRecordsStats(array $records, int $plannedCount = 0): array
 {
     $plannedCount = max(0, $plannedCount);
     $recordCount = count($records);
@@ -2267,7 +2267,7 @@ function hansjackMaimemoBuildRecordsStats(array $records, int $plannedCount = 0)
             if (!isset($dateBuckets[$dateKey])) {
                 $dateBuckets[$dateKey] = [
                     'date' => $dateKey,
-                    'label' => hansjackMaimemoShortDateLabel($nextTs),
+                    'label' => themekitMaimemoShortDateLabel($nextTs),
                     'count' => 0,
                 ];
             }
@@ -2285,7 +2285,7 @@ function hansjackMaimemoBuildRecordsStats(array $records, int $plannedCount = 0)
         if (!isset($statusBuckets[$responseCode])) {
             $statusBuckets[$responseCode] = [
                 'code' => $responseCode,
-                'label' => hansjackMaimemoResponseLabel($responseCode),
+                'label' => themekitMaimemoResponseLabel($responseCode),
                 'count' => 0,
             ];
         }
@@ -2392,18 +2392,18 @@ function hansjackMaimemoBuildRecordsStats(array $records, int $plannedCount = 0)
     ];
 }
 
-function hansjackMaimemoStudyPayload(Options $options): array
+function themekitMaimemoStudyPayload(Options $options): array
 {
-    $enabled = hansjackMaimemoStudyEnabled($options);
-    $today = hansjackMaimemoTodayDate($options);
+    $enabled = themekitMaimemoStudyEnabled($options);
+    $today = themekitMaimemoTodayDate($options);
     $base = [
         'enabled' => $enabled,
         'tokenConfigured' => false,
         'ok' => false,
         'date' => $today,
-        'progress' => hansjackMaimemoNormalizeProgress([]),
+        'progress' => themekitMaimemoNormalizeProgress([]),
         'today_items' => [],
-        'study_time_text' => hansjackMaimemoStudyTimeText(0),
+        'study_time_text' => themekitMaimemoStudyTimeText(0),
         'updatedAt' => 0,
         'updatedAtText' => '',
         'source' => 'none',
@@ -2414,7 +2414,7 @@ function hansjackMaimemoStudyPayload(Options $options): array
         return $base;
     }
 
-    $token = hansjackMaimemoApiToken($options);
+    $token = themekitMaimemoApiToken($options);
     if ($token === '') {
         $base['message'] = _t('请在主题设置中填写墨墨开放 API Token。');
         return $base;
@@ -2422,13 +2422,13 @@ function hansjackMaimemoStudyPayload(Options $options): array
     $base['tokenConfigured'] = true;
 
     $now = time();
-    $ttl = hansjackMaimemoStudyCacheTtl($options);
-    $cache = hansjackMaimemoReadCache();
+    $ttl = themekitMaimemoStudyCacheTtl($options);
+    $cache = themekitMaimemoReadCache();
     $cacheDate = trim((string) ($cache['date'] ?? ''));
     $cacheUpdatedAt = max(0, (int) ($cache['updatedAt'] ?? 0));
     $cacheHoldUntil = max(0, (int) ($cache['holdUntil'] ?? 0));
-    $cacheProgress = hansjackMaimemoNormalizeProgress($cache['progress'] ?? []);
-    $cacheItems = hansjackMaimemoNormalizeTodayItems($cache['today_items'] ?? [], 200);
+    $cacheProgress = themekitMaimemoNormalizeProgress($cache['progress'] ?? []);
+    $cacheItems = themekitMaimemoNormalizeTodayItems($cache['today_items'] ?? [], 200);
     $cacheMessage = trim((string) ($cache['message'] ?? ''));
 
     $cacheHasData = (
@@ -2447,9 +2447,9 @@ function hansjackMaimemoStudyPayload(Options $options): array
         $base['ok'] = true;
         $base['progress'] = $cacheProgress;
         $base['today_items'] = $cacheItems;
-        $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($cacheProgress['study_time'] ?? 0));
+        $base['study_time_text'] = themekitMaimemoStudyTimeText((int) ($cacheProgress['study_time'] ?? 0));
         $base['updatedAt'] = $cacheUpdatedAt;
-        $base['updatedAtText'] = hansjackFormatTimestampByOptions($options, $cacheUpdatedAt);
+        $base['updatedAtText'] = themekitFormatTimestampByOptions($options, $cacheUpdatedAt);
         $base['source'] = 'cache';
         $base['message'] = $cacheMessage;
         return $base;
@@ -2460,16 +2460,16 @@ function hansjackMaimemoStudyPayload(Options $options): array
         $base['ok'] = true;
         $base['progress'] = $cacheProgress;
         $base['today_items'] = $cacheItems;
-        $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($cacheProgress['study_time'] ?? 0));
+        $base['study_time_text'] = themekitMaimemoStudyTimeText((int) ($cacheProgress['study_time'] ?? 0));
         $base['updatedAt'] = $cacheUpdatedAt;
-        $base['updatedAtText'] = hansjackFormatTimestampByOptions($options, $cacheUpdatedAt);
+        $base['updatedAtText'] = themekitFormatTimestampByOptions($options, $cacheUpdatedAt);
         $base['source'] = 'cache-stale';
         $base['message'] = $cacheMessage !== '' ? $cacheMessage : _t('缓存冷却中，暂不触发刷新。');
         return $base;
     }
 
-    $progressResp = hansjackMaimemoRequestJson('get_study_progress', $token, []);
-    $itemsResp = hansjackMaimemoRequestJson('get_today_items', $token, [
+    $progressResp = themekitMaimemoRequestJson('get_study_progress', $token, []);
+    $itemsResp = themekitMaimemoRequestJson('get_today_items', $token, [
         'limit' => 120,
     ]);
 
@@ -2499,8 +2499,8 @@ function hansjackMaimemoStudyPayload(Options $options): array
         && is_array($itemsRoot['today_items'])
     );
 
-    $liveProgress = $progressOk ? hansjackMaimemoNormalizeProgress($progressRoot['progress'] ?? []) : $cacheProgress;
-    $liveItems = $itemsOk ? hansjackMaimemoNormalizeTodayItems($itemsRoot['today_items'] ?? [], 200) : $cacheItems;
+    $liveProgress = $progressOk ? themekitMaimemoNormalizeProgress($progressRoot['progress'] ?? []) : $cacheProgress;
+    $liveItems = $itemsOk ? themekitMaimemoNormalizeTodayItems($itemsRoot['today_items'] ?? [], 200) : $cacheItems;
 
     $liveHasData = (
         !empty($liveItems)
@@ -2512,13 +2512,13 @@ function hansjackMaimemoStudyPayload(Options $options): array
     if (!$progressOk || !$itemsOk) {
         $errors = [];
         if (!$progressOk) {
-            $progressError = hansjackMaimemoApiErrorText($progressResp);
+            $progressError = themekitMaimemoApiErrorText($progressResp);
             if ($progressError !== '') {
                 $errors[] = _t('进度接口：%s', $progressError);
             }
         }
         if (!$itemsOk) {
-            $itemsError = hansjackMaimemoApiErrorText($itemsResp);
+            $itemsError = themekitMaimemoApiErrorText($itemsResp);
             if ($itemsError !== '') {
                 $errors[] = _t('单词接口：%s', $itemsError);
             }
@@ -2532,13 +2532,13 @@ function hansjackMaimemoStudyPayload(Options $options): array
         $base['ok'] = true;
         $base['progress'] = $liveProgress;
         $base['today_items'] = $liveItems;
-        $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($liveProgress['study_time'] ?? 0));
+        $base['study_time_text'] = themekitMaimemoStudyTimeText((int) ($liveProgress['study_time'] ?? 0));
         $base['updatedAt'] = $now;
-        $base['updatedAtText'] = hansjackFormatTimestampByOptions($options, $now);
+        $base['updatedAtText'] = themekitFormatTimestampByOptions($options, $now);
         $base['source'] = ($progressOk && $itemsOk) ? 'api' : 'api-partial';
         $base['message'] = $message;
 
-        hansjackMaimemoWriteCache([
+        themekitMaimemoWriteCache([
             'date' => $today,
             'updatedAt' => $now,
             'holdUntil' => 0,
@@ -2551,7 +2551,7 @@ function hansjackMaimemoStudyPayload(Options $options): array
     }
 
     if ($cacheIsToday && $cacheHasSnapshot) {
-        hansjackMaimemoWriteCache([
+        themekitMaimemoWriteCache([
             'date' => $today,
             'updatedAt' => max(0, $cacheUpdatedAt),
             'holdUntil' => $now + $ttl,
@@ -2563,9 +2563,9 @@ function hansjackMaimemoStudyPayload(Options $options): array
         $base['ok'] = true;
         $base['progress'] = $cacheProgress;
         $base['today_items'] = $cacheItems;
-        $base['study_time_text'] = hansjackMaimemoStudyTimeText((int) ($cacheProgress['study_time'] ?? 0));
+        $base['study_time_text'] = themekitMaimemoStudyTimeText((int) ($cacheProgress['study_time'] ?? 0));
         $base['updatedAt'] = $cacheUpdatedAt;
-        $base['updatedAtText'] = hansjackFormatTimestampByOptions($options, $cacheUpdatedAt);
+        $base['updatedAtText'] = themekitFormatTimestampByOptions($options, $cacheUpdatedAt);
         $base['source'] = 'cache-stale';
         $base['message'] = $message !== '' ? $message : _t('接口暂不可用，已展示今日缓存数据。');
         return $base;
@@ -2576,7 +2576,7 @@ function hansjackMaimemoStudyPayload(Options $options): array
     }
 
     // Write a short-circuit snapshot so repeated page refresh won't keep triggering API fetch.
-    hansjackMaimemoWriteCache([
+    themekitMaimemoWriteCache([
         'date' => $today,
         'updatedAt' => $now,
         'holdUntil' => $now + $ttl,
@@ -2589,7 +2589,7 @@ function hansjackMaimemoStudyPayload(Options $options): array
     return $base;
 }
 
-function hansjackSitemapSize(Options $options): int
+function themekitSitemapSize(Options $options): int
 {
     $raw = '';
     try {
@@ -2598,10 +2598,10 @@ function hansjackSitemapSize(Options $options): int
         $raw = '1000';
     }
 
-    return hansjackParsePositiveInt($raw, 1000, 1, 50000);
+    return themekitParsePositiveInt($raw, 1000, 1, 50000);
 }
 
-function hansjackSitemapChangefreq(Options $options): string
+function themekitSitemapChangefreq(Options $options): string
 {
     $raw = '';
     try {
@@ -2614,7 +2614,7 @@ function hansjackSitemapChangefreq(Options $options): string
     return in_array($raw, $allowed, true) ? $raw : 'daily';
 }
 
-function hansjackSitemapPriority(Options $options): string
+function themekitSitemapPriority(Options $options): string
 {
     $raw = '';
     try {
@@ -2636,16 +2636,16 @@ function hansjackSitemapPriority(Options $options): string
     return $text;
 }
 
-function hansjackAnonymousPageCacheTtl(Options $options): int
+function themekitAnonymousPageCacheTtl(Options $options): int
 {
-    if (hansjackHighLoadDegradeEnabled($options)) {
+    if (themekitHighLoadDegradeEnabled($options)) {
         return 120;
     }
 
     return 45;
 }
 
-function hansjackCurrentUserHasLogin(): bool
+function themekitCurrentUserHasLogin(): bool
 {
     try {
         $user = \Typecho\Widget::widget('Widget_User');
@@ -2659,14 +2659,14 @@ function hansjackCurrentUserHasLogin(): bool
     }
 }
 
-function hansjackAnonymousPageCacheDir(): string
+function themekitAnonymousPageCacheDir(): string
 {
     return __DIR__
         . DIRECTORY_SEPARATOR . 'cache'
         . DIRECTORY_SEPARATOR . 'page-cache';
 }
 
-function hansjackEnsureDir(string $dir): bool
+function themekitEnsureDir(string $dir): bool
 {
     if ($dir === '') {
         return false;
@@ -2679,10 +2679,10 @@ function hansjackEnsureDir(string $dir): bool
     return @mkdir($dir, 0755, true);
 }
 
-function hansjackWriteFileAtomic(string $path, string $content): bool
+function themekitWriteFileAtomic(string $path, string $content): bool
 {
     $dir = dirname($path);
-    if (!hansjackEnsureDir($dir)) {
+    if (!themekitEnsureDir($dir)) {
         return false;
     }
 
@@ -2702,13 +2702,13 @@ function hansjackWriteFileAtomic(string $path, string $content): bool
     return true;
 }
 
-function hansjackShouldUseAnonymousPageCache(Archive $archive, Options $options): bool
+function themekitShouldUseAnonymousPageCache(Archive $archive, Options $options): bool
 {
-    if (!hansjackAnonymousPageCacheEnabled($options)) {
+    if (!themekitAnonymousPageCacheEnabled($options)) {
         return false;
     }
 
-    if (hansjackCurrentUserHasLogin()) {
+    if (themekitCurrentUserHasLogin()) {
         return false;
     }
 
@@ -2772,7 +2772,7 @@ function hansjackShouldUseAnonymousPageCache(Archive $archive, Options $options)
     return true;
 }
 
-function hansjackAnonymousPageCacheFilePath(): string
+function themekitAnonymousPageCacheFilePath(): string
 {
     $scheme = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') ? 'https' : 'http';
     $host = strtolower(trim((string) ($_SERVER['HTTP_HOST'] ?? 'localhost')));
@@ -2782,11 +2782,11 @@ function hansjackAnonymousPageCacheFilePath(): string
     }
 
     $key = sha1($scheme . '|' . $host . '|' . $uri);
-    return hansjackAnonymousPageCacheDir()
+    return themekitAnonymousPageCacheDir()
         . DIRECTORY_SEPARATOR . $key . '.html';
 }
 
-function hansjackStoreAnonymousPageCache(string $cachePath, string $buffer): void
+function themekitStoreAnonymousPageCache(string $cachePath, string $buffer): void
 {
     if ($buffer === '') {
         return;
@@ -2821,25 +2821,25 @@ function hansjackStoreAnonymousPageCache(string $cachePath, string $buffer): voi
         return;
     }
 
-    hansjackWriteFileAtomic($cachePath, $buffer);
+    themekitWriteFileAtomic($cachePath, $buffer);
 }
 
-function hansjackStartAnonymousPageCache(Archive $archive): void
+function themekitStartAnonymousPageCache(Archive $archive): void
 {
     $options = Options::alloc();
-    if (!hansjackShouldUseAnonymousPageCache($archive, $options)) {
+    if (!themekitShouldUseAnonymousPageCache($archive, $options)) {
         return;
     }
 
-    $cachePath = hansjackAnonymousPageCacheFilePath();
-    $ttl = hansjackAnonymousPageCacheTtl($options);
+    $cachePath = themekitAnonymousPageCacheFilePath();
+    $ttl = themekitAnonymousPageCacheTtl($options);
 
     if ($ttl > 0 && is_file($cachePath) && is_readable($cachePath)) {
         $mtime = (int) @filemtime($cachePath);
         if ($mtime > 0 && (time() - $mtime) <= $ttl) {
             if (!headers_sent()) {
                 header('Content-Type: text/html; charset=UTF-8');
-                header('X-HansJack-Page-Cache: HIT');
+                header('X-ThemeKit-Page-Cache: HIT');
             }
             @readfile($cachePath);
             exit;
@@ -2847,14 +2847,14 @@ function hansjackStartAnonymousPageCache(Archive $archive): void
     }
 
     if (!headers_sent()) {
-        header('X-HansJack-Page-Cache: MISS');
+        header('X-ThemeKit-Page-Cache: MISS');
     }
 
     $finalFlag = defined('PHP_OUTPUT_HANDLER_FINAL') ? (int) constant('PHP_OUTPUT_HANDLER_FINAL') : 8;
     ob_start(
         function ($buffer, $phase) use ($cachePath, $finalFlag) {
             if ((($phase ?? 0) & $finalFlag) === $finalFlag) {
-                hansjackStoreAnonymousPageCache($cachePath, (string) $buffer);
+                themekitStoreAnonymousPageCache($cachePath, (string) $buffer);
             }
 
             return $buffer;
@@ -2864,17 +2864,17 @@ function hansjackStartAnonymousPageCache(Archive $archive): void
     );
 }
 
-function hansjackPostGuessCacheTtl(): int
+function themekitPostGuessCacheTtl(): int
 {
     return 30 * 24 * 60 * 60;
 }
 
-function hansjackPostGuessCacheVersion(): int
+function themekitPostGuessCacheVersion(): int
 {
     return 2;
 }
 
-function hansjackPostGuessCacheFilePath(int $cid): string
+function themekitPostGuessCacheFilePath(int $cid): string
 {
     $safeCid = max(0, $cid);
     return __DIR__
@@ -2883,7 +2883,7 @@ function hansjackPostGuessCacheFilePath(int $cid): string
         . DIRECTORY_SEPARATOR . 'cid-' . $safeCid . '.json';
 }
 
-function hansjackNormalizePostGuessItems($items): array
+function themekitNormalizePostGuessItems($items): array
 {
     if (!is_array($items)) {
         return [];
@@ -2955,13 +2955,13 @@ function hansjackNormalizePostGuessItems($items): array
     return $result;
 }
 
-function hansjackLoadPostGuessCache(int $cid): array
+function themekitLoadPostGuessCache(int $cid): array
 {
     if ($cid <= 0) {
         return ['updated' => 0, 'items' => []];
     }
 
-    $path = hansjackPostGuessCacheFilePath($cid);
+    $path = themekitPostGuessCacheFilePath($cid);
     if (!is_file($path) || !is_readable($path)) {
         return ['updated' => 0, 'items' => []];
     }
@@ -2996,15 +2996,15 @@ function hansjackLoadPostGuessCache(int $cid): array
     }
 
     $version = (int) ($decoded['version'] ?? 0);
-    if ($version !== hansjackPostGuessCacheVersion()) {
+    if ($version !== themekitPostGuessCacheVersion()) {
         return [
             'updated' => 0,
-            'items' => hansjackNormalizePostGuessItems($decoded['items'] ?? []),
+            'items' => themekitNormalizePostGuessItems($decoded['items'] ?? []),
         ];
     }
 
     $updated = (int) ($decoded['updated'] ?? 0);
-    $items = hansjackNormalizePostGuessItems($decoded['items'] ?? []);
+    $items = themekitNormalizePostGuessItems($decoded['items'] ?? []);
 
     return [
         'updated' => max(0, $updated),
@@ -3012,18 +3012,18 @@ function hansjackLoadPostGuessCache(int $cid): array
     ];
 }
 
-function hansjackSavePostGuessCache(int $cid, array $items): bool
+function themekitSavePostGuessCache(int $cid, array $items): bool
 {
     if ($cid <= 0) {
         return false;
     }
 
-    $normalizedItems = hansjackNormalizePostGuessItems($items);
+    $normalizedItems = themekitNormalizePostGuessItems($items);
     $now = time();
     $payload = [
-        'version' => hansjackPostGuessCacheVersion(),
+        'version' => themekitPostGuessCacheVersion(),
         'updated' => $now,
-        'expires' => $now + hansjackPostGuessCacheTtl(),
+        'expires' => $now + themekitPostGuessCacheTtl(),
         'items' => $normalizedItems,
     ];
 
@@ -3032,11 +3032,11 @@ function hansjackSavePostGuessCache(int $cid, array $items): bool
         return false;
     }
 
-    $path = hansjackPostGuessCacheFilePath($cid);
-    return hansjackWriteFileAtomic($path, $json);
+    $path = themekitPostGuessCacheFilePath($cid);
+    return themekitWriteFileAtomic($path, $json);
 }
 
-function hansjackNormalizeMidSet(array $values): array
+function themekitNormalizeMidSet(array $values): array
 {
     $map = [];
     foreach ($values as $value) {
@@ -3052,7 +3052,7 @@ function hansjackNormalizeMidSet(array $values): array
     return $result;
 }
 
-function hansjackPostTaxonomySignatureByCid(int $cid): array
+function themekitPostTaxonomySignatureByCid(int $cid): array
 {
     $signature = [
         'categoryMids' => [],
@@ -3103,12 +3103,12 @@ function hansjackPostTaxonomySignatureByCid(int $cid): array
         }
     }
 
-    $signature['categoryMids'] = hansjackNormalizeMidSet($categoryMids);
-    $signature['tagMids'] = hansjackNormalizeMidSet($tagMids);
+    $signature['categoryMids'] = themekitNormalizeMidSet($categoryMids);
+    $signature['tagMids'] = themekitNormalizeMidSet($tagMids);
     return $signature;
 }
 
-function hansjackPostTaxonomySignatureByPostWidget($post): array
+function themekitPostTaxonomySignatureByPostWidget($post): array
 {
     $categoryMids = [];
     $tagMids = [];
@@ -3134,17 +3134,17 @@ function hansjackPostTaxonomySignatureByPostWidget($post): array
     }
 
     return [
-        'categoryMids' => hansjackNormalizeMidSet($categoryMids),
-        'tagMids' => hansjackNormalizeMidSet($tagMids),
+        'categoryMids' => themekitNormalizeMidSet($categoryMids),
+        'tagMids' => themekitNormalizeMidSet($tagMids),
     ];
 }
 
-function hansjackSeriesCacheTtl(): int
+function themekitSeriesCacheTtl(): int
 {
     return 24 * 60 * 60;
 }
 
-function hansjackSeriesCacheFilePath(int $cid): string
+function themekitSeriesCacheFilePath(int $cid): string
 {
     $safeCid = max(0, $cid);
     return __DIR__
@@ -3153,7 +3153,7 @@ function hansjackSeriesCacheFilePath(int $cid): string
         . DIRECTORY_SEPARATOR . 'cid-' . $safeCid . '.json';
 }
 
-function hansjackNormalizeSeriesItems($items, int $currentCid): array
+function themekitNormalizeSeriesItems($items, int $currentCid): array
 {
     if (!is_array($items)) {
         return [];
@@ -3219,13 +3219,13 @@ function hansjackNormalizeSeriesItems($items, int $currentCid): array
     return $result;
 }
 
-function hansjackLoadSeriesCache(int $cid): array
+function themekitLoadSeriesCache(int $cid): array
 {
     if ($cid <= 0) {
         return ['hit' => false, 'updated' => 0, 'items' => []];
     }
 
-    $path = hansjackSeriesCacheFilePath($cid);
+    $path = themekitSeriesCacheFilePath($cid);
     if (!is_file($path) || !is_readable($path)) {
         return ['hit' => false, 'updated' => 0, 'items' => []];
     }
@@ -3268,7 +3268,7 @@ function hansjackLoadSeriesCache(int $cid): array
     $updated = (int) ($decoded['updated'] ?? 0);
     $expires = (int) ($decoded['expires'] ?? 0);
     if ($expires <= 0 && $updated > 0) {
-        $expires = $updated + hansjackSeriesCacheTtl();
+        $expires = $updated + themekitSeriesCacheTtl();
     }
     if ($expires <= 0 || $now > $expires) {
         return ['hit' => false, 'updated' => max(0, $updated), 'items' => []];
@@ -3277,22 +3277,22 @@ function hansjackLoadSeriesCache(int $cid): array
     return [
         'hit' => true,
         'updated' => max(0, $updated),
-        'items' => hansjackNormalizeSeriesItems($decoded['items'] ?? [], $cid),
+        'items' => themekitNormalizeSeriesItems($decoded['items'] ?? [], $cid),
     ];
 }
 
-function hansjackSaveSeriesCache(int $cid, array $items): bool
+function themekitSaveSeriesCache(int $cid, array $items): bool
 {
     if ($cid <= 0) {
         return false;
     }
 
-    $normalizedItems = hansjackNormalizeSeriesItems($items, $cid);
+    $normalizedItems = themekitNormalizeSeriesItems($items, $cid);
     $now = time();
     $payload = [
         'version' => 2,
         'updated' => $now,
-        'expires' => $now + hansjackSeriesCacheTtl(),
+        'expires' => $now + themekitSeriesCacheTtl(),
         'items' => $normalizedItems,
     ];
 
@@ -3301,28 +3301,28 @@ function hansjackSaveSeriesCache(int $cid, array $items): bool
         return false;
     }
 
-    $path = hansjackSeriesCacheFilePath($cid);
-    return hansjackWriteFileAtomic($path, $json);
+    $path = themekitSeriesCacheFilePath($cid);
+    return themekitWriteFileAtomic($path, $json);
 }
 
-function hansjackSeriesItemsByCid(int $cid, bool $forceRefresh = false): array
+function themekitSeriesItemsByCid(int $cid, bool $forceRefresh = false): array
 {
     if ($cid <= 0) {
         return [];
     }
 
     if (!$forceRefresh) {
-        $cachePayload = hansjackLoadSeriesCache($cid);
+        $cachePayload = themekitLoadSeriesCache($cid);
         if (!empty($cachePayload['hit'])) {
-            return hansjackNormalizeSeriesItems($cachePayload['items'] ?? [], $cid);
+            return themekitNormalizeSeriesItems($cachePayload['items'] ?? [], $cid);
         }
     }
 
-    $targetSignature = hansjackPostTaxonomySignatureByCid($cid);
+    $targetSignature = themekitPostTaxonomySignatureByCid($cid);
     $targetCategories = $targetSignature['categoryMids'] ?? [];
     $targetTags = $targetSignature['tagMids'] ?? [];
     if (empty($targetTags)) {
-        hansjackSaveSeriesCache($cid, []);
+        themekitSaveSeriesCache($cid, []);
         return [];
     }
 
@@ -3361,7 +3361,7 @@ function hansjackSeriesItemsByCid(int $cid, bool $forceRefresh = false): array
             $seen[$postCid] = true;
             $newScanned += 1;
 
-            $signature = hansjackPostTaxonomySignatureByPostWidget($posts);
+            $signature = themekitPostTaxonomySignatureByPostWidget($posts);
             $catMids = $signature['categoryMids'] ?? [];
             $tagMids = $signature['tagMids'] ?? [];
 
@@ -3412,7 +3412,7 @@ function hansjackSeriesItemsByCid(int $cid, bool $forceRefresh = false): array
         return ((int) ($b['cid'] ?? 0)) <=> ((int) ($a['cid'] ?? 0));
     });
 
-    hansjackSaveSeriesCache($cid, $items);
+    themekitSaveSeriesCache($cid, $items);
     return $items;
 }
 
@@ -3468,7 +3468,7 @@ function handleSeriesListRequest(Archive $archive): void
         );
     }
 
-    $items = hansjackSeriesItemsByCid($cid, $forceRefresh);
+    $items = themekitSeriesItemsByCid($cid, $forceRefresh);
     emitJson([
         'ok' => true,
         'cid' => $cid,
@@ -3493,7 +3493,7 @@ function handlePresenceStatusRequest(Archive $archive): void
     }
 
     $options = Options::alloc();
-    if (!hansjackPresenceStatusEnabled($options)) {
+    if (!themekitPresenceStatusEnabled($options)) {
         emitJson([
             'ok' => false,
             'message' => _t('实时状态接口已关闭'),
@@ -3502,7 +3502,7 @@ function handlePresenceStatusRequest(Archive $archive): void
 
     $method = strtoupper(trim((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')));
     if ($method === 'GET' || $method === 'HEAD') {
-        emitJson(hansjackPresenceStatusPublicPayload($options));
+        emitJson(themekitPresenceStatusPublicPayload($options));
     }
     if ($method !== 'POST') {
         emitJson([
@@ -3513,7 +3513,7 @@ function handlePresenceStatusRequest(Archive $archive): void
 
     $isAuthorized = currentUserIsAdmin();
     if (!$isAuthorized) {
-        $expectedToken = hansjackPresenceStatusToken($options);
+        $expectedToken = themekitPresenceStatusToken($options);
         $providedToken = trim((string) ($_SERVER['HTTP_X_PRESENCE_TOKEN'] ?? ''));
 
         if ($providedToken === '') {
@@ -3569,13 +3569,13 @@ function handlePresenceStatusRequest(Archive $archive): void
         return trim($fallback);
     };
 
-    $state = hansjackNormalizePresenceState($readInput('state', 'offline'));
-    $source = hansjackPresenceSanitizeText($readInput('source'), 48);
-    $process = hansjackPresenceSanitizeText($readInput('process'), 96);
-    $app = hansjackPresenceSanitizeText($readInput('app'), 96);
-    $media = hansjackPresenceSanitizeText($readInput('media'), 140);
-    $detail = hansjackPresenceSanitizeText($readInput('detail'), 180);
-    $icon = hansjackPresenceSanitizeIcon($readInput('icon'));
+    $state = themekitNormalizePresenceState($readInput('state', 'offline'));
+    $source = themekitPresenceSanitizeText($readInput('source'), 48);
+    $process = themekitPresenceSanitizeText($readInput('process'), 96);
+    $app = themekitPresenceSanitizeText($readInput('app'), 96);
+    $media = themekitPresenceSanitizeText($readInput('media'), 140);
+    $detail = themekitPresenceSanitizeText($readInput('detail'), 180);
+    $icon = themekitPresenceSanitizeIcon($readInput('icon'));
     $ttl = (int) $readInput('ttl', '180');
     if ($ttl <= 0) {
         $ttl = 180;
@@ -3604,14 +3604,14 @@ function handlePresenceStatusRequest(Archive $archive): void
         ], 500);
     }
 
-    if (!hansjackWriteFileAtomic(hansjackPresenceStatusFilePath(), $json)) {
+    if (!themekitWriteFileAtomic(themekitPresenceStatusFilePath(), $json)) {
         emitJson([
             'ok' => false,
             'message' => _t('实时状态缓存不可写'),
         ], 500);
     }
 
-    $payload = hansjackPresenceStatusPublicPayload($options);
+    $payload = themekitPresenceStatusPublicPayload($options);
     $payload['ttl'] = $ttl;
     emitJson($payload);
 }
@@ -3622,7 +3622,7 @@ function handlePresenceStatusRequest(Archive $archive): void
  */
 function themeInit(Archive $archive)
 {
-    hansjackEnsureSitemapRoute();
+    themekitEnsureSitemapRoute();
     try {
         if (!empty($archive->parameter->isFeed)) {
             $archive->parameter->pageSize = 20;
@@ -3642,7 +3642,7 @@ function themeInit(Archive $archive)
     handleThemeCacheManageRequest($archive);
     handleSitemapRequest($archive);
     enableFeedStylesheet($archive);
-    hansjackStartAnonymousPageCache($archive);
+    themekitStartAnonymousPageCache($archive);
 
     if ($archive->is('category', 'posts') || $archive->is('category', 'notes')) {
         $archive->parameter->pageSize = 15;
@@ -3696,8 +3696,8 @@ function handleLiveVersionRequest(Archive $archive): void
 
     $options = Options::alloc();
     if (!currentUserIsAdmin()) {
-        $visitorPollingEnabled = hansjackVisitorLivePollingEnabled($options);
-        $highLoadMode = hansjackHighLoadDegradeEnabled($options);
+        $visitorPollingEnabled = themekitVisitorLivePollingEnabled($options);
+        $highLoadMode = themekitHighLoadDegradeEnabled($options);
         if (!$visitorPollingEnabled || $highLoadMode) {
             emitJson([
                 'ok' => false,
@@ -3949,8 +3949,8 @@ function handleCommentUploadRequest(Archive $archive): void
 
     try {
         $options = Options::alloc();
-        $upload = hansjackPrepareCommentUpload($file, $options, hansjackCurrentUserHasLogin());
-        $upload = hansjackStoreCommentUpload($upload);
+        $upload = themekitPrepareCommentUpload($file, $options, themekitCurrentUserHasLogin());
+        $upload = themekitStoreCommentUpload($upload);
     } catch (\RuntimeException $e) {
         commentUploadJson([
             'ok' => false,
@@ -5301,7 +5301,7 @@ JS;
 
 function handleSitemapRequest(Archive $archive): void
 {
-    $request = hansjackParseSitemapRequestPath();
+    $request = themekitParseSitemapRequestPath();
     if (empty($request['matched'])) {
         return;
     }
@@ -5322,27 +5322,27 @@ function handleSitemapRequest(Archive $archive): void
     }
 
     $options = Options::alloc();
-    $items = hansjackBuildSitemapItems($options);
-    $pageSize = hansjackSitemapSize($options);
+    $items = themekitBuildSitemapItems($options);
+    $pageSize = themekitSitemapSize($options);
     $chunks = array_chunk($items, max(1, $pageSize));
     $chunkNumber = (int) ($request['chunk'] ?? 0);
 
     if ($chunkNumber > 0) {
         $chunkIndex = $chunkNumber - 1;
         if (!isset($chunks[$chunkIndex])) {
-            hansjackOutputXmlResponse(hansjackRenderSitemapUrlset([]), 404, $method === 'HEAD');
+            themekitOutputXmlResponse(themekitRenderSitemapUrlset([]), 404, $method === 'HEAD');
         }
-        hansjackOutputXmlResponse(hansjackRenderSitemapUrlset($chunks[$chunkIndex]), 200, $method === 'HEAD');
+        themekitOutputXmlResponse(themekitRenderSitemapUrlset($chunks[$chunkIndex]), 200, $method === 'HEAD');
     }
 
     if (count($chunks) > 1) {
-        hansjackOutputXmlResponse(hansjackRenderSitemapIndex($chunks, $options), 200, $method === 'HEAD');
+        themekitOutputXmlResponse(themekitRenderSitemapIndex($chunks, $options), 200, $method === 'HEAD');
     }
 
-    hansjackOutputXmlResponse(hansjackRenderSitemapUrlset($chunks[0] ?? []), 200, $method === 'HEAD');
+    themekitOutputXmlResponse(themekitRenderSitemapUrlset($chunks[0] ?? []), 200, $method === 'HEAD');
 }
 
-function hansjackParseSitemapRequestPath(): array
+function themekitParseSitemapRequestPath(): array
 {
     $requestUri = trim((string) ($_SERVER['REQUEST_URI'] ?? '/'));
     $path = (string) (parse_url($requestUri, PHP_URL_PATH) ?? '/');
@@ -5366,7 +5366,7 @@ function hansjackParseSitemapRequestPath(): array
     ];
 }
 
-function hansjackOutputXmlResponse(string $xml, int $status = 200, bool $headOnly = false): void
+function themekitOutputXmlResponse(string $xml, int $status = 200, bool $headOnly = false): void
 {
     if (!headers_sent()) {
         header('Content-Type: application/xml; charset=UTF-8');
@@ -5383,30 +5383,30 @@ function hansjackOutputXmlResponse(string $xml, int $status = 200, bool $headOnl
     exit;
 }
 
-function hansjackBuildSitemapItems(Options $options): array
+function themekitBuildSitemapItems(Options $options): array
 {
     static $cached = null;
     if (is_array($cached)) {
         return $cached;
     }
 
-    $pageGroups = hansjackBuildSitemapPageGroups();
+    $pageGroups = themekitBuildSitemapPageGroups();
     $specialPages = is_array($pageGroups['specialPages'] ?? null) ? $pageGroups['specialPages'] : [];
     $otherPages = is_array($pageGroups['otherPages'] ?? null) ? $pageGroups['otherPages'] : [];
 
-    $postItems = hansjackBuildSitemapCategoryItems($options, 'posts');
-    $noteItems = hansjackBuildSitemapCategoryItems($options, 'notes');
+    $postItems = themekitBuildSitemapCategoryItems($options, 'posts');
+    $noteItems = themekitBuildSitemapCategoryItems($options, 'notes');
 
     $memoryItems = [];
     $memosPage = $specialPages['memos'] ?? null;
     if (is_array($memosPage)) {
-        $memoryItems = hansjackBuildSitemapMemoryCommentItems($memosPage);
+        $memoryItems = themekitBuildSitemapMemoryCommentItems($memosPage);
     }
 
-    $postLastmod = hansjackSitemapMaxLastmod($postItems);
-    $noteLastmod = hansjackSitemapMaxLastmod($noteItems);
-    $memoryLastmod = hansjackSitemapMaxLastmod($memoryItems);
-    $pageLastmod = hansjackSitemapMaxLastmod($otherPages);
+    $postLastmod = themekitSitemapMaxLastmod($postItems);
+    $noteLastmod = themekitSitemapMaxLastmod($noteItems);
+    $memoryLastmod = themekitSitemapMaxLastmod($memoryItems);
+    $pageLastmod = themekitSitemapMaxLastmod($otherPages);
 
     if (is_array($specialPages['posts'] ?? null)) {
         $specialPages['posts']['lastmod'] = max((int) ($specialPages['posts']['lastmod'] ?? 0), $postLastmod);
@@ -5431,14 +5431,14 @@ function hansjackBuildSitemapItems(Options $options): array
         (int) (($specialPages['notes']['lastmod'] ?? 0)),
         (int) (($specialPages['memos']['lastmod'] ?? 0))
     );
-    hansjackSitemapPushItem($items, $seen, $homeUrl, $homeLastmod);
+    themekitSitemapPushItem($items, $seen, $homeUrl, $homeLastmod);
 
     foreach (['posts', 'notes', 'memos'] as $specialSlug) {
         $specialItem = $specialPages[$specialSlug] ?? null;
         if (!is_array($specialItem)) {
             continue;
         }
-        hansjackSitemapPushItem(
+        themekitSitemapPushItem(
             $items,
             $seen,
             (string) ($specialItem['loc'] ?? ''),
@@ -5447,23 +5447,23 @@ function hansjackBuildSitemapItems(Options $options): array
     }
 
     foreach ($postItems as $item) {
-        hansjackSitemapPushItem($items, $seen, (string) ($item['loc'] ?? ''), (int) ($item['lastmod'] ?? 0));
+        themekitSitemapPushItem($items, $seen, (string) ($item['loc'] ?? ''), (int) ($item['lastmod'] ?? 0));
     }
     foreach ($noteItems as $item) {
-        hansjackSitemapPushItem($items, $seen, (string) ($item['loc'] ?? ''), (int) ($item['lastmod'] ?? 0));
+        themekitSitemapPushItem($items, $seen, (string) ($item['loc'] ?? ''), (int) ($item['lastmod'] ?? 0));
     }
     foreach ($memoryItems as $item) {
-        hansjackSitemapPushItem($items, $seen, (string) ($item['loc'] ?? ''), (int) ($item['lastmod'] ?? 0));
+        themekitSitemapPushItem($items, $seen, (string) ($item['loc'] ?? ''), (int) ($item['lastmod'] ?? 0));
     }
     foreach ($otherPages as $item) {
-        hansjackSitemapPushItem($items, $seen, (string) ($item['loc'] ?? ''), (int) ($item['lastmod'] ?? 0));
+        themekitSitemapPushItem($items, $seen, (string) ($item['loc'] ?? ''), (int) ($item['lastmod'] ?? 0));
     }
 
     $cached = $items;
     return $cached;
 }
 
-function hansjackBuildSitemapPageGroups(): array
+function themekitBuildSitemapPageGroups(): array
 {
     $specialPages = [
         'posts' => null,
@@ -5474,7 +5474,7 @@ function hansjackBuildSitemapPageGroups(): array
 
     $pages = null;
     try {
-        \Typecho\Widget::widget('Widget_Contents_Page_List@hansjack_sitemap_pages', null, null, false)->to($pages);
+        \Typecho\Widget::widget('Widget_Contents_Page_List@themekit_sitemap_pages', null, null, false)->to($pages);
     } catch (\Throwable $e) {
         $pages = null;
     }
@@ -5514,11 +5514,11 @@ function hansjackBuildSitemapPageGroups(): array
     ];
 }
 
-function hansjackBuildSitemapCategoryItems(Options $options, string $categorySlug): array
+function themekitBuildSitemapCategoryItems(Options $options, string $categorySlug): array
 {
     $items = [];
     $seen = [];
-    $pageSize = max(100, min(1000, hansjackSitemapSize($options)));
+    $pageSize = max(100, min(1000, themekitSitemapSize($options)));
     $safeSlug = preg_replace('/[^a-z0-9_]+/i', '_', $categorySlug);
     if (!is_string($safeSlug) || $safeSlug === '') {
         $safeSlug = 'category';
@@ -5526,7 +5526,7 @@ function hansjackBuildSitemapCategoryItems(Options $options, string $categorySlu
 
     for ($page = 1; $page <= 2000; $page++) {
         $posts = null;
-        $widgetName = 'Widget_Archive@hansjack_sitemap_' . $safeSlug . '_' . $page;
+        $widgetName = 'Widget_Archive@themekit_sitemap_' . $safeSlug . '_' . $page;
         $widgetParams = 'pageSize=' . $pageSize . '&type=category';
         $widgetRequest = 'slug=' . urlencode($categorySlug) . '&page=' . $page;
 
@@ -5548,7 +5548,7 @@ function hansjackBuildSitemapCategoryItems(Options $options, string $categorySlu
                 continue;
             }
             $lastmod = max(0, (int) ($posts->created ?? 0), (int) ($posts->modified ?? 0));
-            hansjackSitemapPushItem($items, $seen, $url, $lastmod);
+            themekitSitemapPushItem($items, $seen, $url, $lastmod);
         }
 
         if ($count < $pageSize) {
@@ -5559,7 +5559,7 @@ function hansjackBuildSitemapCategoryItems(Options $options, string $categorySlu
     return $items;
 }
 
-function hansjackBuildSitemapMemoryCommentItems(array $memosPage): array
+function themekitBuildSitemapMemoryCommentItems(array $memosPage): array
 {
     $pageCid = (int) ($memosPage['cid'] ?? 0);
     $pageUrl = trim((string) ($memosPage['loc'] ?? ''));
@@ -5591,24 +5591,24 @@ function hansjackBuildSitemapMemoryCommentItems(array $memosPage): array
     $items = [];
     $seen = [];
     foreach ($rows as $row) {
-        $commentId = (int) hansjackSitemapRowValue($row, 'coid', 0);
+        $commentId = (int) themekitSitemapRowValue($row, 'coid', 0);
         if ($commentId <= 0) {
             continue;
         }
 
-        $rawText = (string) hansjackSitemapRowValue($row, 'text', '');
+        $rawText = (string) themekitSitemapRowValue($row, 'text', '');
         if ($rawText !== '' && function_exists('isPrivateCommentText') && isPrivateCommentText($rawText)) {
             continue;
         }
 
-        $created = (int) hansjackSitemapRowValue($row, 'created', 0);
-        hansjackSitemapPushItem($items, $seen, $pageUrl . '#comment-' . $commentId, $created);
+        $created = (int) themekitSitemapRowValue($row, 'created', 0);
+        themekitSitemapPushItem($items, $seen, $pageUrl . '#comment-' . $commentId, $created);
     }
 
     return $items;
 }
 
-function hansjackSitemapPushItem(array &$items, array &$seen, string $url, int $lastmod = 0): void
+function themekitSitemapPushItem(array &$items, array &$seen, string $url, int $lastmod = 0): void
 {
     $loc = trim($url);
     if ($loc === '') {
@@ -5629,7 +5629,7 @@ function hansjackSitemapPushItem(array &$items, array &$seen, string $url, int $
     $seen[$loc] = count($items) - 1;
 }
 
-function hansjackSitemapRowValue($row, string $key, $default = null)
+function themekitSitemapRowValue($row, string $key, $default = null)
 {
     if (is_array($row)) {
         return $row[$key] ?? $default;
@@ -5641,7 +5641,7 @@ function hansjackSitemapRowValue($row, string $key, $default = null)
     return $default;
 }
 
-function hansjackSitemapMaxLastmod(array $items): int
+function themekitSitemapMaxLastmod(array $items): int
 {
     $maxLastmod = 0;
     foreach ($items as $item) {
@@ -5654,21 +5654,21 @@ function hansjackSitemapMaxLastmod(array $items): int
     return $maxLastmod;
 }
 
-function hansjackSitemapRootUrl(Options $options): string
+function themekitSitemapRootUrl(Options $options): string
 {
     return Common::url('sitemap.xml', (string) $options->index);
 }
 
-function hansjackSitemapChunkUrl(Options $options, int $chunkNumber): string
+function themekitSitemapChunkUrl(Options $options, int $chunkNumber): string
 {
     return Common::url('sitemap-' . max(1, $chunkNumber) . '.xml', (string) $options->index);
 }
 
-function hansjackRenderSitemapUrlset(array $items): string
+function themekitRenderSitemapUrlset(array $items): string
 {
     $options = Options::alloc();
-    $changefreq = hansjackSitemapChangefreq($options);
-    $priority = hansjackSitemapPriority($options);
+    $changefreq = themekitSitemapChangefreq($options);
+    $priority = themekitSitemapPriority($options);
 
     $lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
@@ -5681,16 +5681,16 @@ function hansjackRenderSitemapUrlset(array $items): string
             continue;
         }
 
-        $line = '  <url><loc>' . hansjackSitemapEscape($loc) . '</loc>';
+        $line = '  <url><loc>' . themekitSitemapEscape($loc) . '</loc>';
         $lastmod = (int) ($item['lastmod'] ?? 0);
         if ($lastmod > 0) {
-            $line .= '<lastmod>' . hansjackSitemapEscape(hansjackSitemapFormatLastmod($lastmod)) . '</lastmod>';
+            $line .= '<lastmod>' . themekitSitemapEscape(themekitSitemapFormatLastmod($lastmod)) . '</lastmod>';
         }
         if ($changefreq !== '') {
-            $line .= '<changefreq>' . hansjackSitemapEscape($changefreq) . '</changefreq>';
+            $line .= '<changefreq>' . themekitSitemapEscape($changefreq) . '</changefreq>';
         }
         if ($priority !== '') {
-            $line .= '<priority>' . hansjackSitemapEscape($priority) . '</priority>';
+            $line .= '<priority>' . themekitSitemapEscape($priority) . '</priority>';
         }
         $line .= '</url>';
         $lines[] = $line;
@@ -5700,7 +5700,7 @@ function hansjackRenderSitemapUrlset(array $items): string
     return implode("\n", $lines);
 }
 
-function hansjackRenderSitemapIndex(array $chunks, Options $options): string
+function themekitRenderSitemapIndex(array $chunks, Options $options): string
 {
     $lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
@@ -5708,11 +5708,11 @@ function hansjackRenderSitemapIndex(array $chunks, Options $options): string
     ];
 
     foreach (array_values($chunks) as $index => $chunkItems) {
-        $chunkUrl = hansjackSitemapChunkUrl($options, $index + 1);
-        $line = '  <sitemap><loc>' . hansjackSitemapEscape($chunkUrl) . '</loc>';
-        $lastmod = hansjackSitemapMaxLastmod(is_array($chunkItems) ? $chunkItems : []);
+        $chunkUrl = themekitSitemapChunkUrl($options, $index + 1);
+        $line = '  <sitemap><loc>' . themekitSitemapEscape($chunkUrl) . '</loc>';
+        $lastmod = themekitSitemapMaxLastmod(is_array($chunkItems) ? $chunkItems : []);
         if ($lastmod > 0) {
-            $line .= '<lastmod>' . hansjackSitemapEscape(hansjackSitemapFormatLastmod($lastmod)) . '</lastmod>';
+            $line .= '<lastmod>' . themekitSitemapEscape(themekitSitemapFormatLastmod($lastmod)) . '</lastmod>';
         }
         $line .= '</sitemap>';
         $lines[] = $line;
@@ -5722,12 +5722,12 @@ function hansjackRenderSitemapIndex(array $chunks, Options $options): string
     return implode("\n", $lines);
 }
 
-function hansjackSitemapEscape(string $value): string
+function themekitSitemapEscape(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8');
 }
 
-function hansjackSitemapFormatLastmod(int $timestamp): string
+function themekitSitemapFormatLastmod(int $timestamp): string
 {
     return gmdate('Y-m-d\TH:i:s\Z', max(0, $timestamp));
 }
@@ -5849,7 +5849,7 @@ function qqBindingPanelHtml(Options $options): string
     return $html;
 }
 
-function hansjackBuildUrlWithQuery(string $baseUrl, array $params): string
+function themekitBuildUrlWithQuery(string $baseUrl, array $params): string
 {
     $baseUrl = trim($baseUrl);
     if ($baseUrl === '') {
@@ -5888,7 +5888,7 @@ function hansjackBuildUrlWithQuery(string $baseUrl, array $params): string
     return $baseUrl . $sep . $qs;
 }
 
-function hansjackThemeCacheActionUrl(string $action, array $params = []): string
+function themekitThemeCacheActionUrl(string $action, array $params = []): string
 {
     $options = Options::alloc();
     $base = (string) $options->index;
@@ -5919,7 +5919,7 @@ function hansjackThemeCacheActionUrl(string $action, array $params = []): string
     return $base . $sep . $qs;
 }
 
-function hansjackThemeCacheAdminReturnUrl(Options $options): string
+function themekitThemeCacheAdminReturnUrl(Options $options): string
 {
     $base = Common::url('options-theme.php', (string) $options->adminUrl);
     $theme = trim((string) ($options->theme ?? ''));
@@ -5927,10 +5927,10 @@ function hansjackThemeCacheAdminReturnUrl(Options $options): string
         return $base;
     }
 
-    return hansjackBuildUrlWithQuery($base, ['theme' => $theme]);
+    return themekitBuildUrlWithQuery($base, ['theme' => $theme]);
 }
 
-function hansjackThemeCacheTargetPaths(): array
+function themekitThemeCacheTargetPaths(): array
 {
     return [
         __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'page-cache',
@@ -5944,7 +5944,7 @@ function hansjackThemeCacheTargetPaths(): array
     ];
 }
 
-function hansjackDeletePathRecursive(string $path, array &$stats): void
+function themekitDeletePathRecursive(string $path, array &$stats): void
 {
     if ($path === '') {
         return;
@@ -5968,7 +5968,7 @@ function hansjackDeletePathRecursive(string $path, array &$stats): void
             if ($item === '.' || $item === '..') {
                 continue;
             }
-            hansjackDeletePathRecursive($path . DIRECTORY_SEPARATOR . $item, $stats);
+            themekitDeletePathRecursive($path . DIRECTORY_SEPARATOR . $item, $stats);
         }
     }
 
@@ -5978,7 +5978,7 @@ function hansjackDeletePathRecursive(string $path, array &$stats): void
     }
 }
 
-function hansjackClearThemeCaches(): array
+function themekitClearThemeCaches(): array
 {
     $stats = [
         'removed' => 0,
@@ -5986,21 +5986,21 @@ function hansjackClearThemeCaches(): array
         'dirs' => 0,
     ];
 
-    $targets = hansjackThemeCacheTargetPaths();
+    $targets = themekitThemeCacheTargetPaths();
     foreach ($targets as $targetPath) {
         $path = trim((string) $targetPath);
         if ($path === '') {
             continue;
         }
-        hansjackDeletePathRecursive($path, $stats);
+        themekitDeletePathRecursive($path, $stats);
     }
 
     return $stats;
 }
 
-function hansjackThemeCacheRedirect(string $returnUrl, array $params = []): void
+function themekitThemeCacheRedirect(string $returnUrl, array $params = []): void
 {
-    $url = hansjackBuildUrlWithQuery($returnUrl, $params);
+    $url = themekitBuildUrlWithQuery($returnUrl, $params);
     if ($url === '') {
         $url = $returnUrl;
     }
@@ -6013,10 +6013,10 @@ function hansjackThemeCacheRedirect(string $returnUrl, array $params = []): void
     exit;
 }
 
-function hansjackThemeCachePanelHtml(Options $options): string
+function themekitThemeCachePanelHtml(Options $options): string
 {
     $isAdmin = currentUserIsAdmin();
-    $adminReturn = hansjackThemeCacheAdminReturnUrl($options);
+    $adminReturn = themekitThemeCacheAdminReturnUrl($options);
 
     $security = null;
     try {
@@ -6034,13 +6034,13 @@ function hansjackThemeCachePanelHtml(Options $options): string
         }
     }
 
-    $clearUrl = hansjackThemeCacheActionUrl('clear', [
+    $clearUrl = themekitThemeCacheActionUrl('clear', [
         'return' => $adminReturn,
         '_' => $token,
     ]);
 
-    $status = trim((string) ($_GET['hansjack_cache_status'] ?? ''));
-    $removed = (int) ($_GET['hansjack_cache_removed'] ?? 0);
+    $status = trim((string) ($_GET['themekit_cache_status'] ?? ''));
+    $removed = (int) ($_GET['themekit_cache_removed'] ?? 0);
 
     $message = '';
     $messageColor = '#1a7f37';
@@ -6057,7 +6057,7 @@ function hansjackThemeCachePanelHtml(Options $options): string
         $messageColor = '#b42318';
     }
 
-    $html = '<div class="hansjack-cache-panel">';
+    $html = '<div class="themekit-cache-panel">';
     $html .= '<div>' . _t('目标缓存：page-cache、post-guess、series、presence-status、maimemo-study、maimemo-rate-limit、internal-link-meta、github-onebox。') . '</div>';
 
     if ($message !== '') {
@@ -6092,7 +6092,7 @@ function handleThemeCacheManageRequest(Archive $archive): void
     }
 
     $options = Options::alloc();
-    $defaultReturn = hansjackThemeCacheAdminReturnUrl($options);
+    $defaultReturn = themekitThemeCacheAdminReturnUrl($options);
     $returnUrlRaw = '';
     try {
         $returnUrlRaw = trim((string) $archive->request->get('return', $defaultReturn));
@@ -6105,7 +6105,7 @@ function handleThemeCacheManageRequest(Archive $archive): void
     }
 
     if (!currentUserIsAdmin()) {
-        hansjackThemeCacheRedirect($returnUrl, ['hansjack_cache_status' => 'denied']);
+        themekitThemeCacheRedirect($returnUrl, ['themekit_cache_status' => 'denied']);
     }
 
     $token = '';
@@ -6138,17 +6138,17 @@ function handleThemeCacheManageRequest(Archive $archive): void
     }
 
     if ($token === '' || $expectedToken === '' || !hash_equals($expectedToken, $token)) {
-        hansjackThemeCacheRedirect($returnUrl, ['hansjack_cache_status' => 'token']);
+        themekitThemeCacheRedirect($returnUrl, ['themekit_cache_status' => 'token']);
     }
 
     if ($action !== 'clear') {
-        hansjackThemeCacheRedirect($returnUrl, ['hansjack_cache_status' => 'invalid']);
+        themekitThemeCacheRedirect($returnUrl, ['themekit_cache_status' => 'invalid']);
     }
 
-    $stats = hansjackClearThemeCaches();
-    hansjackThemeCacheRedirect($returnUrl, [
-        'hansjack_cache_status' => 'cleared',
-        'hansjack_cache_removed' => (int) ($stats['removed'] ?? 0),
+    $stats = themekitClearThemeCaches();
+    themekitThemeCacheRedirect($returnUrl, [
+        'themekit_cache_status' => 'cleared',
+        'themekit_cache_removed' => (int) ($stats['removed'] ?? 0),
     ]);
 }
 
@@ -6189,7 +6189,7 @@ function themeMourningEnabled(Options $options): bool
         $raw = '0';
     }
 
-    return hansjackOptionEnabled($raw, false);
+    return themekitOptionEnabled($raw, false);
 }
 
 function githubCurrentAdminUid(&$uid = 0): bool
@@ -6334,8 +6334,8 @@ function githubDb()
     return null;
 }
 
-if (!function_exists('hansjackNormalizeContentTypeValue')) {
-    function hansjackNormalizeContentTypeValue($value): string
+if (!function_exists('themekitNormalizeContentTypeValue')) {
+    function themekitNormalizeContentTypeValue($value): string
     {
         $text = trim((string) $value);
         if ($text === '') {
@@ -6350,19 +6350,19 @@ if (!function_exists('hansjackNormalizeContentTypeValue')) {
     }
 }
 
-if (!function_exists('hansjackHasContentWarningType')) {
-    function hansjackHasContentWarningType(string $contentType): bool
+if (!function_exists('themekitHasContentWarningType')) {
+    function themekitHasContentWarningType(string $contentType): bool
     {
         return in_array(
-            hansjackNormalizeContentTypeValue($contentType),
+            themekitNormalizeContentTypeValue($contentType),
             ['warning', 'nsfw', 'sensitive'],
             true
         );
     }
 }
 
-if (!function_exists('hansjackContentTypeByCid')) {
-    function hansjackContentTypeByCid(int $cid, $archive = null): string
+if (!function_exists('themekitContentTypeByCid')) {
+    function themekitContentTypeByCid(int $cid, $archive = null): string
     {
         static $cache = [];
 
@@ -6383,7 +6383,7 @@ if (!function_exists('hansjackContentTypeByCid')) {
             }
         }
 
-        $fieldValue = hansjackNormalizeContentTypeValue($fieldValue);
+        $fieldValue = themekitNormalizeContentTypeValue($fieldValue);
         if ($fieldValue !== '') {
             $cache[$cid] = $fieldValue;
             return $fieldValue;
@@ -6423,7 +6423,7 @@ if (!function_exists('hansjackContentTypeByCid')) {
             $dbValue = '';
         }
 
-        $dbValue = hansjackNormalizeContentTypeValue($dbValue);
+        $dbValue = themekitNormalizeContentTypeValue($dbValue);
         $cache[$cid] = $dbValue;
         return $dbValue;
     }
@@ -7504,10 +7504,10 @@ function buildThemeConfig(Options $options): array
         'welcomeText' => text((string) ($options->landingWelcomeText ?? ($options->welcomeTitle ?? '')), ''),
         'landingHitokotoEnabled' => landingHitokotoEnabled($options),
         'mourningEnabled' => themeMourningEnabled($options),
-        'landingSocialLinks' => hansjackLandingSocialLinks($options),
-        'presenceStatusEnabled' => hansjackPresenceStatusEnabled($options),
-        'presenceStatusEndpoint' => hansjackPresenceStatusEndpoint($options),
-        'maimemoStudyEnabled' => hansjackMaimemoStudyEnabled($options),
+        'landingSocialLinks' => themekitLandingSocialLinks($options),
+        'presenceStatusEnabled' => themekitPresenceStatusEnabled($options),
+        'presenceStatusEndpoint' => themekitPresenceStatusEndpoint($options),
+        'maimemoStudyEnabled' => themekitMaimemoStudyEnabled($options),
         'links' => $links,
         'navItems' => [
             ['key' => 'home', 'label' => '首页', 'url' => $links['home']],
@@ -7518,7 +7518,7 @@ function buildThemeConfig(Options $options): array
     ];
 }
 
-function hansjackLandingSocialLinks(Options $options): array
+function themekitLandingSocialLinks(Options $options): array
 {
     $defs = [
         [
@@ -7580,7 +7580,7 @@ function hansjackLandingSocialLinks(Options $options): array
         }
 
         $rawValue = trim((string) ($options->{$field} ?? ''));
-        $url = hansjackNormalizeLandingSocialUrl($options, $rawValue, (string) ($def['type'] ?? 'url'));
+        $url = themekitNormalizeLandingSocialUrl($options, $rawValue, (string) ($def['type'] ?? 'url'));
         if ($url === '') {
             continue;
         }
@@ -7596,7 +7596,7 @@ function hansjackLandingSocialLinks(Options $options): array
     return $items;
 }
 
-function hansjackNormalizeLandingSocialUrl(Options $options, string $value, string $type = 'url'): string
+function themekitNormalizeLandingSocialUrl(Options $options, string $value, string $type = 'url'): string
 {
     $raw = trim($value);
     if ($raw === '') {
@@ -7655,7 +7655,7 @@ function text(string $value, string $fallback = ''): string
  * 统一读取站点 SEO 基础信息。
  * 注意：不要在普通函数里访问 $archive->options（受保护属性），会触发异常并回退默认值。
  */
-function hansjackSiteSeoBase(): array
+function themekitSiteSeoBase(): array
 {
     $siteTitle = 'Typecho';
     $siteDescription = '';
@@ -7677,7 +7677,7 @@ function hansjackSiteSeoBase(): array
     ];
 }
 
-function hansjackMbLength(string $value): int
+function themekitMbLength(string $value): int
 {
     if (function_exists('mb_strlen')) {
         return (int) mb_strlen($value, 'UTF-8');
@@ -7686,7 +7686,7 @@ function hansjackMbLength(string $value): int
     return strlen($value);
 }
 
-function hansjackMbSubstr(string $value, int $start, int $length): string
+function themekitMbSubstr(string $value, int $start, int $length): string
 {
     if (function_exists('mb_substr')) {
         return (string) mb_substr($value, $start, $length, 'UTF-8');
@@ -7695,7 +7695,7 @@ function hansjackMbSubstr(string $value, int $start, int $length): string
     return substr($value, $start, $length);
 }
 
-function hansjackNormalizeSeoText(string $value): string
+function themekitNormalizeSeoText(string $value): string
 {
     $value = trim($value);
     if ($value === '') {
@@ -7708,26 +7708,26 @@ function hansjackNormalizeSeoText(string $value): string
     return trim((string) $text);
 }
 
-function hansjackTruncateText(string $value, int $maxLen = 180): string
+function themekitTruncateText(string $value, int $maxLen = 180): string
 {
-    $text = hansjackNormalizeSeoText($value);
+    $text = themekitNormalizeSeoText($value);
     if ($text === '') {
         return '';
     }
 
     $maxLen = max(1, (int) $maxLen);
-    if (hansjackMbLength($text) <= $maxLen) {
+    if (themekitMbLength($text) <= $maxLen) {
         return $text;
     }
 
     $short = rtrim(
-        hansjackMbSubstr($text, 0, $maxLen),
+        themekitMbSubstr($text, 0, $maxLen),
         " \t\n\r\0\x0B,，。.;；:：!?！？"
     );
     return $short . '...';
 }
 
-function hansjackArchiveRawTitle($archive): string
+function themekitArchiveRawTitle($archive): string
 {
     if (!is_object($archive)) {
         return '';
@@ -7772,9 +7772,9 @@ function hansjackArchiveRawTitle($archive): string
     return $title;
 }
 
-function hansjackArchiveSeoTitle($archive): string
+function themekitArchiveSeoTitle($archive): string
 {
-    $baseSeo = hansjackSiteSeoBase();
+    $baseSeo = themekitSiteSeoBase();
     $siteTitle = (string) ($baseSeo['title'] ?? 'Typecho');
     $siteDescription = (string) ($baseSeo['description'] ?? '');
     $isIndex = false;
@@ -7793,8 +7793,8 @@ function hansjackArchiveSeoTitle($archive): string
     }
 
     $siteTitle = text($siteTitle, 'Typecho');
-    $siteDescription = hansjackNormalizeSeoText($siteDescription);
-    $archiveTitle = hansjackArchiveRawTitle($archive);
+    $siteDescription = themekitNormalizeSeoText($siteDescription);
+    $archiveTitle = themekitArchiveRawTitle($archive);
 
     if ($isIndex) {
         $suffix = $siteDescription !== '' ? $siteDescription : _t('首页');
@@ -7808,11 +7808,11 @@ function hansjackArchiveSeoTitle($archive): string
     }
 
     $title = trim($title);
-    if ($siteDescription !== '' && hansjackMbLength($title) < 8) {
+    if ($siteDescription !== '' && themekitMbLength($title) < 8) {
         $title .= ' - ' . $siteDescription;
     }
 
-    if (hansjackMbLength($title) < 12) {
+    if (themekitMbLength($title) < 12) {
         $titleTail = $siteDescription !== '' ? $siteDescription : _t('文章与笔记');
         if ($titleTail !== '' && strpos($title, $titleTail) === false) {
             $title = trim($title . ' - ' . $titleTail, " \t\n\r\0\x0B-");
@@ -7822,11 +7822,11 @@ function hansjackArchiveSeoTitle($archive): string
     return trim($title, " \t\n\r\0\x0B-");
 }
 
-function hansjackArchiveSeoDescription($archive, int $maxLen = 180): string
+function themekitArchiveSeoDescription($archive, int $maxLen = 180): string
 {
     $maxLen = max(80, min(320, (int) $maxLen));
 
-    $baseSeo = hansjackSiteSeoBase();
+    $baseSeo = themekitSiteSeoBase();
     $siteTitle = (string) ($baseSeo['title'] ?? 'Typecho');
     $siteDescription = (string) ($baseSeo['description'] ?? '');
     $isIndex = false;
@@ -7851,8 +7851,8 @@ function hansjackArchiveSeoDescription($archive, int $maxLen = 180): string
     }
 
     $siteTitle = text($siteTitle, 'Typecho');
-    $siteDescription = hansjackNormalizeSeoText($siteDescription);
-    $archiveTitle = hansjackArchiveRawTitle($archive);
+    $siteDescription = themekitNormalizeSeoText($siteDescription);
+    $archiveTitle = themekitArchiveRawTitle($archive);
 
     $description = '';
 
@@ -7872,7 +7872,7 @@ function hansjackArchiveSeoDescription($archive, int $maxLen = 180): string
             } catch (\Throwable $e) {
                 $fieldValue = '';
             }
-            $fieldValue = hansjackNormalizeSeoText($fieldValue);
+            $fieldValue = themekitNormalizeSeoText($fieldValue);
             if ($fieldValue !== '') {
                 $description = $fieldValue;
                 break;
@@ -7886,11 +7886,11 @@ function hansjackArchiveSeoDescription($archive, int $maxLen = 180): string
             } catch (\Throwable $e) {
                 // Ignore excerpt rendering errors.
             }
-            $description = hansjackNormalizeSeoText((string) ob_get_clean());
+            $description = themekitNormalizeSeoText((string) ob_get_clean());
         }
 
         if ($description === '') {
-            $description = hansjackNormalizeSeoText(renderArchiveContent($archive));
+            $description = themekitNormalizeSeoText(renderArchiveContent($archive));
         }
 
         if ($description === '') {
@@ -7913,16 +7913,16 @@ function hansjackArchiveSeoDescription($archive, int $maxLen = 180): string
         }
     }
 
-    $description = hansjackTruncateText($description, $maxLen);
+    $description = themekitTruncateText($description, $maxLen);
     if ($description === '') {
-        $description = hansjackTruncateText(
+        $description = themekitTruncateText(
             $siteDescription !== '' ? $siteDescription : ($siteTitle . '博客'),
             $maxLen
         );
     }
 
     $minLen = 34;
-    if (hansjackMbLength($description) < $minLen) {
+    if (themekitMbLength($description) < $minLen) {
         $fallbackTail = $siteDescription !== '' ? $siteDescription : '持续分享技术实践、开发笔记与生活记录。';
         $description = trim($description, "， \t\n\r\0\x0B");
         if ($fallbackTail !== '' && strpos($description, $fallbackTail) === false) {
@@ -7930,7 +7930,7 @@ function hansjackArchiveSeoDescription($archive, int $maxLen = 180): string
                 ? ($description . '，' . $fallbackTail)
                 : $fallbackTail;
         }
-        $description = hansjackTruncateText($description, $maxLen);
+        $description = themekitTruncateText($description, $maxLen);
     }
 
     return $description;
@@ -8307,7 +8307,7 @@ function buildImageAltFromSrc(string $src, string $fallback = ''): string
         return trim($fallback);
     }
 
-    return hansjackTruncateText($base, 80);
+    return themekitTruncateText($base, 80);
 }
 
 function applyImageAltFallbackToHtml(string $html, string $defaultAlt = ''): string
@@ -9532,7 +9532,7 @@ function embedHttpGet(string $url, int $timeoutSeconds = 8, bool $withEmbedFetch
             curl_setopt($ch, CURLOPT_ENCODING, '');
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Accept: text/html,application/json;q=0.9,*/*;q=0.8',
-                'User-Agent: HansJack-Embed/1.0',
+                'User-Agent: ThemeKit-Embed/1.0',
             ]);
             $resp = curl_exec($ch);
             $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
@@ -9548,7 +9548,7 @@ function embedHttpGet(string $url, int $timeoutSeconds = 8, bool $withEmbedFetch
     $ctx = stream_context_create([
         'http' => [
             'method' => 'GET',
-            'header' => "Accept: text/html,application/json;q=0.9,*/*;q=0.8\r\nUser-Agent: HansJack-Embed/1.0\r\n",
+            'header' => "Accept: text/html,application/json;q=0.9,*/*;q=0.8\r\nUser-Agent: ThemeKit-Embed/1.0\r\n",
             'timeout' => $timeoutSeconds,
             'ignore_errors' => true,
         ],
@@ -9806,21 +9806,21 @@ function renderCommentEmbedShortcodeFromDb(int $commentId, string $sourceUrl = '
         return '';
     }
 
-    $status = strtolower(trim((string) hansjackSitemapRowValue($row, 'status', '')));
+    $status = strtolower(trim((string) themekitSitemapRowValue($row, 'status', '')));
     if (!currentUserIsAdmin() && $status !== 'approved') {
         return '';
     }
 
-    $rawText = (string) hansjackSitemapRowValue($row, 'text', '');
+    $rawText = (string) themekitSitemapRowValue($row, 'text', '');
     $isPrivate = isPrivateCommentText($rawText);
-    $ownerId = (int) hansjackSitemapRowValue($row, 'ownerId', 0);
-    $authorId = (int) hansjackSitemapRowValue($row, 'authorId', 0);
+    $ownerId = (int) themekitSitemapRowValue($row, 'ownerId', 0);
+    $authorId = (int) themekitSitemapRowValue($row, 'authorId', 0);
     if ($isPrivate && !canViewPrivateComment($ownerId, $authorId)) {
         return '';
     }
 
     $commentText = $isPrivate ? stripPrivateCommentMarker($rawText) : $rawText;
-    $author = trim((string) hansjackSitemapRowValue($row, 'author', ''));
+    $author = trim((string) themekitSitemapRowValue($row, 'author', ''));
     if ($author === '') {
         $author = _t('匿名');
     }
@@ -9835,8 +9835,8 @@ function renderCommentEmbedShortcodeFromDb(int $commentId, string $sourceUrl = '
     }
 
     $avatarSize = 32;
-    $avatarEmail = strtolower(trim((string) hansjackSitemapRowValue($row, 'mail', '')));
-    $commentUrl = trim((string) hansjackSitemapRowValue($row, 'url', ''));
+    $avatarEmail = strtolower(trim((string) themekitSitemapRowValue($row, 'mail', '')));
+    $commentUrl = trim((string) themekitSitemapRowValue($row, 'url', ''));
     $githubLogin = githubLoginFromUrl($commentUrl);
     if ($githubLogin !== '') {
         $avatarBase = 'https://github.com/' . rawurlencode($githubLogin) . '.png';
@@ -9847,7 +9847,7 @@ function renderCommentEmbedShortcodeFromDb(int $commentId, string $sourceUrl = '
         $avatarUrl = $avatarBase . '?s=' . $avatarSize . '&d=' . rawurlencode('mp') . '&r=g';
     }
 
-    $created = (int) hansjackSitemapRowValue($row, 'created', 0);
+    $created = (int) themekitSitemapRowValue($row, 'created', 0);
     $dateTime = $created > 0 ? date('c', $created) : date('c');
     $timeLabel = $created > 0 ? date('Y-m-d H:i:s', $created) : _t('未知时间');
     $commentClass = 'comment-body comment-parent';
@@ -9860,7 +9860,7 @@ function renderCommentEmbedShortcodeFromDb(int $commentId, string $sourceUrl = '
         $commentClass .= ' comment-private';
     }
 
-    $coid = max(0, (int) hansjackSitemapRowValue($row, 'coid', $commentId));
+    $coid = max(0, (int) themekitSitemapRowValue($row, 'coid', $commentId));
 
     $html = '<li id="comment-' . $coid . '" class="' . escape($commentClass) . '" data-comment-level="0">';
     $html .= '<div class="comment-author" itemprop="creator">';
@@ -10480,21 +10480,21 @@ function applyEmbedSyntaxToHtml(string $html): string
     return $replaced;
 }
 
-function hansjackGithubOneboxCachePath(): string
+function themekitGithubOneboxCachePath(): string
 {
     return __DIR__
         . DIRECTORY_SEPARATOR . 'cache'
         . DIRECTORY_SEPARATOR . 'github-onebox.json';
 }
 
-function hansjackGithubOneboxLoadCache(): array
+function themekitGithubOneboxLoadCache(): array
 {
     $cache = [
         'version' => 1,
         'items' => [],
     ];
 
-    $path = hansjackGithubOneboxCachePath();
+    $path = themekitGithubOneboxCachePath();
     if (!is_file($path)) {
         return $cache;
     }
@@ -10549,25 +10549,25 @@ function hansjackGithubOneboxLoadCache(): array
     return $cache;
 }
 
-function hansjackGithubOneboxCacheBootstrap(): void
+function themekitGithubOneboxCacheBootstrap(): void
 {
-    if (isset($GLOBALS['hansjack_github_onebox_cache_state']) && is_array($GLOBALS['hansjack_github_onebox_cache_state'])) {
+    if (isset($GLOBALS['themekit_github_onebox_cache_state']) && is_array($GLOBALS['themekit_github_onebox_cache_state'])) {
         return;
     }
 
-    $GLOBALS['hansjack_github_onebox_cache_state'] = hansjackGithubOneboxLoadCache();
-    $GLOBALS['hansjack_github_onebox_cache_dirty'] = false;
+    $GLOBALS['themekit_github_onebox_cache_state'] = themekitGithubOneboxLoadCache();
+    $GLOBALS['themekit_github_onebox_cache_dirty'] = false;
 }
 
-function hansjackGithubOneboxCacheGet(string $key): ?array
+function themekitGithubOneboxCacheGet(string $key): ?array
 {
     $key = trim($key);
     if ($key === '') {
         return null;
     }
 
-    hansjackGithubOneboxCacheBootstrap();
-    $state = &$GLOBALS['hansjack_github_onebox_cache_state'];
+    themekitGithubOneboxCacheBootstrap();
+    $state = &$GLOBALS['themekit_github_onebox_cache_state'];
     if (!is_array($state) || !is_array($state['items'] ?? null)) {
         return null;
     }
@@ -10580,7 +10580,7 @@ function hansjackGithubOneboxCacheGet(string $key): ?array
     $expires = (int) ($entry['expires'] ?? 0);
     if ($expires <= time()) {
         unset($state['items'][$key]);
-        $GLOBALS['hansjack_github_onebox_cache_dirty'] = true;
+        $GLOBALS['themekit_github_onebox_cache_dirty'] = true;
         return null;
     }
 
@@ -10590,15 +10590,15 @@ function hansjackGithubOneboxCacheGet(string $key): ?array
     ];
 }
 
-function hansjackGithubOneboxCachePut(string $key, string $html, bool $ok): void
+function themekitGithubOneboxCachePut(string $key, string $html, bool $ok): void
 {
     $key = trim($key);
     if ($key === '') {
         return;
     }
 
-    hansjackGithubOneboxCacheBootstrap();
-    $state = &$GLOBALS['hansjack_github_onebox_cache_state'];
+    themekitGithubOneboxCacheBootstrap();
+    $state = &$GLOBALS['themekit_github_onebox_cache_state'];
     if (!is_array($state)) {
         $state = ['version' => 1, 'items' => []];
     }
@@ -10625,18 +10625,18 @@ function hansjackGithubOneboxCachePut(string $key, string $html, bool $ok): void
         $state['items'] = array_slice($state['items'], 0, 400, true);
     }
 
-    $GLOBALS['hansjack_github_onebox_cache_dirty'] = true;
+    $GLOBALS['themekit_github_onebox_cache_dirty'] = true;
 }
 
-function hansjackGithubOneboxCacheFlush(): void
+function themekitGithubOneboxCacheFlush(): void
 {
-    hansjackGithubOneboxCacheBootstrap();
+    themekitGithubOneboxCacheBootstrap();
 
-    if (empty($GLOBALS['hansjack_github_onebox_cache_dirty'])) {
+    if (empty($GLOBALS['themekit_github_onebox_cache_dirty'])) {
         return;
     }
 
-    $state = $GLOBALS['hansjack_github_onebox_cache_state'] ?? [];
+    $state = $GLOBALS['themekit_github_onebox_cache_state'] ?? [];
     $items = is_array($state['items'] ?? null) ? $state['items'] : [];
 
     $payload = [
@@ -10646,13 +10646,13 @@ function hansjackGithubOneboxCacheFlush(): void
     ];
     $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if (is_string($json) && $json !== '') {
-        hansjackWriteFileAtomic(hansjackGithubOneboxCachePath(), $json);
+        themekitWriteFileAtomic(themekitGithubOneboxCachePath(), $json);
     }
 
-    $GLOBALS['hansjack_github_onebox_cache_dirty'] = false;
+    $GLOBALS['themekit_github_onebox_cache_dirty'] = false;
 }
 
-function hansjackGithubOneboxApiJson(string $url): array
+function themekitGithubOneboxApiJson(string $url): array
 {
     $url = trim($url);
     if ($url === '') {
@@ -10661,7 +10661,7 @@ function hansjackGithubOneboxApiJson(string $url): array
 
     $resp = githubHttpRequest('GET', $url, [
         'Accept: application/vnd.github+json',
-        'User-Agent: HansJack-GitHub-Onebox/1.0',
+        'User-Agent: ThemeKit-GitHub-Onebox/1.0',
         'X-GitHub-Api-Version: 2022-11-28',
     ]);
 
@@ -10679,7 +10679,7 @@ function hansjackGithubOneboxApiJson(string $url): array
     return is_array($json) ? $json : [];
 }
 
-function hansjackGithubOneboxHttpGet(string $url, int $timeoutSeconds = 8): string
+function themekitGithubOneboxHttpGet(string $url, int $timeoutSeconds = 8): string
 {
     $url = trim($url);
     if ($url === '' || preg_match('/^https?:\/\//i', $url) !== 1) {
@@ -10699,7 +10699,7 @@ function hansjackGithubOneboxHttpGet(string $url, int $timeoutSeconds = 8): stri
             curl_setopt($ch, CURLOPT_ENCODING, '');
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Accept: text/plain,text/*;q=0.9,*/*;q=0.8',
-                'User-Agent: HansJack-GitHub-Onebox/1.0',
+                'User-Agent: ThemeKit-GitHub-Onebox/1.0',
             ]);
 
             $resp = curl_exec($ch);
@@ -10716,7 +10716,7 @@ function hansjackGithubOneboxHttpGet(string $url, int $timeoutSeconds = 8): stri
     $ctx = stream_context_create([
         'http' => [
             'method' => 'GET',
-            'header' => "Accept: text/plain,text/*;q=0.9,*/*;q=0.8\r\nUser-Agent: HansJack-GitHub-Onebox/1.0\r\n",
+            'header' => "Accept: text/plain,text/*;q=0.9,*/*;q=0.8\r\nUser-Agent: ThemeKit-GitHub-Onebox/1.0\r\n",
             'timeout' => $timeoutSeconds,
             'ignore_errors' => true,
         ],
@@ -10735,7 +10735,7 @@ function hansjackGithubOneboxHttpGet(string $url, int $timeoutSeconds = 8): stri
     return '';
 }
 
-function hansjackGithubOneboxParseLineRange(string $fragment): array
+function themekitGithubOneboxParseLineRange(string $fragment): array
 {
     $fragment = trim($fragment);
     if ($fragment === '') {
@@ -10761,7 +10761,7 @@ function hansjackGithubOneboxParseLineRange(string $fragment): array
     return ['start' => $start, 'end' => $end];
 }
 
-function hansjackGithubOneboxParseUrl(string $url): array
+function themekitGithubOneboxParseUrl(string $url): array
 {
     $raw = trim(html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     if ($raw === '' || preg_match('/^https?:\/\//i', $raw) !== 1) {
@@ -10863,7 +10863,7 @@ function hansjackGithubOneboxParseUrl(string $url): array
             'ref' => $ref,
             'filePath' => $filePath,
             'blobSegments' => $decodedSegments,
-            'lineRange' => hansjackGithubOneboxParseLineRange($fragment),
+            'lineRange' => themekitGithubOneboxParseLineRange($fragment),
             'canonicalUrl' => $canonicalUrl,
         ];
     }
@@ -10871,7 +10871,7 @@ function hansjackGithubOneboxParseUrl(string $url): array
     return [];
 }
 
-function hansjackGithubOneboxIconSvg(string $type): string
+function themekitGithubOneboxIconSvg(string $type): string
 {
     if ($type === 'pull') {
         return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-git-pull-request-arrow-icon lucide-git-pull-request-arrow"><circle cx="5" cy="6" r="3"/><path d="M5 9v12"/><circle cx="19" cy="18" r="3"/><path d="m15 9-3-3 3-3"/><path d="M12 6h5a2 2 0 0 1 2 2v7"/></svg>';
@@ -10884,7 +10884,7 @@ function hansjackGithubOneboxIconSvg(string $type): string
     return '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-github-icon lucide-github"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>';
 }
 
-function hansjackGithubOneboxFormatNumber(int $value): string
+function themekitGithubOneboxFormatNumber(int $value): string
 {
     $value = max(0, $value);
     if ($value >= 1000000) {
@@ -10896,7 +10896,7 @@ function hansjackGithubOneboxFormatNumber(int $value): string
     return (string) $value;
 }
 
-function hansjackGithubOneboxFormatDate(string $iso): string
+function themekitGithubOneboxFormatDate(string $iso): string
 {
     $iso = trim($iso);
     if ($iso === '') {
@@ -10911,7 +10911,7 @@ function hansjackGithubOneboxFormatDate(string $iso): string
     return date('Y-m-d', $ts);
 }
 
-function hansjackGithubOneboxBuildBlobUrl(string $owner, string $repo, string $ref, string $filePath, string $fragment = ''): string
+function themekitGithubOneboxBuildBlobUrl(string $owner, string $repo, string $ref, string $filePath, string $fragment = ''): string
 {
     $owner = trim($owner);
     $repo = trim($repo);
@@ -10941,7 +10941,7 @@ function hansjackGithubOneboxBuildBlobUrl(string $owner, string $repo, string $r
     return $url;
 }
 
-function hansjackGithubOneboxBuildRawUrl(string $owner, string $repo, string $ref, string $filePath): string
+function themekitGithubOneboxBuildRawUrl(string $owner, string $repo, string $ref, string $filePath): string
 {
     $owner = trim($owner);
     $repo = trim($repo);
@@ -10964,7 +10964,7 @@ function hansjackGithubOneboxBuildRawUrl(string $owner, string $repo, string $re
         . '/' . implode('/', array_map('rawurlencode', $pathParts));
 }
 
-function hansjackGithubOneboxResolveCodeLanguage(string $filePath): array
+function themekitGithubOneboxResolveCodeLanguage(string $filePath): array
 {
     $ext = strtolower(trim((string) pathinfo($filePath, PATHINFO_EXTENSION)));
     $map = [
@@ -11019,7 +11019,7 @@ function hansjackGithubOneboxResolveCodeLanguage(string $filePath): array
     return ['class' => '', 'label' => 'Text'];
 }
 
-function hansjackGithubOneboxFetchFileByRef(string $owner, string $repo, string $ref, string $filePath): string
+function themekitGithubOneboxFetchFileByRef(string $owner, string $repo, string $ref, string $filePath): string
 {
     $pathParts = array_filter(explode('/', trim($filePath, '/')), static function ($item): bool {
         return $item !== '';
@@ -11032,7 +11032,7 @@ function hansjackGithubOneboxFetchFileByRef(string $owner, string $repo, string 
         . '/' . rawurlencode($repo)
         . '/contents/' . implode('/', array_map('rawurlencode', $pathParts))
         . '?ref=' . rawurlencode($ref);
-    $json = hansjackGithubOneboxApiJson($apiUrl);
+    $json = themekitGithubOneboxApiJson($apiUrl);
     if (!empty($json)) {
         $encoding = strtolower(trim((string) ($json['encoding'] ?? '')));
         $contentRaw = (string) ($json['content'] ?? '');
@@ -11045,22 +11045,22 @@ function hansjackGithubOneboxFetchFileByRef(string $owner, string $repo, string 
 
         $downloadUrl = trim((string) ($json['download_url'] ?? ''));
         if ($downloadUrl !== '') {
-            $download = hansjackGithubOneboxHttpGet($downloadUrl, 8);
+            $download = themekitGithubOneboxHttpGet($downloadUrl, 8);
             if ($download !== '') {
                 return $download;
             }
         }
     }
 
-    $rawUrl = hansjackGithubOneboxBuildRawUrl($owner, $repo, $ref, $filePath);
+    $rawUrl = themekitGithubOneboxBuildRawUrl($owner, $repo, $ref, $filePath);
     if ($rawUrl === '') {
         return '';
     }
 
-    return hansjackGithubOneboxHttpGet($rawUrl, 8);
+    return themekitGithubOneboxHttpGet($rawUrl, 8);
 }
 
-function hansjackGithubOneboxRenderRepo(array $parsed): string
+function themekitGithubOneboxRenderRepo(array $parsed): string
 {
     $owner = trim((string) ($parsed['owner'] ?? ''));
     $repo = trim((string) ($parsed['repo'] ?? ''));
@@ -11068,7 +11068,7 @@ function hansjackGithubOneboxRenderRepo(array $parsed): string
         return '';
     }
 
-    $data = hansjackGithubOneboxApiJson(
+    $data = themekitGithubOneboxApiJson(
         'https://api.github.com/repos/' . rawurlencode($owner) . '/' . rawurlencode($repo)
     );
     if (empty($data)) {
@@ -11081,7 +11081,7 @@ function hansjackGithubOneboxRenderRepo(array $parsed): string
     }
 
     $fullName = trim((string) ($data['full_name'] ?? ($owner . '/' . $repo)));
-    $description = hansjackTruncateText((string) ($data['description'] ?? ''), 260);
+    $description = themekitTruncateText((string) ($data['description'] ?? ''), 260);
     $language = trim((string) ($data['language'] ?? ''));
     $stars = (int) ($data['stargazers_count'] ?? 0);
     $forks = (int) ($data['forks_count'] ?? 0);
@@ -11094,7 +11094,7 @@ function hansjackGithubOneboxRenderRepo(array $parsed): string
     $html = '<aside class="onebox githubrepo" data-onebox-src="' . escape($repoUrl) . '">';
     $html .= '<article class="onebox-body">';
     $html .= '<div class="source">';
-    $html .= '<span class="github-source-icon" aria-hidden="true">' . hansjackGithubOneboxIconSvg('repo') . '</span>';
+    $html .= '<span class="github-source-icon" aria-hidden="true">' . themekitGithubOneboxIconSvg('repo') . '</span>';
     $html .= '<a href="' . escape($repoUrl) . '" target="_blank" rel="noopener">github.com/' . escape($fullName) . '</a>';
     $html .= '</div>';
     $html .= '<div class="github-row" data-github-private-repo="' . ($private ? 'true' : 'false') . '">';
@@ -11118,10 +11118,10 @@ function hansjackGithubOneboxRenderRepo(array $parsed): string
         }
         $html .= '</span>';
     }
-    $html .= '<span class="github-stat">★ ' . escape(hansjackGithubOneboxFormatNumber($stars)) . '</span>';
-    $html .= '<span class="github-stat">Fork ' . escape(hansjackGithubOneboxFormatNumber($forks)) . '</span>';
+    $html .= '<span class="github-stat">★ ' . escape(themekitGithubOneboxFormatNumber($stars)) . '</span>';
+    $html .= '<span class="github-stat">Fork ' . escape(themekitGithubOneboxFormatNumber($forks)) . '</span>';
     if ($watchers > 0) {
-        $html .= '<span class="github-stat">Watch ' . escape(hansjackGithubOneboxFormatNumber($watchers)) . '</span>';
+        $html .= '<span class="github-stat">Watch ' . escape(themekitGithubOneboxFormatNumber($watchers)) . '</span>';
     }
     if ($language !== '') {
         $html .= '<span class="github-stat">' . escape($language) . '</span>';
@@ -11135,7 +11135,7 @@ function hansjackGithubOneboxRenderRepo(array $parsed): string
     return $html;
 }
 
-function hansjackGithubOneboxRenderPull(array $parsed): string
+function themekitGithubOneboxRenderPull(array $parsed): string
 {
     $owner = trim((string) ($parsed['owner'] ?? ''));
     $repo = trim((string) ($parsed['repo'] ?? ''));
@@ -11144,7 +11144,7 @@ function hansjackGithubOneboxRenderPull(array $parsed): string
         return '';
     }
 
-    $data = hansjackGithubOneboxApiJson(
+    $data = themekitGithubOneboxApiJson(
         'https://api.github.com/repos/' . rawurlencode($owner) . '/' . rawurlencode($repo) . '/pulls/' . $number
     );
     if (empty($data)) {
@@ -11164,8 +11164,8 @@ function hansjackGithubOneboxRenderPull(array $parsed): string
     $state = strtolower(trim((string) ($data['state'] ?? 'open')));
     $mergedAt = trim((string) ($data['merged_at'] ?? ''));
     $status = $mergedAt !== '' ? _t('已合并') : ($state === 'closed' ? _t('已关闭') : _t('已打开'));
-    $createdAt = hansjackGithubOneboxFormatDate((string) ($data['created_at'] ?? ''));
-    $excerpt = hansjackTruncateText((string) ($data['body'] ?? ''), 320);
+    $createdAt = themekitGithubOneboxFormatDate((string) ($data['created_at'] ?? ''));
+    $excerpt = themekitTruncateText((string) ($data['body'] ?? ''), 320);
 
     $baseRef = trim((string) ($data['base']['ref'] ?? ''));
     $headRef = trim((string) ($data['head']['ref'] ?? ''));
@@ -11189,11 +11189,11 @@ function hansjackGithubOneboxRenderPull(array $parsed): string
     $html = '<aside class="onebox githubpullrequest" data-onebox-src="' . escape($prUrl) . '">';
     $html .= '<article class="onebox-body">';
     $html .= '<div class="source">';
-    $html .= '<span class="github-source-icon" aria-hidden="true">' . hansjackGithubOneboxIconSvg('repo') . '</span>';
+    $html .= '<span class="github-source-icon" aria-hidden="true">' . themekitGithubOneboxIconSvg('repo') . '</span>';
     $html .= '<a href="' . escape($prUrl) . '" target="_blank" rel="noopener">github.com/' . escape($owner . '/' . $repo) . '</a>';
     $html .= '</div>';
     $html .= '<div class="github-row github-feature">';
-    $html .= '<div class="github-leading-icon" title="' . escape(_t('拉取请求')) . '" aria-hidden="true">' . hansjackGithubOneboxIconSvg('pull') . '</div>';
+    $html .= '<div class="github-leading-icon" title="' . escape(_t('拉取请求')) . '" aria-hidden="true">' . themekitGithubOneboxIconSvg('pull') . '</div>';
     $html .= '<div class="github-info-container">';
     $html .= '<div class="github-title github-pr-title">';
     $html .= '<a href="' . escape($prUrl) . '" target="_blank" rel="noopener">' . escape($title) . ' (#' . $number . ')</a>';
@@ -11245,7 +11245,7 @@ function hansjackGithubOneboxRenderPull(array $parsed): string
     return $html;
 }
 
-function hansjackGithubOneboxRenderFile(array $parsed): string
+function themekitGithubOneboxRenderFile(array $parsed): string
 {
     $owner = trim((string) ($parsed['owner'] ?? ''));
     $repo = trim((string) ($parsed['repo'] ?? ''));
@@ -11266,7 +11266,7 @@ function hansjackGithubOneboxRenderFile(array $parsed): string
             continue;
         }
 
-        $fetched = hansjackGithubOneboxFetchFileByRef($owner, $repo, $ref, $filePath);
+        $fetched = themekitGithubOneboxFetchFileByRef($owner, $repo, $ref, $filePath);
         if ($fetched === '') {
             continue;
         }
@@ -11281,7 +11281,7 @@ function hansjackGithubOneboxRenderFile(array $parsed): string
         $resolvedRef = trim((string) ($parsed['ref'] ?? ''));
         $resolvedPath = trim((string) ($parsed['filePath'] ?? ''), '/');
         if ($resolvedRef !== '' && $resolvedPath !== '') {
-            $content = hansjackGithubOneboxFetchFileByRef($owner, $repo, $resolvedRef, $resolvedPath);
+            $content = themekitGithubOneboxFetchFileByRef($owner, $repo, $resolvedRef, $resolvedPath);
         }
     }
 
@@ -11302,10 +11302,10 @@ function hansjackGithubOneboxRenderFile(array $parsed): string
 
     $sourceUrl = trim((string) ($parsed['canonicalUrl'] ?? ''));
     if ($sourceUrl === '') {
-        $sourceUrl = hansjackGithubOneboxBuildBlobUrl($owner, $repo, $resolvedRef, $resolvedPath, $lineFragment);
+        $sourceUrl = themekitGithubOneboxBuildBlobUrl($owner, $repo, $resolvedRef, $resolvedPath, $lineFragment);
     }
 
-    $language = hansjackGithubOneboxResolveCodeLanguage($resolvedPath);
+    $language = themekitGithubOneboxResolveCodeLanguage($resolvedPath);
     $langClass = trim((string) ($language['class'] ?? ''));
 
     $previewHtml = '';
@@ -11349,26 +11349,26 @@ function hansjackGithubOneboxRenderFile(array $parsed): string
     return $html;
 }
 
-function hansjackGithubOneboxRender(array $parsed): string
+function themekitGithubOneboxRender(array $parsed): string
 {
     $type = trim((string) ($parsed['type'] ?? ''));
     if ($type === 'repo') {
-        return hansjackGithubOneboxRenderRepo($parsed);
+        return themekitGithubOneboxRenderRepo($parsed);
     }
     if ($type === 'pull') {
-        return hansjackGithubOneboxRenderPull($parsed);
+        return themekitGithubOneboxRenderPull($parsed);
     }
     if ($type === 'file') {
-        return hansjackGithubOneboxRenderFile($parsed);
+        return themekitGithubOneboxRenderFile($parsed);
     }
     return '';
 }
 
-function hansjackGithubOneboxFromUrl(string $url): string
+function themekitGithubOneboxFromUrl(string $url): string
 {
     static $memo = [];
 
-    $parsed = hansjackGithubOneboxParseUrl($url);
+    $parsed = themekitGithubOneboxParseUrl($url);
     if (empty($parsed)) {
         return '';
     }
@@ -11386,19 +11386,19 @@ function hansjackGithubOneboxFromUrl(string $url): string
         return (string) $memo[$cacheKey];
     }
 
-    $cached = hansjackGithubOneboxCacheGet($cacheKey);
+    $cached = themekitGithubOneboxCacheGet($cacheKey);
     if (is_array($cached)) {
         $memo[$cacheKey] = !empty($cached['ok']) ? (string) ($cached['html'] ?? '') : '';
         return (string) $memo[$cacheKey];
     }
 
-    $html = hansjackGithubOneboxRender($parsed);
-    hansjackGithubOneboxCachePut($cacheKey, $html, $html !== '');
+    $html = themekitGithubOneboxRender($parsed);
+    themekitGithubOneboxCachePut($cacheKey, $html, $html !== '');
     $memo[$cacheKey] = $html;
     return $html;
 }
 
-function hansjackGithubOneboxIsBlockedByAncestor(\DOMElement $element, \DOMElement $root): bool
+function themekitGithubOneboxIsBlockedByAncestor(\DOMElement $element, \DOMElement $root): bool
 {
     $blockedTags = ['pre', 'code', 'script', 'style', 'textarea', 'aside'];
     $parent = $element->parentNode;
@@ -11415,7 +11415,7 @@ function hansjackGithubOneboxIsBlockedByAncestor(\DOMElement $element, \DOMEleme
     return false;
 }
 
-function hansjackGithubOneboxExtractStandaloneUrl(\DOMElement $block): string
+function themekitGithubOneboxExtractStandaloneUrl(\DOMElement $block): string
 {
     $tag = strtolower((string) $block->tagName);
     if ($tag !== 'p') {
@@ -11526,15 +11526,15 @@ function applyGithubOneboxToHtml(string $html): string
         if (!$block instanceof \DOMElement) {
             continue;
         }
-        if (hansjackGithubOneboxIsBlockedByAncestor($block, $root)) {
+        if (themekitGithubOneboxIsBlockedByAncestor($block, $root)) {
             continue;
         }
 
-        $url = hansjackGithubOneboxExtractStandaloneUrl($block);
+        $url = themekitGithubOneboxExtractStandaloneUrl($block);
         if ($url === '') {
             continue;
         }
-        if (empty(hansjackGithubOneboxParseUrl($url))) {
+        if (empty(themekitGithubOneboxParseUrl($url))) {
             continue;
         }
 
@@ -11551,7 +11551,7 @@ function applyGithubOneboxToHtml(string $html): string
             continue;
         }
 
-        $boxHtml = hansjackGithubOneboxFromUrl((string) ($target['url'] ?? ''));
+        $boxHtml = themekitGithubOneboxFromUrl((string) ($target['url'] ?? ''));
         if ($boxHtml === '') {
             continue;
         }
@@ -11574,7 +11574,7 @@ function applyGithubOneboxToHtml(string $html): string
         }
     }
 
-    hansjackGithubOneboxCacheFlush();
+    themekitGithubOneboxCacheFlush();
 
     if (!$changed) {
         return $html;
@@ -12430,3 +12430,4 @@ function threadedComments($comments, $singleCommentOptions): void
     </li>
     <?php
 }
+

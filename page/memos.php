@@ -39,8 +39,8 @@ $commentUploadPolicy = [
     'hint' => '',
 ];
 try {
-    if (function_exists('hansjackCommentUploadPolicy')) {
-        $commentUploadPolicy = hansjackCommentUploadPolicy($this->options, $userLoggedIn);
+    if (function_exists('themekitCommentUploadPolicy')) {
+        $commentUploadPolicy = themekitCommentUploadPolicy($this->options, $userLoggedIn);
     }
 } catch (\Throwable $e) {
     $commentUploadPolicy = [
@@ -997,3 +997,4 @@ if ($pagePermalink === '') {
 </script>
 
 <?php $this->need('footer.php'); ?>
+

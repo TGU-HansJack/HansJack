@@ -202,7 +202,7 @@
         function applyViewportHeightVar() {
             rafId = 0;
             var viewportHeight = readViewportHeight();
-            root.style.setProperty("--hansjack-vh", viewportHeight.toFixed(2) + "px");
+            root.style.setProperty("--themekit-vh", viewportHeight.toFixed(2) + "px");
         }
 
         function requestViewportHeightSync() {
@@ -246,7 +246,7 @@
             requestViewportHeightSync();
             window.setTimeout(requestViewportHeightSync, 160);
         });
-        window.addEventListener("hansjack:pjax:after", function () {
+        window.addEventListener("themekit:pjax:after", function () {
             requestViewportHeightSync();
             window.setTimeout(requestViewportHeightSync, 120);
         });
@@ -800,7 +800,7 @@
 
         window.addEventListener("scroll", hideToolbar, { passive: true });
         window.addEventListener("resize", hideToolbar);
-        window.addEventListener("hansjack:pjax:after", hideToolbar);
+        window.addEventListener("themekit:pjax:after", hideToolbar);
         window.addEventListener("keydown", function (e) {
             var key = e && (e.key || e.code);
             if (key === "Escape" || key === "Esc") {
@@ -1814,7 +1814,7 @@
             }
         });
 
-        window.addEventListener("hansjack:pjax:after", function () {
+        window.addEventListener("themekit:pjax:after", function () {
             // Re-run list-state sync after PJAX swapped `.main`.
             syncPostsSettingsUI();
             applyPostsSettingsToAllLists();
@@ -3158,8 +3158,8 @@
                 } catch (e) {}
 
                 try {
-                    if (typeof window.__hansjackInitCommentsSection === "function") {
-                        window.__hansjackInitCommentsSection();
+                    if (typeof window.__themekitInitCommentsSection === "function") {
+                        window.__themekitInitCommentsSection();
                     }
                 } catch (e) {}
 
@@ -4957,7 +4957,7 @@
                 if (!file) {
                     return "附件";
                 }
-                var raw = String(file.name || file.__hansjackAssignedName || "").trim();
+                var raw = String(file.name || file.__themekitAssignedName || "").trim();
                 return normalizeAttachmentName(raw || "附件");
             }
 
@@ -5035,7 +5035,7 @@
                     } catch (e) {}
                 }
 
-                file.__hansjackAssignedName = nextName;
+                file.__themekitAssignedName = nextName;
                 return file;
             }
 
@@ -6298,7 +6298,7 @@
             initCommentEmbedShortcodes();
         }
 
-        window.__hansjackInitCommentsSection = bootstrapCommentsFeatures;
+        window.__themekitInitCommentsSection = bootstrapCommentsFeatures;
         bootstrapCommentsFeatures();
     })();
 
@@ -6397,7 +6397,7 @@
 
 /* block 12 */
 (function () {
-        var controlKey = "__hansjackStudyCarouselControl";
+        var controlKey = "__themekitStudyCarouselControl";
         var previous = window[controlKey];
         if (previous && typeof previous.teardown === "function") {
             try {
@@ -6691,7 +6691,7 @@
                 visibilityBound = false;
             }
             if (pjaxBound) {
-                window.removeEventListener("hansjack:pjax:after", bootstrap);
+                window.removeEventListener("themekit:pjax:after", bootstrap);
                 pjaxBound = false;
             }
             if (pagehideBound) {
@@ -6705,7 +6705,7 @@
             visibilityBound = true;
         }
         if (!pjaxBound) {
-            window.addEventListener("hansjack:pjax:after", bootstrap);
+            window.addEventListener("themekit:pjax:after", bootstrap);
             pjaxBound = true;
         }
         if (!pagehideBound) {
@@ -6723,7 +6723,7 @@
 
 /* block 14 */
 (function () {
-        var controlKey = "__hansjackStudyDrawerControl";
+        var controlKey = "__themekitStudyDrawerControl";
         var previous = window[controlKey];
         if (previous && typeof previous.teardown === "function") {
             try {
@@ -7073,7 +7073,7 @@
         function teardownAll() {
             teardownInstances();
             if (pjaxBound) {
-                window.removeEventListener("hansjack:pjax:after", bootstrap);
+                window.removeEventListener("themekit:pjax:after", bootstrap);
                 pjaxBound = false;
             }
             if (keydownBound) {
@@ -7086,7 +7086,7 @@
         }
 
         if (!pjaxBound) {
-            window.addEventListener("hansjack:pjax:after", bootstrap);
+            window.addEventListener("themekit:pjax:after", bootstrap);
             pjaxBound = true;
         }
         if (!keydownBound) {
@@ -7104,7 +7104,7 @@
 
 /* block 13 */
 (function () {
-        var controlKey = "__hansjackStudyWordPopupControl";
+        var controlKey = "__themekitStudyWordPopupControl";
         var previous = window[controlKey];
         if (previous && typeof previous.teardown === "function") {
             try {
@@ -7568,7 +7568,7 @@
             closeModal(false);
             teardownCards();
             if (pjaxBound) {
-                window.removeEventListener("hansjack:pjax:after", bootstrap);
+                window.removeEventListener("themekit:pjax:after", bootstrap);
                 pjaxBound = false;
             }
             if (keydownBound) {
@@ -7590,7 +7590,7 @@
         }
 
         if (!pjaxBound) {
-            window.addEventListener("hansjack:pjax:after", bootstrap);
+            window.addEventListener("themekit:pjax:after", bootstrap);
             pjaxBound = true;
         }
         if (!keydownBound) {
@@ -7605,3 +7605,4 @@
 
         bootstrap();
     })();
+

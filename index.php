@@ -64,8 +64,8 @@ $landingStudyPayload = [
     'message' => '',
 ];
 if ($this->is('index')) {
-    $landingTimezoneOffset = function_exists('hansjackOptionsTimezoneOffset')
-        ? hansjackOptionsTimezoneOffset($this->options)
+    $landingTimezoneOffset = function_exists('themekitOptionsTimezoneOffset')
+        ? themekitOptionsTimezoneOffset($this->options)
         : 0;
     $landingFormatByTz = static function (string $format, int $timestamp) use ($landingTimezoneOffset): string {
         if ($timestamp <= 0) {
@@ -126,7 +126,7 @@ if ($this->is('index')) {
     $landingPresenceEnabled = (bool) ($themeConfig['presenceStatusEnabled'] ?? false);
 
     if ($landingPresenceEnabled) {
-        $landingPresencePayload = hansjackPresenceStatusPublicPayload($this->options);
+        $landingPresencePayload = themekitPresenceStatusPublicPayload($this->options);
         $landingPresenceEndpoint = trim((string) ($landingPresencePayload['endpoint'] ?? ($themeConfig['presenceStatusEndpoint'] ?? '')));
         $landingPresenceState = trim((string) ($landingPresencePayload['state'] ?? 'offline'));
         if ($landingPresenceState === '') {
@@ -139,7 +139,7 @@ if ($this->is('index')) {
         $landingPresenceIcon = trim((string) ($landingPresencePayload['icon'] ?? ''));
     }
 
-    $landingStudyPayload = hansjackMaimemoStudyPayload($this->options);
+    $landingStudyPayload = themekitMaimemoStudyPayload($this->options);
     $landingStudyEnabled = !empty($landingStudyPayload['enabled']);
 
     $heatmapDayCount = max(1, (int) $landingHeatmapDays);
@@ -1315,7 +1315,7 @@ if ($this->is('index')) {
             $studyPercentStyle = number_format($studyPercent, 2, '.', '');
             $studyTimeText = trim((string) ($landingStudyPayload['study_time_text'] ?? ''));
             if ($studyTimeText === '') {
-                $studyTimeText = hansjackMaimemoStudyTimeText((int) ($studyProgress['study_time'] ?? 0));
+                $studyTimeText = themekitMaimemoStudyTimeText((int) ($studyProgress['study_time'] ?? 0));
             }
             $studyRenderableItems = [];
             foreach ($studyItems as $studyItem) {
@@ -1418,7 +1418,7 @@ if ($this->is('index')) {
                                                     $studyIsNew = !empty($studyItem['is_new']);
                                                     $studyIsFinished = !empty($studyItem['is_finished']);
                                                     $studyFirstResponse = trim((string) ($studyItem['first_response'] ?? ''));
-                                                    $studyFirstResponseLabel = hansjackMaimemoResponseLabel($studyFirstResponse);
+                                                    $studyFirstResponseLabel = themekitMaimemoResponseLabel($studyFirstResponse);
                                                     ?>
                                                     <li
                                                         class="landing-study-card links-step"
@@ -1484,7 +1484,7 @@ if ($this->is('index')) {
                                                     $studyIsNew = !empty($studyItem['is_new']);
                                                     $studyIsFinished = !empty($studyItem['is_finished']);
                                                     $studyFirstResponse = trim((string) ($studyItem['first_response'] ?? ''));
-                                                    $studyFirstResponseLabel = hansjackMaimemoResponseLabel($studyFirstResponse);
+                                                    $studyFirstResponseLabel = themekitMaimemoResponseLabel($studyFirstResponse);
                                                     ?>
                                                     <li
                                                         class="landing-study-card links-step"
@@ -1877,8 +1877,8 @@ HTML;
                                 $postExcerpt = trim((string) preg_replace('/\\s+/u', ' ', $postExcerpt));
 
                                 $postCid = (int) ($this->cid ?? 0);
-                                $postContentTypeKey = hansjackContentTypeByCid($postCid, $this);
-                                $postHasContentWarning = hansjackHasContentWarningType($postContentTypeKey);
+                                $postContentTypeKey = themekitContentTypeByCid($postCid, $this);
+                                $postHasContentWarning = themekitHasContentWarningType($postContentTypeKey);
                                 ?>
                                 <li class="posts-item"
                                     data-post-created="<?php echo (int) $postCreated; ?>"
@@ -2014,3 +2014,4 @@ HTML;
 </main>
 
 <?php $this->need('footer.php'); ?>
+

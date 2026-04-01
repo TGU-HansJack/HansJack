@@ -42,8 +42,8 @@ $commentUploadPolicy = [
     'hint' => '',
 ];
 try {
-    if (function_exists('hansjackCommentUploadPolicy')) {
-        $commentUploadPolicy = hansjackCommentUploadPolicy($this->options, $userLoggedIn);
+    if (function_exists('themekitCommentUploadPolicy')) {
+        $commentUploadPolicy = themekitCommentUploadPolicy($this->options, $userLoggedIn);
     }
 } catch (\Throwable $e) {
     $commentUploadPolicy = [
@@ -278,3 +278,4 @@ $commentUploadHint = trim((string) ($commentUploadPolicy['hint'] ?? ''));
         <?php $comments->pageNav(); ?>
     <?php endif; ?>
 </section>
+

@@ -89,8 +89,8 @@ if ($siteFaviconUrl === '') {
     }
 }
 
-$seoTitle = hansjackArchiveSeoTitle($this);
-$seoDescription = hansjackArchiveSeoDescription($this, 150);
+$seoTitle = themekitArchiveSeoTitle($this);
+$seoDescription = themekitArchiveSeoDescription($this, 150);
 $seoSiteName = 'Typecho';
 $seoCanonical = '';
 $seoOgType = 'website';
@@ -662,3 +662,4 @@ if ($mourningEnabled) {
     </div>
 </header>
 <div class="shell main-shell">
+

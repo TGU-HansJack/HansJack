@@ -771,13 +771,13 @@
                 if (!document || !document.createElementNS) {
                     return;
                 }
-                if (document.getElementById("hj-callout-icon-sprite")) {
+                if (document.getElementById("mk-callout-icon-sprite")) {
                     return;
                 }
 
                 var ns = "http://www.w3.org/2000/svg";
                 var sprite = document.createElementNS(ns, "svg");
-                sprite.setAttribute("id", "hj-callout-icon-sprite");
+                sprite.setAttribute("id", "mk-callout-icon-sprite");
                 sprite.setAttribute("aria-hidden", "true");
                 sprite.setAttribute("width", "0");
                 sprite.setAttribute("height", "0");
@@ -905,7 +905,7 @@
                     if (!quote || !quote.classList) {
                         continue;
                     }
-                    if (quote.getAttribute("data-hj-quote-enhanced") === "1") {
+                    if (quote.getAttribute("data-mk-quote-enhanced") === "1") {
                         continue;
                     }
                     if (quote.classList.contains("markdown-alert")) {
@@ -921,7 +921,7 @@
                     }
 
                     var body = document.createElement("div");
-                    body.className = "hj-quote-body";
+                    body.className = "mk-quote-body";
                     for (var n = 0; n < existingNodes.length; n++) {
                         body.appendChild(existingNodes[n]);
                     }
@@ -930,23 +930,23 @@
                     }
 
                     var head = document.createElement("div");
-                    head.className = "hj-quote-head";
+                    head.className = "mk-quote-head";
 
                     var iconWrap = document.createElement("span");
-                    iconWrap.className = "hj-quote-icon";
+                    iconWrap.className = "mk-quote-icon";
                     iconWrap.appendChild(createQuoteIconSvg());
                     head.appendChild(iconWrap);
 
                     var titleText = document.createElement("span");
-                    titleText.className = "hj-quote-title-inner";
+                    titleText.className = "mk-quote-title-inner";
                     titleText.textContent = "Quote";
                     head.appendChild(titleText);
 
-                    var toggle = createCollapseToggleButton("hj-quote-toggle");
+                    var toggle = createCollapseToggleButton("mk-quote-toggle");
                     head.appendChild(toggle);
 
-                    quote.classList.add("hj-quote");
-                    quote.setAttribute("data-hj-quote-enhanced", "1");
+                    quote.classList.add("mk-quote");
+                    quote.setAttribute("data-mk-quote-enhanced", "1");
                     quote.appendChild(head);
                     quote.appendChild(body);
 
@@ -992,7 +992,7 @@
                     if (!alert || !alert.classList) {
                         continue;
                     }
-                    if (alert.getAttribute("data-hj-alert-enhanced") === "1") {
+                    if (alert.getAttribute("data-mk-alert-enhanced") === "1") {
                         continue;
                     }
                     if (!alert.querySelector(":scope > :not(.markdown-alert-title)")) {
@@ -1007,7 +1007,7 @@
                     var toggle = createCollapseToggleButton("markdown-alert-toggle");
                     title.appendChild(toggle);
 
-                    alert.setAttribute("data-hj-alert-enhanced", "1");
+                    alert.setAttribute("data-mk-alert-enhanced", "1");
                     alert.classList.add("markdown-alert-collapsible");
 
                     (function (alertEl, toggleEl) {
@@ -1750,3 +1750,4 @@
                 }
             }
         })();
+

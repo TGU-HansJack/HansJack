@@ -147,8 +147,8 @@ if ($notesRootMid) {
                             $postExcerpt = trim((string) preg_replace('/\\s+/u', ' ', $postExcerpt));
 
                             $postCid = (int) ($posts->cid ?? 0);
-                            $postContentTypeKey = hansjackContentTypeByCid($postCid, $posts);
-                            $postHasContentWarning = hansjackHasContentWarningType($postContentTypeKey);
+                            $postContentTypeKey = themekitContentTypeByCid($postCid, $posts);
+                            $postHasContentWarning = themekitHasContentWarningType($postContentTypeKey);
                             ?>
                             <li class="posts-item"
                                 data-post-created="<?php echo (int) $postCreated; ?>"
@@ -248,3 +248,4 @@ if ($notesRootMid) {
 </main>
 
 <?php $this->need('footer.php'); ?>
+

@@ -15,8 +15,8 @@ if ($customJavaScript !== '') {
 }
 
 $isAdminViewer = currentUserIsAdmin();
-$highLoadDegradeEnabled = hansjackHighLoadDegradeEnabled($this->options);
-$visitorLivePollingEnabled = hansjackVisitorLivePollingEnabled($this->options);
+$highLoadDegradeEnabled = themekitHighLoadDegradeEnabled($this->options);
+$visitorLivePollingEnabled = themekitVisitorLivePollingEnabled($this->options);
 $liveReloadEnabledForCurrent = $isAdminViewer
     ? true
     : ($visitorLivePollingEnabled && !$highLoadDegradeEnabled);
@@ -1344,9 +1344,9 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
 <?php endif; ?>
 
 <script>
-window.__hansjackInternalLinkMeta = <?php echo $internalLinkMetaJson; ?>;
-window.__hansjackLiveReloadEnabled = <?php echo $liveReloadEnabledForCurrent ? 'true' : 'false'; ?>;
-window.__hansjackHighLoadDegradeEnabled = <?php echo $highLoadDegradeEnabled ? 'true' : 'false'; ?>;
+window.__themekitInternalLinkMeta = <?php echo $internalLinkMetaJson; ?>;
+window.__themekitLiveReloadEnabled = <?php echo $liveReloadEnabledForCurrent ? 'true' : 'false'; ?>;
+window.__themekitHighLoadDegradeEnabled = <?php echo $highLoadDegradeEnabled ? 'true' : 'false'; ?>;
 </script>
 <script src="<?php echo escape(assetUrlSmart($this->options, 'assets/js/footer-global-tail.js')); ?>"></script>
 <script src="<?php echo escape(assetUrlSmart($this->options, 'assets/js/pjax-lite.js')); ?>"></script>
@@ -1359,3 +1359,4 @@ window.__hansjackHighLoadDegradeEnabled = <?php echo $highLoadDegradeEnabled ? '
 <?php endif; ?>
 </body>
 </html>
+

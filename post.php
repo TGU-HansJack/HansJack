@@ -169,14 +169,14 @@ $contentWarningBucket = 'posts';
 
             $guessPosts = [];
             $currentCid = (int) ($this->cid ?? 0);
-            $guessCachePayload = hansjackLoadPostGuessCache($currentCid);
+            $guessCachePayload = themekitLoadPostGuessCache($currentCid);
             $guessCacheUpdated = (int) ($guessCachePayload['updated'] ?? 0);
-            $guessPosts = hansjackNormalizePostGuessItems($guessCachePayload['items'] ?? []);
+            $guessPosts = themekitNormalizePostGuessItems($guessCachePayload['items'] ?? []);
             $guessCacheFresh = (
                 $guessCacheUpdated > 0 &&
-                (time() - $guessCacheUpdated) <= hansjackPostGuessCacheTtl()
+                (time() - $guessCacheUpdated) <= themekitPostGuessCacheTtl()
             );
-            $guessCanRefreshByAdmin = currentUserIsAdmin() && !hansjackHighLoadDegradeEnabled($this->options);
+            $guessCanRefreshByAdmin = currentUserIsAdmin() && !themekitHighLoadDegradeEnabled($this->options);
             $guessRefreshRequested = false;
             if ($guessCanRefreshByAdmin) {
                 try {
@@ -385,7 +385,7 @@ $contentWarningBucket = 'posts';
                 }
             }
             if ($guessRebuilt && $currentCid > 0) {
-                hansjackSavePostGuessCache($currentCid, $guessPosts);
+                themekitSavePostGuessCache($currentCid, $guessPosts);
             }
             if (count($guessPosts) > 1) {
                 shuffle($guessPosts);
@@ -451,7 +451,7 @@ $contentWarningBucket = 'posts';
             <?php
             $seriesItems = [];
             try {
-                $seriesItems = hansjackSeriesItemsByCid((int) ($this->cid ?? 0));
+                $seriesItems = themekitSeriesItemsByCid((int) ($this->cid ?? 0));
             } catch (\Throwable $e) {
                 $seriesItems = [];
             }
@@ -1163,7 +1163,7 @@ $contentWarningBucket = 'posts';
                 function emitSeriesRendered() {
                     var ev = null;
                     try {
-                        ev = new CustomEvent("hansjack:series:rendered", {
+                        ev = new CustomEvent("themekit:series:rendered", {
                             detail: {
                                 root: seriesRoot
                             }
@@ -1174,7 +1174,7 @@ $contentWarningBucket = 'posts';
                     if (!ev) {
                         try {
                             ev = document.createEvent("CustomEvent");
-                            ev.initCustomEvent("hansjack:series:rendered", true, false, {
+                            ev.initCustomEvent("themekit:series:rendered", true, false, {
                                 root: seriesRoot
                             });
                         } catch (e) {
@@ -1478,3 +1478,4 @@ $contentWarningBucket = 'posts';
 </main>
 
 <?php $this->need('footer.php'); ?>
+

@@ -400,7 +400,7 @@
                 return;
             }
 
-            var oldGroups = table.querySelectorAll("colgroup[data-hj-colratio='1']");
+            var oldGroups = table.querySelectorAll("colgroup[data-colratio-enhanced='1']");
             for (var i = 0; i < oldGroups.length; i++) {
                 var old = oldGroups[i];
                 if (old && old.parentNode === table) {
@@ -409,7 +409,7 @@
             }
 
             var colgroup = document.createElement("colgroup");
-            colgroup.setAttribute("data-hj-colratio", "1");
+            colgroup.setAttribute("data-colratio-enhanced", "1");
 
             for (var c = 0; c < percents.length; c++) {
                 var col = document.createElement("col");
@@ -630,8 +630,8 @@
 
         var internalLinkMeta = {};
         try {
-            if (window.__hansjackInternalLinkMeta && typeof window.__hansjackInternalLinkMeta === "object") {
-                internalLinkMeta = window.__hansjackInternalLinkMeta;
+            if (window.__themekitInternalLinkMeta && typeof window.__themekitInternalLinkMeta === "object") {
+                internalLinkMeta = window.__themekitInternalLinkMeta;
             }
         } catch (e) {
             internalLinkMeta = {};
@@ -1383,14 +1383,14 @@
             hideTooltip();
         }, true);
 
-        window.addEventListener("hansjack:series:rendered", function (ev) {
+        window.addEventListener("themekit:series:rendered", function (ev) {
             var detail = ev && ev.detail ? ev.detail : null;
             var root = detail && detail.root && detail.root.querySelectorAll ? detail.root : document;
             bindSeriesLinks(root);
             scheduleReposition();
         });
 
-        window.addEventListener("hansjack:pjax:after", function () {
+        window.addEventListener("themekit:pjax:after", function () {
             hideTooltip();
         });
     })();
@@ -1402,7 +1402,7 @@
             return;
         }
         try {
-            if (window.__hansjackLiveReloadEnabled === false) {
+            if (window.__themekitLiveReloadEnabled === false) {
                 return;
             }
         } catch (e) {}
@@ -1816,7 +1816,7 @@
             clearTimer();
         });
 
-        window.addEventListener("hansjack:pjax:after", function (e) {
+        window.addEventListener("themekit:pjax:after", function (e) {
             var detail = e && e.detail ? e.detail : null;
             if (!detail || detail.listPage !== true) {
                 return;
@@ -1837,7 +1837,7 @@
 
 /* block 23 */
 (function () {
-        var globalKey = "__hansjackPresenceControl";
+        var globalKey = "__themekitPresenceControl";
         var previous = window[globalKey];
         if (previous && typeof previous.teardown === "function") {
             previous.teardown();
@@ -2103,7 +2103,7 @@
 
         document.addEventListener("visibilitychange", onVisibilityChange);
         window.addEventListener("pagehide", onPageHide);
-        window.addEventListener("hansjack:pjax:after", onPjaxAfter);
+        window.addEventListener("themekit:pjax:after", onPjaxAfter);
 
         window[globalKey] = {
             refresh: startPresencePolling,
@@ -2111,9 +2111,10 @@
                 destroyRuntime();
                 document.removeEventListener("visibilitychange", onVisibilityChange);
                 window.removeEventListener("pagehide", onPageHide);
-                window.removeEventListener("hansjack:pjax:after", onPjaxAfter);
+                window.removeEventListener("themekit:pjax:after", onPjaxAfter);
             }
         };
 
         startPresencePolling();
     })();
+

@@ -4,7 +4,7 @@
         return;
     }
 
-    var globalKey = "__hansjackSeasonalFx";
+    var globalKey = "__themekitSeasonalFx";
     var previous = window[globalKey];
     if (previous && typeof previous.teardown === "function") {
         try {
@@ -658,7 +658,7 @@
         unbindReducedMotionListener();
         window.removeEventListener("resize", handleResize);
         window.removeEventListener("orientationchange", handleResize);
-        window.removeEventListener("hansjack:pjax:after", handlePjaxAfter);
+        window.removeEventListener("themekit:pjax:after", handlePjaxAfter);
         window.removeEventListener("pagehide", handlePageHide);
         window.removeEventListener("pageshow", handlePageShow);
         document.removeEventListener("visibilitychange", handleVisibility);
@@ -667,7 +667,7 @@
 
     window.addEventListener("resize", handleResize);
     window.addEventListener("orientationchange", handleResize);
-    window.addEventListener("hansjack:pjax:after", handlePjaxAfter);
+    window.addEventListener("themekit:pjax:after", handlePjaxAfter);
     window.addEventListener("pagehide", handlePageHide);
     window.addEventListener("pageshow", handlePageShow);
     document.addEventListener("visibilitychange", handleVisibility);
@@ -680,3 +680,4 @@
 
     ensureRuntime();
 })();
+
