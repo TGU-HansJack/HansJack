@@ -12335,19 +12335,33 @@ html.login-modal-open .login-modal {
 
     html:not(.theme-light) :is(.article-content, .comment-content) .onebox {
         border-color: var(--line-night);
-        background: rgba(255, 255, 255, 0.08);
+        background: rgba(240, 240, 240, 0.08);
     }
 
     html:not(.theme-light) :is(.article-content, .comment-content) .onebox.githubfile pre {
         border-color: var(--line-night);
+        background: rgba(240, 240, 240, 0.08);
     }
 
     html:not(.theme-light) :is(.article-content, .comment-content) .onebox .source {
-        color: var(--muted-night);
+        color: var(--night-text);
     }
 
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .source .github-source-icon,
     html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-leading-icon {
-        color: var(--muted-night);
+        color: var(--night-white);
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-row,
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-repo-description,
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-body-container,
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-file-fallback {
+        color: var(--night-text);
+    }
+
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .branches,
+    html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-info {
+        color: var(--night-text);
     }
 
     html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-title a,
@@ -12381,7 +12395,7 @@ html.login-modal-open .login-modal {
     }
 
     html:not(.theme-light) :is(.article-content, .comment-content) .github-file-inline .github-file-link {
-        color: var(--muted-night);
+        color: var(--night-text);
     }
 
     html:not(.theme-light) :is(.article-content, .comment-content) sup.footnote-tooltip > .footnote-tip a,
@@ -12748,6 +12762,71 @@ html.theme-dark .link-internal-tooltip {
     --internal-link-tip-bg: rgba(221, 221, 219, 0.96);
     --internal-link-tip-fg: var(--night-black);
     box-shadow: none;
+}
+
+html.theme-dark :is(.article-content, .comment-content) .onebox {
+    border-color: var(--line-night);
+    background: rgba(240, 240, 240, 0.08);
+}
+
+html.theme-dark :is(.article-content, .comment-content) .onebox.githubfile pre {
+    border-color: var(--line-night);
+    background: rgba(240, 240, 240, 0.08);
+}
+
+html.theme-dark :is(.article-content, .comment-content) .onebox .source {
+    color: var(--night-text);
+}
+
+html.theme-dark :is(.article-content, .comment-content) .onebox .source .github-source-icon,
+html.theme-dark :is(.article-content, .comment-content) .onebox .github-leading-icon {
+    color: var(--night-white);
+}
+
+html.theme-dark :is(.article-content, .comment-content) .onebox .github-row,
+html.theme-dark :is(.article-content, .comment-content) .onebox .github-repo-description,
+html.theme-dark :is(.article-content, .comment-content) .onebox .github-body-container,
+html.theme-dark :is(.article-content, .comment-content) .onebox .github-file-fallback {
+    color: var(--night-text);
+}
+
+html.theme-dark :is(.article-content, .comment-content) .onebox .branches,
+html.theme-dark :is(.article-content, .comment-content) .onebox .github-info {
+    color: var(--night-text);
+}
+
+html.theme-dark :is(.article-content, .comment-content) .onebox .github-title a,
+html.theme-dark :is(.article-content, .comment-content) .onebox .github-title a:visited {
+    color: #7bc9ff;
+}
+
+html.theme-dark :is(.article-content, .comment-content) .onebox .github-info .user a,
+html.theme-dark :is(.article-content, .comment-content) .onebox .github-info .user a:visited {
+    color: #7bc9ff;
+}
+
+html.theme-dark :is(.article-content, .comment-content) .onebox .onebox-avatar-inline.lazy-blurup,
+html.theme-dark :is(.article-content, .comment-content) .onebox .onebox-avatar-inline.lazy-blurup.is-loaded {
+    filter: none;
+    transform: none;
+    opacity: 1;
+}
+
+html.theme-dark :is(.article-content, .comment-content) .onebox .branches code,
+html.theme-dark :is(.article-content, .comment-content) .onebox .github-info code {
+    background: rgba(221, 221, 219, 0.16);
+}
+
+html.theme-dark :is(.article-content, .comment-content) .onebox .lines .added {
+    color: #78dba9;
+}
+
+html.theme-dark :is(.article-content, .comment-content) .onebox .lines .removed {
+    color: #ff938a;
+}
+
+html.theme-dark :is(.article-content, .comment-content) .github-file-inline .github-file-link {
+    color: var(--night-text);
 }
 
 html.theme-dark :is(.article-content, .comment-content) sup.footnote-tooltip > .footnote-tip a,
