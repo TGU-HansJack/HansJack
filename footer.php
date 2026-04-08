@@ -20,6 +20,7 @@ $visitorLivePollingEnabled = themekitVisitorLivePollingEnabled($this->options);
 $liveReloadEnabledForCurrent = $isAdminViewer
     ? true
     : ($visitorLivePollingEnabled && !$highLoadDegradeEnabled);
+$landingParticleFxEnabled = themekitLandingParticleFxEnabled($this->options);
 
 $internalLinkMetaJson = '{}';
 $allowInternalLinkMeta = !$highLoadDegradeEnabled || $isAdminViewer;
@@ -346,7 +347,9 @@ if (($this->is('post') || $this->is('page')) && $allowInternalLinkMeta) {
 <div class="theme-curtain" aria-hidden="true"></div>
 
 <script src="<?php echo escape(assetUrlSmart($this->options, 'assets/js/footer-global-pre.js')); ?>"></script>
+<?php if ($landingParticleFxEnabled && $this->is('index')): ?>
 <script src="<?php echo escape(assetUrlSmart($this->options, 'assets/js/landing-seasonal-fx.js')); ?>"></script>
+<?php endif; ?>
 
 <?php if ($this->is('post') || $this->is('page') || $this->is('index')): ?>
     <script>

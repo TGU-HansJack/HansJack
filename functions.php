@@ -83,6 +83,18 @@ function themeConfig($form)
     );
     $form->addInput($landingHitokotoEnabled);
 
+    $landingParticleFxEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'landingParticleFxEnabled',
+        [
+            '1' => _t('开启'),
+            '0' => _t('关闭'),
+        ],
+        '0',
+        _t('开启首页特效粒子'),
+        _t('控制首页粒子特效（樱花/雪花）是否加载。默认关闭。')
+    );
+    $form->addInput($landingParticleFxEnabled);
+
     $landingWelcomeText = new \Typecho\Widget\Helper\Form\Element\Textarea(
         'landingWelcomeText',
         null,
@@ -6170,6 +6182,12 @@ function landingHitokotoEnabled(Options $options): bool
     return in_array($raw, ['1', 'on', 'true', 'yes'], true);
 }
 
+function themekitLandingParticleFxEnabled(Options $options): bool
+{
+    $raw = strtolower(trim((string) ($options->landingParticleFxEnabled ?? '0')));
+    return in_array($raw, ['1', 'on', 'true', 'yes'], true);
+}
+
 function themeFontChoice(Options $options): string
 {
     $raw = trim((string) ($options->fontChoice ?? 'noto_serif_sc_light'));
@@ -7503,6 +7521,7 @@ function buildThemeConfig(Options $options): array
         'brandName' => $brandName,
         'welcomeText' => text((string) ($options->landingWelcomeText ?? ($options->welcomeTitle ?? '')), ''),
         'landingHitokotoEnabled' => landingHitokotoEnabled($options),
+        'landingParticleFxEnabled' => themekitLandingParticleFxEnabled($options),
         'mourningEnabled' => themeMourningEnabled($options),
         'landingSocialLinks' => themekitLandingSocialLinks($options),
         'presenceStatusEnabled' => themekitPresenceStatusEnabled($options),
