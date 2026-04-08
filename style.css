@@ -9780,7 +9780,7 @@ html.login-modal-open .login-modal {
     margin: 1rem 0;
     border: 1px solid var(--line-day);
     border-radius: 6px;
-    background: #fff;
+    background: var(--day-bg);
     overflow: hidden;
 }
 
@@ -9874,12 +9874,12 @@ html.login-modal-open .login-modal {
 
 :is(.article-content, .comment-content) .onebox .github-title a,
 :is(.article-content, .comment-content) .onebox .github-title a:visited {
-    color: #0077bc;
+    color: inherit;
 }
 
 :is(.article-content, .comment-content) .onebox .github-title a:hover,
 :is(.article-content, .comment-content) .onebox .github-title a:focus-visible {
-    color: #0a8ad7;
+    color: inherit;
 }
 
 :is(.article-content, .comment-content) .onebox .github-repo-description,
@@ -9894,6 +9894,12 @@ html.login-modal-open .login-modal {
 
 :is(.article-content, .comment-content) .onebox .github-repo-description {
     margin: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
 }
 
 :is(.article-content, .comment-content) .onebox .branches {
@@ -9939,11 +9945,11 @@ html.login-modal-open .login-modal {
     align-items: center;
     gap: 0.35rem;
     line-height: 1.3;
-    color: #0077bc;
+    color: inherit;
 }
 
 :is(.article-content, .comment-content) .onebox .github-info .user a:visited {
-    color: #0077bc;
+    color: inherit;
 }
 
 :is(.article-content, .comment-content) .onebox .onebox-avatar-inline {
@@ -12335,12 +12341,12 @@ html.login-modal-open .login-modal {
 
     html:not(.theme-light) :is(.article-content, .comment-content) .onebox {
         border-color: var(--line-night);
-        background: rgba(240, 240, 240, 0.08);
+        background: var(--night-bg);
     }
 
     html:not(.theme-light) :is(.article-content, .comment-content) .onebox.githubfile pre {
         border-color: var(--line-night);
-        background: rgba(240, 240, 240, 0.08);
+        background: var(--night-bg);
     }
 
     html:not(.theme-light) :is(.article-content, .comment-content) .onebox .source {
@@ -12366,12 +12372,12 @@ html.login-modal-open .login-modal {
 
     html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-title a,
     html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-title a:visited {
-        color: #7bc9ff;
+        color: inherit;
     }
 
     html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-info .user a,
     html:not(.theme-light) :is(.article-content, .comment-content) .onebox .github-info .user a:visited {
-        color: #7bc9ff;
+        color: inherit;
     }
 
     html:not(.theme-light) :is(.article-content, .comment-content) .onebox .onebox-avatar-inline.lazy-blurup,
@@ -12766,12 +12772,12 @@ html.theme-dark .link-internal-tooltip {
 
 html.theme-dark :is(.article-content, .comment-content) .onebox {
     border-color: var(--line-night);
-    background: rgba(240, 240, 240, 0.08);
+    background: var(--night-bg);
 }
 
 html.theme-dark :is(.article-content, .comment-content) .onebox.githubfile pre {
     border-color: var(--line-night);
-    background: rgba(240, 240, 240, 0.08);
+    background: var(--night-bg);
 }
 
 html.theme-dark :is(.article-content, .comment-content) .onebox .source {
@@ -12797,12 +12803,12 @@ html.theme-dark :is(.article-content, .comment-content) .onebox .github-info {
 
 html.theme-dark :is(.article-content, .comment-content) .onebox .github-title a,
 html.theme-dark :is(.article-content, .comment-content) .onebox .github-title a:visited {
-    color: #7bc9ff;
+    color: inherit;
 }
 
 html.theme-dark :is(.article-content, .comment-content) .onebox .github-info .user a,
 html.theme-dark :is(.article-content, .comment-content) .onebox .github-info .user a:visited {
-    color: #7bc9ff;
+    color: inherit;
 }
 
 html.theme-dark :is(.article-content, .comment-content) .onebox .onebox-avatar-inline.lazy-blurup,
