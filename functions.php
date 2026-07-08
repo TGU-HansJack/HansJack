@@ -83,6 +83,18 @@ function themeConfig($form)
     );
     $form->addInput($landingHitokotoEnabled);
 
+    $landingLetterMemoryHidden = new \Typecho\Widget\Helper\Form\Element\Radio(
+        'landingLetterMemoryHidden',
+        [
+            '0' => _t('显示'),
+            '1' => _t('隐藏'),
+        ],
+        '0',
+        _t('首页隐藏来信和回忆'),
+        _t('控制首页“来信”和“回忆”模块是否隐藏。默认显示。')
+    );
+    $form->addInput($landingLetterMemoryHidden);
+
     $landingParticleFxEnabled = new \Typecho\Widget\Helper\Form\Element\Radio(
         'landingParticleFxEnabled',
         [
@@ -6182,6 +6194,18 @@ function landingHitokotoEnabled(Options $options): bool
     return in_array($raw, ['1', 'on', 'true', 'yes'], true);
 }
 
+function themekitLandingLetterMemoryHidden(Options $options): bool
+{
+    $raw = '';
+    try {
+        $raw = (string) ($options->landingLetterMemoryHidden ?? '0');
+    } catch (\Throwable $e) {
+        $raw = '0';
+    }
+
+    return themekitOptionEnabled($raw, false);
+}
+
 function themekitLandingParticleFxEnabled(Options $options): bool
 {
     $raw = strtolower(trim((string) ($options->landingParticleFxEnabled ?? '0')));
@@ -7521,6 +7545,7 @@ function buildThemeConfig(Options $options): array
         'brandName' => $brandName,
         'welcomeText' => text((string) ($options->landingWelcomeText ?? ($options->welcomeTitle ?? '')), ''),
         'landingHitokotoEnabled' => landingHitokotoEnabled($options),
+        'landingLetterMemoryHidden' => themekitLandingLetterMemoryHidden($options),
         'landingParticleFxEnabled' => themekitLandingParticleFxEnabled($options),
         'mourningEnabled' => themeMourningEnabled($options),
         'landingSocialLinks' => themekitLandingSocialLinks($options),

@@ -41,6 +41,7 @@ $landingSiteCommentsCount = 0;
 $landingSiteStatsLabel = '0 字 0 天 0 篇 0评论';
 $landingMemosPageUrl = '';
 $landingHitokotoEnabled = true;
+$landingLetterMemoryHidden = false;
 $landingPresenceEnabled = false;
 $landingPresenceEndpoint = '';
 $landingPresenceState = 'offline';
@@ -122,6 +123,7 @@ if ($this->is('index')) {
     $blogUrl = (string) (($themeConfig['links']['blog'] ?? '') ?: '');
     $memoUrl = (string) (($themeConfig['links']['memo'] ?? '') ?: '');
     $landingHitokotoEnabled = (bool) ($themeConfig['landingHitokotoEnabled'] ?? true);
+    $landingLetterMemoryHidden = (bool) ($themeConfig['landingLetterMemoryHidden'] ?? false);
     $landingSocialLinks = is_array($themeConfig['landingSocialLinks'] ?? null) ? $themeConfig['landingSocialLinks'] : [];
     $landingPresenceEnabled = (bool) ($themeConfig['presenceStatusEnabled'] ?? false);
 
@@ -379,26 +381,28 @@ if ($this->is('index')) {
     $landingCommentsPageSize = 180;
     $landingMemosPageCid = 0;
 
-    try {
-        $this->widget('Widget_Contents_Page_List@landing_pages')->to($landingPages);
-        if ($landingPages && $landingPages->have()) {
-            while ($landingPages->next()) {
-                $landingPageSlug = trim((string) ($landingPages->slug ?? ''));
-                $landingPageSlugLower = function_exists('mb_strtolower')
-                    ? mb_strtolower($landingPageSlug, 'UTF-8')
-                    : strtolower($landingPageSlug);
-                if ($landingPageSlugLower !== 'memos') {
-                    continue;
-                }
+    if (!$landingLetterMemoryHidden) {
+        try {
+            $this->widget('Widget_Contents_Page_List@landing_pages')->to($landingPages);
+            if ($landingPages && $landingPages->have()) {
+                while ($landingPages->next()) {
+                    $landingPageSlug = trim((string) ($landingPages->slug ?? ''));
+                    $landingPageSlugLower = function_exists('mb_strtolower')
+                        ? mb_strtolower($landingPageSlug, 'UTF-8')
+                        : strtolower($landingPageSlug);
+                    if ($landingPageSlugLower !== 'memos') {
+                        continue;
+                    }
 
-                $landingMemosPageCid = (int) ($landingPages->cid ?? 0);
-                $landingMemosPageUrl = trim((string) ($landingPages->permalink ?? ''));
-                break;
+                    $landingMemosPageCid = (int) ($landingPages->cid ?? 0);
+                    $landingMemosPageUrl = trim((string) ($landingPages->permalink ?? ''));
+                    break;
+                }
             }
+        } catch (\Throwable $e) {
+            $landingMemosPageCid = 0;
+            $landingMemosPageUrl = '';
         }
-    } catch (\Throwable $e) {
-        $landingMemosPageCid = 0;
-        $landingMemosPageUrl = '';
     }
 
     $landingMemoryDateLabel = static function (int $timestamp) use ($landingFormatByTz): string {
@@ -477,13 +481,15 @@ if ($this->is('index')) {
     };
 
     $landingRecentComments = null;
-    try {
-        $this->widget('Widget_Comments_Recent@landing_comments', 'pageSize=' . $landingCommentsPageSize, null, false)->to($landingRecentComments);
-    } catch (\Throwable $e) {
-        $landingRecentComments = null;
+    if (!$landingLetterMemoryHidden) {
+        try {
+            $this->widget('Widget_Comments_Recent@landing_comments', 'pageSize=' . $landingCommentsPageSize, null, false)->to($landingRecentComments);
+        } catch (\Throwable $e) {
+            $landingRecentComments = null;
+        }
     }
 
-    if ($landingRecentComments && $landingRecentComments->have()) {
+    if (!$landingLetterMemoryHidden && $landingRecentComments && $landingRecentComments->have()) {
         $landingMemosBaseUrl = '';
         if ($landingMemosPageUrl !== '') {
             $landingMemosBaseUrl = (string) preg_replace('/[#?].*$/', '', $landingMemosPageUrl);
@@ -1124,6 +1130,7 @@ if ($this->is('index')) {
             </div>
         </section>
 
+        <?php if (!$landingLetterMemoryHidden): ?>
         <section class="landing-letter-memory" role="region" aria-label="<?php _e('来信与回忆'); ?>">
             <div class="landing-letter-memory-top">
                 <div class="landing-letter-memory-col">
@@ -1213,6 +1220,7 @@ if ($this->is('index')) {
                 </div>
             </div>
         </section>
+        <?php endif; ?>
 
         <section class="landing-seasonal" role="region" aria-label="<?php _e('笔耕不辍'); ?>">
             <div class="landing-seasonal-main">
