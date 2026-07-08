@@ -11660,6 +11660,7 @@ function renderArchiveContent($archive): string
     $html = applyImageAltFallbackToHtml($html, $archiveImageAlt);
     $html = applyImagePerformanceAttrsToHtml($html, true);
     $html = applyTaskListSyntaxToHtml($html);
+    $html = applyMarkdownAlertSyntaxToHtml($html);
     $html = applyInlineSyntaxToHtml($html);
     if (!isEmbedFetchRequest()) {
         $html = applyEmbedSyntaxToHtml($html);
